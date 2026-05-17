@@ -59,7 +59,9 @@ if (Test-Path $DumpSrc) {
 }
 
 Write-Host "  → Compressing bundle (using Python for memory efficiency)..." -ForegroundColor Gray
-& python -c "import shutil; shutil.make_archive('d:\Robot\assurcore_prod_latest', 'zip', '$BundleDir')"
+$BundleDirPy = $BundleDir -replace '\\', '/'
+$ZipFilePy = $ZipFile -replace '\\', '/' -replace '\.zip', ''
+& python -c "import shutil; shutil.make_archive('$ZipFilePy', 'zip', '$BundleDirPy')"
 
 Write-Host "  → Cleaning up bundle..." -ForegroundColor Gray
 Remove-Item $BundleDir -Recurse -Force
