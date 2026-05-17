@@ -27,7 +27,7 @@ docker-compose exec -T db dropdb -U odoo --if-exists assurcore_db || true
 docker-compose exec -T db createdb -U odoo assurcore_db
 
 echo "=== [6/6] Restoring PostgreSQL database dump ==="
-docker-compose exec -T db pg_restore -U odoo -d assurcore_db /backups/assurcore_db.dump
+docker-compose exec -T db pg_restore -U odoo -d assurcore_db /backups/assurcore_db.dump || true
 
 echo "=== Restarting Odoo web service to clear cache ==="
 docker-compose start web
