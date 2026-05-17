@@ -20,7 +20,7 @@ echo "=== [4/5] Waiting for database container to be healthy ==="
 sleep 15
 
 echo "=== [5/5] Restoring PostgreSQL database dump ==="
-docker-compose exec -T db pg_restore -U odoo -d postgres_system --clean --create /var/lib/postgresql/data/assurcore_db.dump
+docker-compose exec -T db pg_restore -U odoo -d postgres_system --clean --create /backups/assurcore_db.dump
 
 echo "=== Restarting Odoo web service to clear cache ==="
 docker-compose restart web
