@@ -76,7 +76,7 @@ services:
     # La variable ODOO_PORT est exportée par deploy_local.sh après détection
     # du premier port libre. La syntaxe ${VAR:-défaut} garantit un fallback.
     ports:
-      - "${ODOO_PORT:-8069}:8069"
+      - "${ODOO_PORT}:8069"
 
     environment:
       # Connexion à la base de données
