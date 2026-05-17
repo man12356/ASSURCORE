@@ -1,0 +1,246 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+================================================================================
+  AssurCore — Données initiales (data/insurance_data.xml)
+  Chargé avec noupdate="1" : ces enregistrements ne sont jamais écrasés
+  lors d'une mise à jour du module (upgrade).
+
+  Contenu :
+    1. Séquences (ir.sequence) pour la numérotation automatique
+    2. Taxes tunisiennes : Timbre Fiscal 1.000 TND (fixe) + TVA Courtage 7%
+    3. Crons planifiés (ir.cron)
+
+  RÈGLE ABSOLUE : Aucun montant fiscal n'est codé en dur dans le Python.
+  Ces enregistrements account.tax sont la SEULE source de vérité.
+  Pour changer le timbre fiscal (décret loi de finance), modifiez uniquement
+  le montant du record "tax_timbre_fiscal" dans la base de données —
+  tous les calculs se mettront à jour automatiquement.
+================================================================================
+-->
+<odoo>
+  <data noupdate="1">
+
+    <!-- ════════════════════════════════════════════════════════════════════ -->
+    <!--  1. SÉQUENCES — Numérotation automatique des documents              -->
+    <!-- ════════════════════════════════════════════════════════════════════ -->
+
+    <!-- Polices d'assurance : POL/2026/00001 -->
+    <record id="seq_insurance_policy" model="ir.sequence">
+      <field name="name">Police d'Assurance</field>
+      <field name="code">insurance.policy</field>
+      <field name="prefix">POL/%(year)s/</field>
+      <field name="suffix"/>
+      <field name="padding">5</field>
+      <field name="number_increment">1</field>
+      <field name="number_next">1</field>
+      <field name="use_date_range">True</field>
+      <field name="company_id" ref="base.main_company"/>
+    </record>
+
+    <!-- Quittances d'assurance : QT/2026/00001 -->
+    <record id="seq_insurance_receipt" model="ir.sequence">
+      <field name="name">Quittance d'Assurance</field>
+      <field name="code">insurance.receipt</field>
+      <field name="prefix">QT/%(year)s/</field>
+      <field name="suffix"/>
+      <field name="padding">5</field>
+      <field name="number_increment">1</field>
+      <field name="number_next">1</field>
+      <field name="use_date_range">True</field>
+      <field name="company_id" ref="base.main_company"/>
+    </record>
+
+    <!-- Sinistres : SIN/2026/0001 -->
+    <record id="seq_insurance_claim" model="ir.sequence">
+      <field name="name">Sinistre d'Assurance</field>
+      <field name="code">insurance.claim</field>
+      <field name="prefix">SIN/%(year)s/</field>
+      <field name="suffix"/>
+      <field name="padding">4</field>
+      <field name="number_increment">1</field>
+      <field name="number_next">1</field>
+      <field name="use_date_range">True</field>
+      <field name="company_id" ref="base.main_company"/>
+    </record>
+
+    <!-- Règlements / Chèques : REG/2026/00001 -->
+    <record id="seq_insurance_settlement" model="ir.sequence">
+      <field name="name">Règlement Assurance</field>
+      <field name="code">insurance.settlement</field>
+      <field name="prefix">REG/%(year)s/</field>
+      <field name="suffix"/>
+      <field name="padding">5</field>
+      <field name="number_increment">1</field>
+      <field name="number_next">1</field>
+      <field name="use_date_range">True</field>
+      <field name="company_id" ref="base.main_company"/>
+    </record>
+
+    <!-- Opérations / Avenants : OP/2026/00001 -->
+    <record id="seq_insurance_operation" model="ir.sequence">
+      <field name="name">Opération / Avenant</field>
+      <field name="code">insurance.operation</field>
+      <field name="prefix">OP/%(year)s/</field>
+      <field name="suffix"/>
+      <field name="padding">5</field>
+      <field name="number_increment">1</field>
+      <field name="number_next">1</field>
+      <field name="use_date_range">True</field>
+      <field name="company_id" ref="base.main_company"/>
+    </record>
+
+    <!-- Journées d'encaissement : JE/2026/001 -->
+    <record id="seq_insurance_journal_enc" model="ir.sequence">
+      <field name="name">Journée d'Encaissement</field>
+      <field name="code">insurance.journal.enc</field>
+      <field name="prefix">JE/%(year)s/</field>
+      <field name="suffix"/>
+      <field name="padding">3</field>
+      <field name="number_increment">1</field>
+      <field name="number_next">1</field>
+      <field name="use_date_range">True</field>
+      <field name="company_id" ref="base.main_company"/>
+    </record>
+
+
+    <!-- ════════════════════════════════════════════════════════════════════ -->
+    <!--  2. TAXES TUNISIENNES (account.tax)                                 -->
+    <!--                                                                     -->
+    <!--  IMPORTANT : Ces taxes sont la SEULE source de vérité pour les      -->
+    <!--  montants fiscaux. Ne jamais coder ces montants dans le Python.     -->
+    <!--  Mise à jour = modifier le champ "amount" ici ou via l'UI Odoo.    -->
+    <!-- ════════════════════════════════════════════════════════════════════ -->
+
+    <!--
+      TIMBRE FISCAL TUNISIEN — 1.000 TND (fixe)
+      ─────────────────────────────────────────
+      Type : Montant FIXE (non un pourcentage)
+      Applicable sur : chaque quittance d'assurance émise
+      Base légale : Code de la fiscalité (Art. 58 et suivants)
+      Révision annuelle : Loi de Finances — modifier "amount" si changement
+    -->
+    <record id="tax_timbre_fiscal" model="account.tax">
+      <field name="name">Timbre Fiscal TN — Assurance</field>
+      <field name="type_tax_use">sale</field>
+      <field name="amount_type">fixed</field>
+      <field name="amount">1.000</field>
+      <field name="description">TF-ASS</field>
+      <field name="sequence">90</field>
+      <field name="price_include">False</field>
+      <field name="include_base_amount">False</field>
+      <field name="is_base_affected">False</field>
+      <field name="company_id" ref="base.main_company"/>
+      <!-- Note : l'account_id (compte 447xxx Timbre Fiscal) doit être      -->
+      <!-- configuré manuellement selon le plan comptable de la société.    -->
+    </record>
+
+    <!--
+      TVA SUR LES HONORAIRES DE COURTAGE — 7%
+      ─────────────────────────────────────────
+      Type : Pourcentage
+      Applicable sur : honoraires de courtage uniquement (PAS sur la prime)
+      La prime pure est reversée brute à la compagnie — non soumise à TVA
+      Base légale : Code de TVA tunisien, section services financiers
+    -->
+    <record id="tax_tva_courtage_7" model="account.tax">
+      <field name="name">TVA Courtage Assurance 7% TN</field>
+      <field name="type_tax_use">sale</field>
+      <field name="amount_type">percent</field>
+      <field name="amount">7.00</field>
+      <field name="description">TVA-CRTG-7</field>
+      <field name="sequence">10</field>
+      <field name="price_include">False</field>
+      <field name="include_base_amount">False</field>
+      <field name="company_id" ref="base.main_company"/>
+    </record>
+
+    <!--
+      TVA 13% — Contrats spéciaux (Transports internationaux, etc.)
+      Disponible pour configuration, non utilisée par défaut
+    -->
+    <record id="tax_tva_courtage_13" model="account.tax">
+      <field name="name">TVA Courtage Assurance 13% TN</field>
+      <field name="type_tax_use">sale</field>
+      <field name="amount_type">percent</field>
+      <field name="amount">13.00</field>
+      <field name="description">TVA-CRTG-13</field>
+      <field name="sequence">11</field>
+      <field name="price_include">False</field>
+      <field name="include_base_amount">False</field>
+      <field name="company_id" ref="base.main_company"/>
+      <field name="active">False</field>
+    </record>
+
+    <!--
+      TVA 19% — Honoraires de conseil (risques complexes, RCP grandes entreprises)
+    -->
+    <record id="tax_tva_courtage_19" model="account.tax">
+      <field name="name">TVA Courtage Assurance 19% TN</field>
+      <field name="type_tax_use">sale</field>
+      <field name="amount_type">percent</field>
+      <field name="amount">19.00</field>
+      <field name="description">TVA-CRTG-19</field>
+      <field name="sequence">12</field>
+      <field name="price_include">False</field>
+      <field name="include_base_amount">False</field>
+      <field name="company_id" ref="base.main_company"/>
+      <field name="active">False</field>
+    </record>
+
+
+    <!-- ════════════════════════════════════════════════════════════════════ -->
+    <!--  3. PARAMÉTRAGE SOCIÉTÉ (res.company)                               -->
+    <!--     Lie les taxes ci-dessus comme valeurs par défaut                -->
+    <!-- ════════════════════════════════════════════════════════════════════ -->
+    <record id="base.main_company" model="res.company">
+      <field name="timbre_fiscal_tax_id" ref="tax_timbre_fiscal"/>
+      <field name="tva_courtage_tax_id" ref="tax_tva_courtage_7"/>
+    </record>
+
+
+    <!-- ════════════════════════════════════════════════════════════════════ -->
+    <!--  4. CRONS PLANIFIÉS (ir.cron)                                       -->
+    <!-- ════════════════════════════════════════════════════════════════════ -->
+
+    <!-- Verification quotidienne des etats des polices -->
+    <!-- model_id : XML ID auto-genere par Odoo lors de l'enregistrement du modele -->
+    <record id="cron_check_policy_states" model="ir.cron">
+      <field name="name">AssurCore - Verification etats polices</field>
+      <field name="model_id" search="[('model', '=', 'insurance.policy')]"/>
+      <field name="state">code</field>
+      <field name="code">model._cron_check_policy_states()</field>
+      <field name="interval_number">1</field>
+      <field name="interval_type">days</field>
+      <field name="numbercall">-1</field>
+      <field name="active">True</field>
+      <field name="user_id" ref="base.user_root"/>
+    </record>
+
+    <!-- Passage automatique des quittances en Contentieux (> 90 jours) -->
+    <record id="cron_update_overdue_receipts" model="ir.cron">
+      <field name="name">AssurCore - Contentieux automatique (90j+)</field>
+      <field name="model_id" search="[('model', '=', 'insurance.receipt')]"/>
+      <field name="state">code</field>
+      <field name="code">model._cron_update_overdue_receipts()</field>
+      <field name="interval_number">1</field>
+      <field name="interval_type">days</field>
+      <field name="numbercall">-1</field>
+      <field name="active">True</field>
+      <field name="user_id" ref="base.user_root"/>
+    </record>
+
+    <!-- Mise a jour statuts clients (fidelisation 5 ans) -->
+    <record id="cron_update_client_states" model="ir.cron">
+      <field name="name">AssurCore - Fidelisation automatique clients</field>
+      <field name="model_id" search="[('model', '=', 'res.partner')]"/>
+      <field name="state">code</field>
+      <field name="code">model._cron_update_client_states()</field>
+      <field name="interval_number">1</field>
+      <field name="interval_type">days</field>
+      <field name="numbercall">-1</field>
+      <field name="active">True</field>
+      <field name="user_id" ref="base.user_root"/>
+    </record>
+
+  </data>
+</odoo>

@@ -1,0 +1,159 @@
+// =============================================================================
+//  AssurCore — Design Tokens & Variables SCSS
+//  Source : Maquette AssurCourtage (deck1.pdf / deck2.pdf)  — Mai 2026
+//
+//  Ce fichier est injecté en PREPEND dans web._assets_primary_variables
+//  (voir __manifest__.py). Il surcharge les variables Bootstrap 5 et Odoo
+//  AVANT que le framework ne les consomme. Aucun CSS custom complexe n'est
+//  nécessaire : toutes les vues XML utilisent les classes Odoo natives.
+//
+//  Page 07/08 du deck : "Bleu assurance, statuts, encre — Inter 13 / radius 8/12"
+// =============================================================================
+
+
+// ── 1. PALETTE DE COULEURS (Design Tokens AssurCore) ─────────────────────────
+
+// Bleu Assurance — couleur primaire (confiance, institution financière)
+$ac-blue-900:   #0F1F5C;   // Titres foncés, hover navbar
+$ac-blue-700:   #1A3691;   // Variante sombre du primaire
+$ac-blue-600:   #1E40AF;   // PRIMARY — boutons principaux, liens actifs
+$ac-blue-500:   #2D5BD6;   // Hover d'éléments actifs, icônes
+$ac-blue-200:   #B6CCFF;   // Bordures légères, chips
+$ac-blue-100:   #DBE6FF;   // Fond des badges "À échoir", tags compagnie
+$ac-blue-50:    #EFF4FF;   // Fond des cards, bandeau info
+
+// Encre — typographie et surfaces neutres
+$ac-ink-900:    #0B1220;   // Texte principal (body)
+$ac-ink-700:    #2A3245;   // Sous-titres, labels
+$ac-ink-500:    #5A6276;   // Texte secondaire, placeholders
+$ac-ink-300:    #A4ABBC;   // Texte désactivé, icônes grises
+$ac-ink-100:    #E5E8EF;   // Bordures de champs, séparateurs
+$ac-ink-50:     #F0F2F7;   // Fond de lignes alternées (zebra)
+$ac-paper:      #F7F8FB;   // Fond de page (body background)
+$ac-white:      #FFFFFF;   // Surfaces : cards, modals, panneaux
+
+// Statuts financiers — codage couleur des quittances
+// Quittance PAYÉE / Encaissée
+$ac-success:    #15803D;
+$ac-success-bg: #E6F4EC;
+
+// Quittance IMPAYÉE / Contentieux
+$ac-danger:     #B91C1C;
+$ac-danger-bg:  #FCEAEA;
+
+// Quittance À ÉCHOIR / Partielle
+$ac-warning:    #B45309;
+$ac-warning-bg: #FEF1DC;
+
+// Information / Émise / Notifiée
+$ac-info:       #0369A1;
+$ac-info-bg:    #E1F1FA;
+
+// Reversée (compagnie réglée)
+$ac-reversed:   #6D28D9;
+$ac-reversed-bg:#EDE9FE;
+
+
+// ── 2. SURCHARGE BOOTSTRAP 5 (cascade vers le framework d'Odoo) ───────────────
+//  Page 08/08 du deck : "Les tokens cascadent vers Bootstrap via $primary, $border-radius, $body-bg"
+
+$primary:               $ac-blue-600;       // Odoo lit $primary pour o-brand-primary
+$secondary:             $ac-ink-500;
+$success:               $ac-success;
+$danger:                $ac-danger;
+$warning:               $ac-warning;
+$info:                  $ac-info;
+
+$body-bg:               $ac-paper;          // Fond général de l'application
+$body-color:            $ac-ink-900;        // Couleur de texte par défaut
+
+$border-color:          $ac-ink-100;        // Bordures des inputs, cards
+$border-radius:         8px;               // Radius standard (medium)
+$border-radius-sm:      6px;               // Radius petits éléments (badges)
+$border-radius-lg:      12px;              // Radius grandes cards / modals
+
+// Ombres portées
+$box-shadow-sm:         0 1px 2px rgba(11, 18, 32, .04);
+$box-shadow:            0 4px 12px -2px rgba(11, 18, 32, .06),
+                        0 2px 4px -2px rgba(11, 18, 32, .04);
+$box-shadow-lg:         0 18px 36px -12px rgba(11, 18, 32, .12);
+
+// Typographie — Inter + JetBrains Mono
+// (polices chargées dans le thème HTML, pas redéclarées ici pour éviter les doublons)
+$font-family-base:      'Inter', -apple-system, 'Segoe UI', Roboto, sans-serif;
+$font-family-monospace: 'JetBrains Mono', 'SFMono-Regular', Consolas, monospace;
+
+// Taille de base : 13px — densité native d'Odoo (page 07 du deck)
+$font-size-base:        0.8125rem;         // 13px
+$font-size-sm:          0.75rem;           // 12px
+$font-size-lg:          0.875rem;          // 14px
+
+$font-weight-normal:    400;
+$font-weight-medium:    500;               // Labels importants
+$font-weight-semibold:  600;               // Titres de section
+$font-weight-bold:      700;               // Valeurs financières (montants TND)
+
+$line-height-base:      1.45;
+
+
+// ── 3. SURCHARGE VARIABLES ODOO SPÉCIFIQUES ───────────────────────────────────
+//  Page 08/08 du deck : "Odoo lit ses propres variables SCSS — aligner les noms"
+
+// Couleurs marque Odoo (lues par les vues XML natives)
+$o-brand-primary:       $ac-blue-600;
+$o-brand-secondary:     $ac-blue-500;
+$o-action:              $ac-blue-600;
+
+// Formulaires
+$o-form-sheet-bg:       $ac-white;
+$o-form-sheet-radius:   $border-radius-lg;
+$o-form-label-color:    $ac-ink-700;
+
+// Statusbar (pipeline d'états en haut des form views)
+$o-statusbar-active-bg: $ac-blue-600;
+$o-statusbar-active-color: $ac-white;
+
+// Kanban
+$o-kanban-record-radius:$border-radius;
+$o-kanban-record-bg:    $ac-white;
+
+// Chatter
+$o-chatter-background:  $ac-paper;
+
+// Button box (Smart Buttons — oe_button_box)
+$o-button-box-radius:   $border-radius-sm;
+
+// Sidebar / menu
+$o-app-menu-background: $ac-blue-900;
+$o-app-menu-color:      rgba(255, 255, 255, .75);
+$o-app-menu-active-color: $ac-white;
+
+
+// ── 4. VARIABLES MÉTIER ASSURCORE ─────────────────────────────────────────────
+//  Variables spécifiques utilisées dans assurcore.scss
+
+// Badges des compagnies d'assurance (couleur par compagnie)
+$ac-star-color:         #1E40AF;   // STAR  — bleu institutionnel
+$ac-gat-color:          #15803D;   // GAT   — vert
+$ac-lloyd-color:        #7C3AED;   // LLOYD — violet
+$ac-comar-color:        #B45309;   // COMAR — orange
+$ac-astree-color:       #0369A1;   // ASTRÉE — bleu clair
+
+// KPI Dashboard
+$ac-kpi-card-bg:        $ac-white;
+$ac-kpi-card-radius:    $border-radius-lg;
+$ac-kpi-card-shadow:    $box-shadow;
+$ac-kpi-positive-color: $ac-success;
+$ac-kpi-negative-color: $ac-danger;
+
+// Top Impayés — seuils de retard (jours)
+$ac-overdue-moderate:   30;        // Orange : 30 à 59 jours
+$ac-overdue-severe:     60;        // Rouge  : 60 jours et plus
+
+// Pipeline Quittances — couleurs des étapes
+$ac-state-emise:        $ac-info;
+$ac-state-notifiee:     $ac-blue-500;
+$ac-state-partielle:    $ac-warning;
+$ac-state-encaissee:    $ac-success;
+$ac-state-reversee:     $ac-reversed;
+$ac-state-contentieux:  $ac-danger;

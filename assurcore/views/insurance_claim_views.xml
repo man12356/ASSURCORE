@@ -1,0 +1,539 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+================================================================================
+  AssurCore — Vues Sinistres (insurance.claim)
+  Référence maquette : deck2.pdf page 05
+
+  Architecture Odoo native (zéro JSX/React) :
+    <header>  + statusbar 6 états : Déclaré → Transmis → Expertise →
+              Indemnisation → Réglé → Clos
+    oe_button_box : Smart Button "Chronologie (N événements)"
+    Ruban "Attente" (warning) si état intermédiaire sans action depuis 7j
+    3 cartes financières : Réclamé | Expertise | Indemnité finale
+    <notebook> : Chronologie (timeline events) | Informations | Documents
+    <chatter/>  : messages + activités
+
+  Vues produites :
+    1. Form — Fiche Sinistre (principale)
+    2. Tree — Liste dense sinistres
+    3. Kanban — Board par état
+    4. Search — Filtres & groupements
+    5. Form — Fiche Événement chronologique
+    6. Actions + Menus
+================================================================================
+-->
+<odoo>
+
+  <!-- ══════════════════════════════════════════════════════════════════════ -->
+  <!--  1. VUE FORM — Fiche Sinistre (maquette page 05)                      -->
+  <!-- ══════════════════════════════════════════════════════════════════════ -->
+  <record id="view_insurance_claim_form" model="ir.ui.view">
+    <field name="name">insurance.claim.form</field>
+    <field name="model">insurance.claim</field>
+    <field name="arch" type="xml">
+      <form string="Sinistre d'Assurance">
+
+        <!-- ── Statusbar 6 états (maquette page 05) ──────────────────── -->
+        <header>
+          <field name="state"
+                 widget="statusbar"
+                 statusbar_visible="declare,transmis,expertise,indemnisation,regle"/>
+
+          <!-- Boutons de transition (pipeline) -->
+          <button name="action_transmettre"
+                  string="Transmettre à la compagnie"
+                  type="object"
+                  class="btn-primary"
+                  invisible="state != 'declare'"/>
+          <button name="action_expertise"
+                  string="Déclencher expertise"
+                  type="object"
+                  class="btn-secondary"
+                  invisible="state != 'transmis'"/>
+          <button name="action_indemnisation"
+                  string="Proposition indemnisation"
+                  type="object"
+                  class="btn-primary"
+                  invisible="state != 'expertise'"/>
+          <button name="action_regler"
+                  string="Régler le sinistre"
+                  type="object"
+                  class="btn-primary"
+                  invisible="state != 'indemnisation'"/>
+          <button name="action_clore"
+                  string="Clôturer"
+                  type="object"
+                  class="btn-secondary"
+                  invisible="state != 'regle'"/>
+          <button name="action_reopen"
+                  string="Réouvrir (recours)"
+                  type="object"
+                  class="btn-secondary"
+                  invisible="state not in ('regle', 'clos')"/>
+        </header>
+
+        <!-- ── Ruban "En attente" (ribbon warning — maquette page 05) ── -->
+        <div class="oe_ribbon oe_ribbon_warning"
+             invisible="state in ('regle', 'clos', 'declare')">
+          <span>Attente</span>
+        </div>
+
+        <sheet>
+          <!-- ── Smart Buttons ───────────────────────────────────────── -->
+          <div name="button_box" class="oe_button_box">
+            <button name="action_view_events"
+                    type="object"
+                    class="oe_stat_button"
+                    icon="fa-history">
+              <field name="event_count"
+                     widget="statinfo"
+                     string="Chronologie"/>
+            </button>
+            <button type="object"
+                    name="action_view_events"
+                    class="oe_stat_button"
+                    icon="fa-paperclip"
+                    invisible="hon_sin_facture == False">
+              <div class="o_field_widget o_stat_info">
+                <span class="o_stat_value">1</span>
+                <span class="o_stat_text">Facturé</span>
+              </div>
+            </button>
+          </div>
+
+          <!-- ── En-tête : Réf. Sinistre ──────────────────────────────── -->
+          <div class="oe_title">
+            <label for="name" string="Réf. Sinistre"/>
+            <h1>
+              <field name="name" placeholder="SIN/2026/0001"/>
+            </h1>
+            <div>
+              <field name="company_ins_id"
+                     options="{'no_create': True}"
+                     class="badge ac-badge-compagnie"/>
+              <field name="branche" class="badge badge-secondary ms-1"/>
+            </div>
+          </div>
+
+          <!-- ── 3 cartes financières (maquette page 05) ──────────────── -->
+          <!-- Réclamé | Expertise | Indemnité finale — progression colorée -->
+          <div class="row ac-financial-cards">
+            <div class="col-4">
+              <div class="ac-financial-card ac-card-neutral">
+                <div class="ac-card-label">Réclamé</div>
+                <div class="ac-card-value">
+                  <field name="montant_reclame"
+                         widget="monetary"
+                         options="{'currency_field': 'currency_id'}"/>
+                </div>
+              </div>
+            </div>
+            <div class="col-4">
+              <div class="ac-financial-card ac-card-info"
+                   invisible="montant_expertise == 0">
+                <div class="ac-card-label">Expertise</div>
+                <div class="ac-card-value">
+                  <field name="montant_expertise"
+                         widget="monetary"
+                         options="{'currency_field': 'currency_id'}"/>
+                </div>
+              </div>
+            </div>
+            <div class="col-4">
+              <div class="ac-financial-card ac-card-success"
+                   invisible="montant_indemnite == 0">
+                <div class="ac-card-label">Indemnité finale</div>
+                <div class="ac-card-value">
+                  <field name="montant_indemnite"
+                         widget="monetary"
+                         options="{'currency_field': 'currency_id'}"/>
+                </div>
+                <div class="ac-card-sub"
+                     invisible="franchise == 0">
+                  Franchise :
+                  <field name="franchise"
+                         widget="monetary"
+                         options="{'currency_field': 'currency_id'}"/>
+                </div>
+                <div class="ac-card-net text-success fw-bold"
+                     invisible="montant_indemnite_net == 0">
+                  Net :
+                  <field name="montant_indemnite_net"
+                         widget="monetary"
+                         options="{'currency_field': 'currency_id'}"/>
+                </div>
+              </div>
+            </div>
+          </div>
+          <!-- Alerte si indemnité > réclamé (anomalie) -->
+          <div class="alert alert-warning"
+               invisible="(montant_reclame == 0 or montant_indemnite &lt;= montant_reclame)">
+            <i class="fa fa-exclamation-triangle me-2"/>
+            L'indemnité proposée dépasse le montant réclamé. Vérifier le dossier.
+          </div>
+
+          <!-- ── Informations principales ─────────────────────────────── -->
+          <group>
+            <group string="Identification">
+              <field name="policy_id"
+                     options="{'no_create': True}"
+                     domain="[('state', 'in', ('active','unpaid'))]"/>
+              <field name="partner_id" readonly="1"/>
+              <field name="date_sinistre" widget="datetime"/>
+              <field name="date_declaration"/>
+              <field name="annee_sinistre"/>
+            </group>
+            <group string="Localisation &amp; Nature">
+              <field name="lieu_sinistre"/>
+              <field name="vehicule"
+                     invisible="branche != 'AUTO'"/>
+              <field name="categorie_indemnisation"/>
+              <field name="tiers"/>
+              <field name="ref_compagnie"/>
+            </group>
+          </group>
+
+          <!-- ── Onglets ───────────────────────────────────────────────── -->
+          <notebook>
+
+            <!-- Onglet Timeline (chronologie des événements — maquette) -->
+            <page string="Chronologie" name="chronologie">
+              <field name="event_ids">
+                <tree string="Événements"
+                      decoration-success="event_type in ('paiement','accord','cloture')"
+                      decoration-info="event_type in ('declaration','transmission')"
+                      decoration-warning="event_type in ('expertise','rapport','proposition')"
+                      decoration-danger="event_type == 'recours'">
+                  <field name="date_event" string="Date &amp; Heure" widget="datetime"/>
+                  <field name="event_type" string="Type" widget="badge"
+                         decoration-success="event_type in ('paiement','accord','cloture')"
+                         decoration-info="event_type in ('declaration','transmission')"
+                         decoration-warning="event_type in ('expertise','rapport','proposition')"
+                         decoration-danger="event_type == 'recours'"/>
+                  <field name="user_id" string="Auteur"
+                         widget="many2one_avatar_user" optional="show"/>
+                  <field name="description" string="Description"/>
+                  <field name="montant" string="Montant (TND)"
+                         widget="monetary"
+                         options="{'currency_field': 'currency_id'}"
+                         optional="show"/>
+                  <field name="is_done" optional="hide"/>
+                  <field name="attachment_ids" string="Pièces jointes"
+                         widget="many2many_binary" optional="show"/>
+                  <field name="currency_id" invisible="1"/>
+                </tree>
+                <form string="Ajouter un événement">
+                  <group>
+                    <field name="date_event" widget="datetime"/>
+                    <field name="event_type"/>
+                    <field name="user_id"/>
+                    <field name="montant"
+                           widget="monetary"
+                           options="{'currency_field': 'currency_id'}"/>
+                    <field name="is_done"/>
+                  </group>
+                  <field name="description" placeholder="Description de l'événement…"/>
+                  <field name="attachment_ids" widget="many2many_binary"
+                         string="Pièces jointes"/>
+                </form>
+              </field>
+            </page>
+
+            <!-- Onglet Expert -->
+            <page string="Expert &amp; Expertise" name="expertise">
+              <group>
+                <group string="Expert mandaté">
+                  <field name="expert_id"
+                         options="{'no_create': True}"/>
+                  <field name="date_expertise"/>
+                </group>
+                <group string="Montants expertise">
+                  <field name="montant_reclame"
+                         widget="monetary"
+                         options="{'currency_field': 'currency_id'}"/>
+                  <field name="montant_expertise"
+                         widget="monetary"
+                         options="{'currency_field': 'currency_id'}"/>
+                  <field name="montant_indemnite"
+                         widget="monetary"
+                         options="{'currency_field': 'currency_id'}"/>
+                  <field name="franchise"
+                         widget="monetary"
+                         options="{'currency_field': 'currency_id'}"/>
+                  <field name="montant_indemnite_net"
+                         widget="monetary"
+                         options="{'currency_field': 'currency_id'}"
+                         readonly="1"
+                         class="fw-bold"/>
+                </group>
+              </group>
+            </page>
+
+            <!-- Onglet Honoraires -->
+            <page string="Honoraires courtier" name="honoraires">
+              <group>
+                <field name="montant_honoraire_sin_ht"
+                       widget="monetary"
+                       options="{'currency_field': 'currency_id'}"/>
+                <field name="hon_sin_facture"/>
+                <field name="facture_indemnite_id" readonly="1"/>
+              </group>
+            </page>
+
+            <!-- Onglet Tags & Notes -->
+            <page string="Tags &amp; Notes" name="notes">
+              <group>
+                <field name="tag_ids" widget="many2many_tags"
+                       options="{'color_field': 'color', 'no_create': False}"/>
+              </group>
+              <field name="lib_sinistre"
+                     placeholder="Description détaillée du sinistre…"/>
+              <field name="notes" placeholder="Notes internes (non visibles du client)…"/>
+            </page>
+
+          </notebook>
+        </sheet>
+
+        <!-- ── Chatter Odoo natif ────────────────────────────────────── -->
+        <div class="oe_chatter">
+          <field name="message_follower_ids"/>
+          <field name="activity_ids"/>
+          <field name="message_ids"/>
+        </div>
+
+      </form>
+    </field>
+  </record>
+
+  <!-- ══════════════════════════════════════════════════════════════════════ -->
+  <!--  2. VUE LISTE — Sinistres                                              -->
+  <!-- ══════════════════════════════════════════════════════════════════════ -->
+  <record id="view_insurance_claim_tree" model="ir.ui.view">
+    <field name="name">insurance.claim.tree</field>
+    <field name="model">insurance.claim</field>
+    <field name="arch" type="xml">
+      <tree string="Sinistres"
+            decoration-success="state == 'regle'"
+            decoration-muted="state == 'clos'"
+            decoration-warning="state == 'expertise'"
+            decoration-danger="state == 'indemnisation'">
+        <field name="name" string="Réf. Sinistre"/>
+        <field name="partner_id" string="Assuré"/>
+        <field name="company_ins_id" string="Compagnie"/>
+        <field name="branche" string="Branche"/>
+        <field name="date_sinistre" string="Date sinistre" widget="date"/>
+        <field name="date_declaration" string="Déclaration" optional="show"/>
+        <field name="categorie_indemnisation" string="Catégorie" optional="show"/>
+        <field name="montant_reclame"
+               string="Réclamé (TND)"
+               widget="monetary"
+               options="{'currency_field': 'currency_id'}"
+               sum="Total réclamé"/>
+        <field name="montant_expertise"
+               string="Expertise (TND)"
+               widget="monetary"
+               options="{'currency_field': 'currency_id'}"
+               sum="Total expertise"
+               optional="show"/>
+        <field name="montant_indemnite"
+               string="Indemnité (TND)"
+               widget="monetary"
+               options="{'currency_field': 'currency_id'}"
+               sum="Total indemnité"/>
+        <field name="state"
+               string="État"
+               widget="badge"
+               decoration-info="state == 'declare'"
+               decoration-warning="state in ('transmis','expertise')"
+               decoration-success="state in ('regle','clos')"
+               decoration-danger="state == 'indemnisation'"/>
+        <field name="currency_id" invisible="1"/>
+      </tree>
+    </field>
+  </record>
+
+  <!-- ══════════════════════════════════════════════════════════════════════ -->
+  <!--  3. VUE KANBAN — Board Sinistres par état                              -->
+  <!-- ══════════════════════════════════════════════════════════════════════ -->
+  <record id="view_insurance_claim_kanban" model="ir.ui.view">
+    <field name="name">insurance.claim.kanban</field>
+    <field name="model">insurance.claim</field>
+    <field name="arch" type="xml">
+      <kanban default_group_by="state"
+              class="o_kanban_small_column"
+              quick_create="false">
+        <field name="name"/>
+        <field name="partner_id"/>
+        <field name="company_ins_id"/>
+        <field name="date_sinistre"/>
+        <field name="montant_reclame"/>
+        <field name="montant_indemnite"/>
+        <field name="state"/>
+        <field name="currency_id"/>
+        <templates>
+          <t t-name="kanban-box">
+            <div class="oe_kanban_global_click o_kanban_record">
+              <div class="o_kanban_record_top">
+                <strong class="o_kanban_record_title">
+                  <field name="name"/>
+                </strong>
+                <span class="badge ac-badge-compagnie">
+                  <field name="company_ins_id"/>
+                </span>
+              </div>
+              <div class="o_kanban_record_body">
+                <div>
+                  <i class="fa fa-user-o me-1"/>
+                  <field name="partner_id"/>
+                </div>
+                <div class="mt-1 text-muted small">
+                  <i class="fa fa-calendar me-1"/>
+                  <field name="date_sinistre" widget="date"/>
+                </div>
+                <div class="mt-2 fw-bold"
+                     t-if="record.montant_reclame.raw_value">
+                  <field name="montant_reclame"
+                         widget="monetary"
+                         options="{'currency_field': 'currency_id'}"/>
+                  <span class="text-muted small ms-1">réclamé</span>
+                </div>
+                <div class="text-success"
+                     t-if="record.montant_indemnite.raw_value">
+                  <field name="montant_indemnite"
+                         widget="monetary"
+                         options="{'currency_field': 'currency_id'}"/>
+                  <span class="text-muted small ms-1">indemnisé</span>
+                </div>
+              </div>
+            </div>
+          </t>
+        </templates>
+      </kanban>
+    </field>
+  </record>
+
+  <!-- ══════════════════════════════════════════════════════════════════════ -->
+  <!--  4. VUE RECHERCHE — Sinistres                                          -->
+  <!-- ══════════════════════════════════════════════════════════════════════ -->
+  <record id="view_insurance_claim_search" model="ir.ui.view">
+    <field name="name">insurance.claim.search</field>
+    <field name="model">insurance.claim</field>
+    <field name="arch" type="xml">
+      <search string="Rechercher un sinistre">
+        <field name="name" string="Réf. Sinistre"/>
+        <field name="partner_id" string="Assuré"/>
+        <field name="ref_compagnie" string="Réf. compagnie"/>
+        <field name="company_ins_id" string="Compagnie"/>
+        <field name="policy_id" string="Police"/>
+
+        <filter string="Ouverts" name="ouverts"
+                domain="[('state', 'not in', ('regle','clos'))]"/>
+        <filter string="En expertise" name="expertise"
+                domain="[('state', '=', 'expertise')]"/>
+        <filter string="En indemnisation" name="indemnisation"
+                domain="[('state', '=', 'indemnisation')]"/>
+        <filter string="Réglés" name="regles"
+                domain="[('state', '=', 'regle')]"/>
+        <separator/>
+        <filter string="Automobile" name="auto"
+                domain="[('branche', '=', 'AUTO')]"/>
+        <filter string="Sans expert" name="sans_expert"
+                domain="[('expert_id', '=', False)]"/>
+
+        <group expand="0" string="Regrouper par">
+          <filter string="État" name="group_state"
+                  context="{'group_by': 'state'}"/>
+          <filter string="Compagnie" name="group_compagnie"
+                  context="{'group_by': 'company_ins_id'}"/>
+          <filter string="Branche" name="group_branche"
+                  context="{'group_by': 'branche'}"/>
+          <filter string="Année" name="group_annee"
+                  context="{'group_by': 'date_sinistre:year'}"/>
+          <filter string="Commercial" name="group_commercial"
+                  context="{'group_by': 'commercial_id'}"/>
+        </group>
+      </search>
+    </field>
+  </record>
+
+  <!-- ══════════════════════════════════════════════════════════════════════ -->
+  <!--  5. VUE FORM — Événement chronologique                                 -->
+  <!-- ══════════════════════════════════════════════════════════════════════ -->
+  <record id="view_claim_event_form" model="ir.ui.view">
+    <field name="name">insurance.claim.event.form</field>
+    <field name="model">insurance.claim.event</field>
+    <field name="arch" type="xml">
+      <form string="Événement Sinistre">
+        <sheet>
+          <group>
+            <group>
+              <field name="claim_id" options="{'no_create': True}"/>
+              <field name="date_event" widget="datetime"/>
+              <field name="event_type"/>
+              <field name="user_id"/>
+              <field name="is_done"/>
+            </group>
+            <group>
+              <field name="montant"
+                     widget="monetary"
+                     options="{'currency_field': 'currency_id'}"/>
+            </group>
+          </group>
+          <field name="description"
+                 placeholder="Description détaillée de l'événement…"/>
+          <field name="attachment_ids" widget="many2many_binary"
+                 string="Pièces jointes (rapport expertise, constat, accord…)"/>
+        </sheet>
+      </form>
+    </field>
+  </record>
+
+  <!-- ══════════════════════════════════════════════════════════════════════ -->
+  <!--  6. ACTIONS                                                             -->
+  <!-- ══════════════════════════════════════════════════════════════════════ -->
+
+  <record id="action_insurance_claims" model="ir.actions.act_window">
+    <field name="name">Sinistres</field>
+    <field name="res_model">insurance.claim</field>
+    <field name="view_mode">tree,form,kanban</field>
+    <field name="view_ids"
+           eval="[(5, 0, 0),
+                  (0, 0, {'view_mode': 'tree',   'view_id': ref('view_insurance_claim_tree')}),
+                  (0, 0, {'view_mode': 'form',   'view_id': ref('view_insurance_claim_form')}),
+                  (0, 0, {'view_mode': 'kanban', 'view_id': ref('view_insurance_claim_kanban')})]"/>
+    <field name="search_view_id" ref="view_insurance_claim_search"/>
+    <field name="context">{'search_default_ouverts': 1}</field>
+    <field name="help" type="html">
+      <p class="o_view_nocontent_smiling_face">
+        Aucun sinistre enregistré
+      </p>
+      <p>
+        Déclarez un sinistre depuis la fiche d'une police.
+        Chaque étape (déclaration, expertise, indemnisation) est tracée
+        dans la chronologie du dossier.
+      </p>
+    </field>
+  </record>
+
+  <!-- ══════════════════════════════════════════════════════════════════════ -->
+  <!--  7. MENUS — Sinistres                                                   -->
+  <!-- ══════════════════════════════════════════════════════════════════════ -->
+
+  <menuitem id="menu_sinistres"
+            name="Sinistres"
+            parent="menu_assurcore_root"
+            sequence="40"/>
+
+  <menuitem id="menu_sinistres_all"
+            name="Tous les sinistres"
+            parent="menu_sinistres"
+            action="action_insurance_claims"
+            sequence="10"/>
+
+  <menuitem id="menu_sinistres_ouverts"
+            name="Sinistres ouverts"
+            parent="menu_sinistres"
+            action="action_insurance_claims"
+            sequence="20"/>
+
+</odoo>

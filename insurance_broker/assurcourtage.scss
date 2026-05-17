@@ -1,0 +1,137 @@
+// ============================================================================
+// AssurCourtage — Odoo 16/17 Backend Theme Overrides
+// ----------------------------------------------------------------------------
+// Drop this file in:  static/src/scss/_variables.scss  of your custom module
+// and import BEFORE Odoo's own variables so these win the cascade:
+//
+//   'web._assets_primary_variables': [
+//       ('prepend', 'assurcourtage/static/src/scss/_variables.scss'),
+//   ],
+//
+// Strategy: we override Bootstrap 5 + Odoo SCSS map entries only.
+// Zero custom CSS rules — every visual change cascades from these tokens.
+// ============================================================================
+
+
+// 1. Brand palette ───────────────────────────────────────────────────────────
+$ac-blue-50:   #EFF4FF;
+$ac-blue-100:  #DBE6FF;
+$ac-blue-200:  #B6CCFF;
+$ac-blue-500:  #2D5BD6;
+$ac-blue-600:  #1E40AF;   // PRIMARY — "Bleu Assurance"
+$ac-blue-700:  #1A3691;
+$ac-blue-900:  #0F1F5C;
+
+$ac-ink-900:   #0B1220;
+$ac-ink-700:   #2A3245;
+$ac-ink-500:   #5A6276;
+$ac-ink-300:   #A4ABBC;
+$ac-ink-100:   #E5E8EF;
+$ac-paper:     #F7F8FB;
+$ac-white:     #FFFFFF;
+
+$ac-success:   #15803D;   // Payé / encaissé
+$ac-success-bg:#E6F4EC;
+$ac-danger:    #B91C1C;   // Impayé / en retard
+$ac-danger-bg: #FCEAEA;
+$ac-warning:   #B45309;   // À échoir
+$ac-warning-bg:#FEF1DC;
+$ac-info:      #0369A1;
+$ac-info-bg:   #E1F1FA;
+
+
+// 2. Bootstrap 5 overrides (consumed by Odoo's web bundle) ───────────────────
+$primary:      $ac-blue-600;
+$secondary:    $ac-ink-500;
+$success:      $ac-success;
+$danger:       $ac-danger;
+$warning:      $ac-warning;
+$info:         $ac-info;
+$light:        $ac-paper;
+$dark:         $ac-ink-900;
+
+$body-bg:      $ac-paper;
+$body-color:   $ac-ink-900;
+
+$border-color: $ac-ink-100;
+$border-radius:    .5rem;   //  8px — cards, inputs
+$border-radius-sm: .375rem; //  6px — badges, small buttons
+$border-radius-lg: .75rem;  // 12px — modals, smart buttons
+
+$box-shadow-sm: 0 1px 2px rgba(11,18,32,.04);
+$box-shadow:    0 4px 12px -2px rgba(11,18,32,.06), 0 2px 4px -2px rgba(11,18,32,.04);
+$box-shadow-lg: 0 18px 36px -12px rgba(11,18,32,.12);
+
+
+// 3. Typography ──────────────────────────────────────────────────────────────
+$font-family-sans-serif: 'Inter', -apple-system, 'Segoe UI', Roboto, sans-serif;
+$font-family-monospace:  'JetBrains Mono', 'SFMono-Regular', Consolas, monospace;
+
+$font-size-base:   .8125rem;   // 13px — Odoo compact baseline
+$line-height-base: 1.45;
+$h1-font-size:     1.5rem;
+$h2-font-size:     1.25rem;
+$h3-font-size:     1.0625rem;
+
+$headings-font-weight: 600;
+$headings-color:       $ac-ink-900;
+$headings-letter-spacing: -.01em;
+
+
+// 4. Odoo-specific SCSS map overrides ────────────────────────────────────────
+// These are the canonical hooks Odoo's web/_variables.scss reads.
+
+$o-brand-primary:        $ac-blue-600;
+$o-brand-secondary:      $ac-blue-500;
+$o-brand-odoo:           $ac-blue-600;   // sidebar / nav highlights
+$o-brand-lightsecondary: $ac-blue-50;
+
+$o-action:               $ac-blue-600;
+$o-view-background-color:$ac-paper;
+$o-webclient-background-color: $ac-paper;
+
+$o-main-text-color:      $ac-ink-900;
+$o-main-color-muted:     $ac-ink-500;
+$o-main-border-color:    $ac-ink-100;
+
+// Control Panel
+$o-control-panel-bg:     $ac-white;
+$o-control-panel-height: 52px;
+$o-control-panel-border: 1px solid $ac-ink-100;
+
+// Form view
+$o-form-lightsecondary:  $ac-ink-100;
+$o-form-title-fontsize:  1.5rem;
+$o-form-sheet-bg:        $ac-white;
+$o-form-sheet-radius:    .75rem;
+
+// Statusbar (pipeline)
+$o-statusbar-arrow-padding:  1rem;
+$o-statusbar-active-bg:      $ac-blue-600;
+$o-statusbar-active-color:   $ac-white;
+
+// Smart buttons (oe_button_box)
+$o-button-box-border:    1px solid $ac-ink-100;
+$o-button-box-radius:    .75rem;
+$o-button-box-bg-hover:  $ac-blue-50;
+
+// Kanban
+$o-kanban-record-radius: .75rem;
+$o-kanban-record-shadow: $box-shadow-sm;
+$o-kanban-record-shadow-hover: $box-shadow;
+$o-kanban-color-border-width: 3px;
+
+// Chatter
+$o-chatter-background:   $ac-paper;
+$o-chatter-border:       1px solid $ac-ink-100;
+
+
+// 5. Status semantic tokens (badges, ribbons) ────────────────────────────────
+$o-tag-bg-paid:        $ac-success-bg;
+$o-tag-color-paid:     $ac-success;
+$o-tag-bg-unpaid:      $ac-danger-bg;
+$o-tag-color-unpaid:   $ac-danger;
+$o-tag-bg-pending:     $ac-warning-bg;
+$o-tag-color-pending:  $ac-warning;
+$o-tag-bg-info:        $ac-info-bg;
+$o-tag-color-info:     $ac-info;

@@ -1,0 +1,133 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+
+  <!-- ══════════════════════════════════════════════════════════════════════ -->
+  <!--  VUE FORM — Risque Assurable                                            -->
+  <!-- ══════════════════════════════════════════════════════════════════════ -->
+  <record id="view_insurance_risk_form" model="ir.ui.view">
+    <field name="name">insurance.risk.form</field>
+    <field name="model">insurance.risk</field>
+    <field name="arch" type="xml">
+      <form string="Risque Assurable">
+        <sheet>
+          <div class="oe_title">
+            <label for="name"/>
+            <h1><field name="name" placeholder="Ex: Comptant, Terme..."/></h1>
+          </div>
+          <group>
+            <field name="branche"/>
+            <field name="branche_oracle" readonly="1"
+                   invisible="branche_oracle == False"/>
+          </group>
+        </sheet>
+      </form>
+    </field>
+  </record>
+
+  <!-- ══════════════════════════════════════════════════════════════════════ -->
+  <!--  VUE LISTE — Risques                                                    -->
+  <!-- ══════════════════════════════════════════════════════════════════════ -->
+  <record id="view_insurance_risk_tree" model="ir.ui.view">
+    <field name="name">insurance.risk.tree</field>
+    <field name="model">insurance.risk</field>
+    <field name="arch" type="xml">
+      <tree editable="top">
+        <field name="name"/>
+        <field name="branche"/>
+        <field name="branche_oracle" optional="hide"/>
+        <field name="active"/>
+      </tree>
+    </field>
+  </record>
+
+  <!-- ══════════════════════════════════════════════════════════════════════ -->
+  <!--  VUE FORM — Code d'Opération                                            -->
+  <!-- ══════════════════════════════════════════════════════════════════════ -->
+  <record id="view_insurance_op_code_form" model="ir.ui.view">
+    <field name="name">insurance.operation.code.form</field>
+    <field name="model">insurance.operation.code</field>
+    <field name="arch" type="xml">
+      <form string="Code d'Opération">
+        <sheet>
+          <div class="oe_title">
+            <label for="display_name"/>
+            <h1><field name="display_name" readonly="1"/></h1>
+          </div>
+          <group>
+            <group>
+              <field name="code"/>
+              <field name="type_operation"/>
+              <field name="active"/>
+            </group>
+            <group>
+              <field name="montant_honoraire_defaut" widget="monetary"/>
+              <field name="taux_honoraire_defaut" widget="percentage"/>
+            </group>
+          </group>
+          <field name="designation"/>
+          <field name="libelle_honoraire" placeholder="Texte honoraires..."/>
+          <field name="description" placeholder="Description détaillée..."/>
+        </sheet>
+      </form>
+    </field>
+  </record>
+
+  <!-- ══════════════════════════════════════════════════════════════════════ -->
+  <!--  VUE LISTE — Codes Opérations (matrice)                                 -->
+  <!-- ══════════════════════════════════════════════════════════════════════ -->
+  <record id="view_insurance_op_code_tree" model="ir.ui.view">
+    <field name="name">insurance.operation.code.tree</field>
+    <field name="model">insurance.operation.code</field>
+    <field name="arch" type="xml">
+      <tree editable="top">
+        <field name="code"/>
+        <field name="designation"/>
+        <field name="type_operation"/>
+        <field name="montant_honoraire_defaut" optional="show"/>
+        <field name="taux_honoraire_defaut" widget="percentage" optional="hide"/>
+        <field name="active" optional="hide"/>
+      </tree>
+    </field>
+  </record>
+
+  <!-- ══════════════════════════════════════════════════════════════════════ -->
+  <!--  ACTIONS + MENUS                                                         -->
+  <!-- ══════════════════════════════════════════════════════════════════════ -->
+
+  <record id="action_insurance_risks" model="ir.actions.act_window">
+    <field name="name">Risques Assurables</field>
+    <field name="res_model">insurance.risk</field>
+    <field name="view_mode">tree,form</field>
+    <field name="help" type="html">
+      <p class="o_view_nocontent_smiling_face">
+        Importez les risques depuis PR_RISQUE (37 types)
+      </p>
+    </field>
+  </record>
+
+  <record id="action_insurance_op_codes" model="ir.actions.act_window">
+    <field name="name">Codes d'Opérations</field>
+    <field name="res_model">insurance.operation.code</field>
+    <field name="view_mode">tree,form</field>
+    <field name="help" type="html">
+      <p class="o_view_nocontent_smiling_face">
+        Importez les codes depuis PR_CODE_OPERATION (87 codes)
+      </p>
+    </field>
+  </record>
+
+  <menuitem id="menu_assurcore_risks"
+            name="Risques"
+            parent="menu_assurcore_parametrage"
+            action="action_insurance_risks"
+            sequence="30"
+            groups="assurcore.group_assurcore_manager"/>
+
+  <menuitem id="menu_assurcore_op_codes"
+            name="Codes Opérations"
+            parent="menu_assurcore_parametrage"
+            action="action_insurance_op_codes"
+            sequence="40"
+            groups="assurcore.group_assurcore_manager"/>
+
+</odoo>

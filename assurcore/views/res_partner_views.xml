@@ -1,0 +1,468 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+================================================================================
+  AssurCore — Fiche Client Famille / Payeur
+  Référence maquette : deck2.pdf page 04
+
+  Architecture Odoo native utilisée (zéro JSX / zéro React) :
+    <header>          → statusbar du cycle de vie client
+    oe_button_box     → Smart Buttons (Polices, Quittances, Impayés, Sinistres, YTD)
+    oe_title          → Nom + badge catégorie
+    ac-solde-global   → Solde consolidé (rouge si dû / bleu si à jour)
+    <notebook>        → Onglets : Membres, Polices, Quittances, Sinistres
+    <chatter/>        → Chatter Odoo natif
+
+  Ce fichier HÉRITE de la vue partner standard d'Odoo (base.view_partner_form)
+  via des xpath afin de ne jamais casser l'écosystème Odoo natif.
+================================================================================
+-->
+<odoo>
+
+  <!-- Menu racine AssurCore -->
+  <menuitem id="menu_assurcore_root"
+            name="AssurCore"
+            sequence="10"
+            web_icon="assurcore,static/src/img/module_icon.png"/>
+
+  <!-- Sous-menu Trésorerie (défini tôt pour éviter les erreurs de dépendance) -->
+  <menuitem id="menu_tresorerie"
+            name="Trésorerie"
+            parent="menu_assurcore_root"
+            sequence="20"/>
+
+  <!-- ══════════════════════════════════════════════════════════════════════ -->
+  <!--  1. HÉRITAGE VUE FORM — res.partner                                   -->
+  <!-- ══════════════════════════════════════════════════════════════════════ -->
+  <record id="view_partner_assurcore_form" model="ir.ui.view">
+    <field name="name">res.partner.assurcore.form</field>
+    <field name="model">res.partner</field>
+    <field name="inherit_id" ref="base.view_partner_form"/>
+    <field name="priority">20</field>
+    <field name="arch" type="xml">
+
+      <!-- ── 1.1 Statusbar : injecté AVANT <sheet> car res.partner n'a pas ── -->
+      <!-- de <header> natif dans Odoo 17. On le crée ici.                    -->
+      <!-- Maquette : Prospect → Actif → Fidèle 5+ → VIP → Résilié           -->
+      <xpath expr="//sheet" position="before">
+        <header>
+          <field name="client_state"
+                 widget="statusbar"
+                 statusbar_visible="prospect,actif,fidele,vip"
+                 options="{'clickable': '1'}"/>
+        </header>
+      </xpath>
+
+      <!-- ── 1.2 Smart Buttons (oe_button_box) ────────────────────────────  -->
+      <!-- Maquette : 47 Quittances · 1 245 TND impayé · 5 Polices actives   -->
+      <!--            7 150 TND encaissé YTD · Sinistres · Membres            -->
+      <xpath expr="//div[@name='button_box']" position="inside">
+
+        <!-- Polices actives -->
+        <button name="action_view_policies"
+                type="object"
+                class="oe_stat_button"
+                icon="fa-file-text-o"
+                invisible="policy_count == 0">
+          <field name="policy_count"
+                 widget="statinfo"
+                 string="Polices"/>
+        </button>
+
+        <!-- Quittances (toutes) -->
+        <button name="action_view_receipts"
+                type="object"
+                class="oe_stat_button"
+                icon="fa-list-alt"
+                invisible="receipt_count == 0">
+          <field name="receipt_count"
+                 widget="statinfo"
+                 string="Quittances"/>
+        </button>
+
+        <!-- Impayés — badge danger si > 0 (maquette : badge rouge "! 1") -->
+        <button name="action_view_impayes"
+                type="object"
+                class="oe_stat_button btn-danger"
+                icon="fa-exclamation-triangle"
+                invisible="impaye_count == 0">
+          <div class="o_field_widget o_stat_info">
+            <span class="o_stat_value">
+              <field name="impaye_count"/>
+            </span>
+            <span class="o_stat_text">Impayé(s)</span>
+          </div>
+        </button>
+
+        <!-- Sinistres -->
+        <button name="action_view_claims"
+                type="object"
+                class="oe_stat_button"
+                icon="fa-ambulance"
+                invisible="claim_count == 0">
+          <field name="claim_count"
+                 widget="statinfo"
+                 string="Sinistres"/>
+        </button>
+
+        <!-- Encaissé YTD — maquette : "€ 7 150" -->
+        <button type="object"
+                name="action_view_receipts"
+                class="oe_stat_button"
+                icon="fa-check-circle-o"
+                invisible="total_encaisse_ytd == 0">
+          <div class="o_field_widget o_stat_info">
+            <span class="o_stat_value">
+              <field name="total_encaisse_ytd"
+                     widget="monetary"
+                     options="{'currency_field': 'currency_id'}"/>
+            </span>
+            <span class="o_stat_text">Encaissé YTD</span>
+          </div>
+        </button>
+
+        <!-- Membres famille (visible uniquement si payeur principal) -->
+        <button type="object"
+                name="action_view_policies"
+                class="oe_stat_button"
+                icon="fa-users"
+                invisible="not is_payer">
+          <field name="family_member_count"
+                 widget="statinfo"
+                 string="Membres"/>
+        </button>
+
+      </xpath>
+
+      <!-- ── 1.3 Ruban VIP (oe_ribbon) ────────────────────────────────────  -->
+      <!-- Maquette : pastille colorée en coin supérieur droit pour VIP       -->
+      <xpath expr="//div[hasclass('oe_title')]" position="before">
+        <div class="oe_ribbon"
+             invisible="client_state != 'vip'">
+          <span>VIP</span>
+        </div>
+        <div class="oe_ribbon oe_ribbon_warning"
+             invisible="client_state != 'resilie'">
+          <span>Résilié</span>
+        </div>
+      </xpath>
+
+      <!-- ── 1.4 Highlight Solde Global — après oe_title ─────────────────── -->
+      <!-- Maquette : bloc à droite du nom, rouge si dû / bleu si à jour      -->
+      <!-- Classe CSS ac-solde-ok / ac-solde-du pilotées par assurcore.scss   -->
+      <xpath expr="//div[hasclass('oe_title')]" position="after">
+        <div class="ac-solde-global"
+             invisible="solde_caisse_consolide == 0">
+          <label for="solde_caisse_consolide" string="Solde global famille"/>
+          <field name="solde_caisse_consolide"
+                 widget="monetary"
+                 options="{'currency_field': 'currency_id'}"
+                 class="ac-solde-value"/>
+          <!-- Indication visuelle : rouge si négatif (dette), vert si positif -->
+          <span class="badge ac-badge-danger"
+                invisible="solde_caisse_consolide &gt;= 0">
+            Doit payer
+          </span>
+          <span class="badge ac-badge-success"
+                invisible="solde_caisse_consolide &lt; 0">
+            À jour
+          </span>
+        </div>
+      </xpath>
+
+      <!-- ── 1.5 Champs identité tunisienne — dans l'onglet "Ventes &amp; Achats" -->
+      <xpath expr="//page[@name='sales_purchases']" position="before">
+
+        <!-- ── Onglet : Famille / Membres ── -->
+        <!-- Maquette page 04 : cards Mohamed · Leïla · Yassine · Sarra      -->
+        <page string="Famille / Membres" name="famille">
+          <group>
+            <group string="Configuration payeur">
+              <field name="is_payer"/>
+              <field name="payer_partner_id"
+                     invisible="is_payer == True" required="False"
+                     options="{'no_create': True, 'no_open': True}"/>
+            </group>
+            <group string="Identité tunisienne">
+              <field name="cin"/>
+              <field name="matricule_fiscal"
+                     invisible="not is_company"/>
+              <field name="registre_commerce"
+                     invisible="not is_company"/>
+              <field name="assujetti_tva"/>
+              <field name="taux_remise"
+                     widget="percentage"/>
+              <field name="categorie_client"/>
+            </group>
+          </group>
+
+          <!-- Cards membres de la famille (si payeur principal) -->
+          <group string="Membres du foyer"
+                 invisible="not is_payer">
+            <field name="family_member_ids"
+                   widget="many2many_tags"
+                   options="{'color_field': 'color', 'no_create': True}"/>
+          </group>
+
+          <!-- Table membres avec statut -->
+          <field name="family_member_ids"
+                 invisible="not is_payer"
+                 nolabel="1">
+            <tree string="Membres de la famille" editable="bottom">
+              <field name="name" string="Membre"/>
+              <field name="mobile" string="Mobile"/>
+              <field name="cin" string="CIN"/>
+              <field name="client_state"
+                     string="Statut"
+                     widget="badge"
+                     decoration-success="client_state in ('actif','fidele','vip')"
+                     decoration-warning="client_state == 'prospect'"
+                     decoration-danger="client_state == 'resilie'"/>
+              <field name="policy_count" string="Polices"/>
+              <field name="impaye_count"
+                     string="Impayés"
+                     decoration-danger="impaye_count &gt; 0"/>
+              <field name="solde_caisse_consolide"
+                     string="Solde"
+                     widget="monetary"
+                     options="{'currency_field': 'currency_id'}"
+                     decoration-danger="solde_caisse_consolide &lt; 0"
+                     decoration-success="solde_caisse_consolide &gt;= 0"/>
+            </tree>
+          </field>
+
+          <!-- Ancienneté client -->
+          <group string="Ancienneté">
+            <field name="date_premiere_police"/>
+            <field name="anciennete_annees" string="Années de fidélité"/>
+          </group>
+        </page>
+
+        <!-- ── Onglet : Polices ── -->
+        <page string="Polices actives" name="polices">
+          <field name="policy_ids" nolabel="1">
+            <tree string="Polices" decoration-muted="state == 'canceled'"
+                  decoration-warning="state == 'unpaid'"
+                  decoration-danger="state == 'expired'">
+              <field name="num_police" string="N° Police"/>
+              <field name="company_ins_id" string="Compagnie"/>
+              <field name="branche" string="Branche"/>
+              <field name="risque" string="Risque"/>
+              <field name="date_effect" string="Effet"/>
+              <field name="date_echeance" string="Échéance"/>
+              <field name="jours_avant_echeance"
+                     string="Jours restants"
+                     decoration-danger="jours_avant_echeance &lt; 0"
+                     decoration-warning="jours_avant_echeance &lt;= 30 and jours_avant_echeance &gt;= 0"/>
+              <field name="prime_nette"
+                     string="Prime (TND)"
+                     widget="monetary"
+                     options="{'currency_field': 'currency_id'}"/>
+              <field name="total_impaye"
+                     string="Impayé (TND)"
+                     widget="monetary"
+                     options="{'currency_field': 'currency_id'}"
+                     decoration-danger="total_impaye &gt; 0"/>
+              <field name="state"
+                     string="État"
+                     widget="badge"
+                     decoration-success="state == 'active'"
+                     decoration-warning="state == 'unpaid'"
+                     decoration-danger="state in ('expired','canceled')"/>
+              <field name="currency_id" invisible="1"/>
+            </tree>
+          </field>
+        </page>
+
+        <!-- ── Onglet : Quittances ── -->
+        <page string="Quittances" name="quittances">
+          <!-- Includes payer receipts (famille consolidée) -->
+          <field name="receipt_ids" nolabel="1"
+                 domain="['|', ('partner_id','=',id), ('payer_id','=',id)]">
+            <tree string="Quittances"
+                  decoration-danger="state == 'contentieux' or (is_overdue and overdue_severity == 'severe')"
+                  decoration-warning="is_overdue and overdue_severity == 'moderate'"
+                  decoration-success="state in ('encaissee','reversee')">
+              <field name="name" string="N° Quittance"/>
+              <field name="partner_id" string="Assuré"/>
+              <field name="company_ins_id" string="Compagnie"/>
+              <field name="branche" string="Branche"/>
+              <field name="date_echeance" string="Échéance"/>
+              <field name="amount_total"
+                     string="TTC (TND)"
+                     widget="monetary"
+                     options="{'currency_field': 'currency_id'}"/>
+              <field name="amount_paid"
+                     string="Encaissé (TND)"
+                     widget="monetary"
+                     options="{'currency_field': 'currency_id'}"/>
+              <field name="amount_residual"
+                     string="Reste dû"
+                     widget="monetary"
+                     options="{'currency_field': 'currency_id'}"
+                     decoration-danger="amount_residual &gt; 0"/>
+              <field name="jours_retard"
+                     string="Retard (j)"
+                     decoration-danger="jours_retard &gt; 60"
+                     decoration-warning="jours_retard &gt; 30 and jours_retard &lt;= 60"/>
+              <field name="state"
+                     string="État"
+                     widget="badge"
+                     decoration-success="state in ('encaissee','reversee')"
+                     decoration-warning="state == 'partielle'"
+                     decoration-danger="state == 'contentieux'"
+                     decoration-info="state in ('emise','notifiee')"/>
+              <field name="is_overdue" invisible="1"/>
+              <field name="overdue_severity" invisible="1"/>
+              <field name="currency_id" invisible="1"/>
+            </tree>
+          </field>
+        </page>
+
+        <!-- ── Onglet : Sinistres ── -->
+        <page string="Sinistres" name="sinistres"
+              invisible="claim_count == 0">
+          <field name="claim_ids" nolabel="1"
+                 domain="[('partner_id','=',id)]">
+            <tree string="Sinistres">
+              <field name="name" string="Réf. Sinistre"/>
+              <field name="policy_id" string="Police"/>
+              <field name="company_ins_id" string="Compagnie"/>
+              <field name="date_sinistre" string="Date sinistre"/>
+              <field name="lib_sinistre" string="Libellé"/>
+              <field name="montant_reclame"
+                     string="Réclamé (TND)"
+                     widget="monetary"
+                     options="{'currency_field': 'currency_id'}"/>
+              <field name="montant_indemnite"
+                     string="Indemnité (TND)"
+                     widget="monetary"
+                     options="{'currency_field': 'currency_id'}"/>
+              <field name="state"
+                     string="État"
+                     widget="badge"
+                     decoration-success="state == 'regle'"
+                     decoration-warning="state in ('expertise','indemnisation')"
+                     decoration-danger="state == 'clos'"
+                     decoration-info="state == 'declare'"/>
+              <field name="currency_id" invisible="1"/>
+            </tree>
+          </field>
+        </page>
+
+      </xpath>
+
+    </field>
+  </record>
+
+  <!-- ══════════════════════════════════════════════════════════════════════ -->
+  <!--  2. VUE LISTE clients assurance                                        -->
+  <!-- ══════════════════════════════════════════════════════════════════════ -->
+  <record id="view_partner_assurcore_list" model="ir.ui.view">
+    <field name="name">res.partner.assurcore.list</field>
+    <field name="model">res.partner</field>
+    <field name="arch" type="xml">
+      <tree string="Clients AssurCore"
+            decoration-warning="client_state == 'prospect'"
+            decoration-muted="client_state == 'resilie'"
+            decoration-danger="impaye_count &gt; 0">
+        <field name="name" string="Nom / Raison sociale"/>
+        <field name="cin" string="CIN" optional="show"/>
+        <field name="matricule_fiscal" string="Matricule Fiscal" optional="hide"/>
+        <field name="mobile" optional="show"/>
+        <field name="email" optional="hide"/>
+        <field name="client_state"
+               string="Statut"
+               widget="badge"
+               decoration-success="client_state in ('actif','fidele','vip')"
+               decoration-warning="client_state == 'prospect'"
+               decoration-danger="client_state == 'resilie'"/>
+        <field name="policy_count" string="Polices" optional="show"/>
+        <field name="impaye_count"
+               string="Impayés"
+               decoration-danger="impaye_count &gt; 0"
+               optional="show"/>
+        <field name="solde_caisse_consolide"
+               string="Solde (TND)"
+               widget="monetary"
+               options="{'currency_field': 'currency_id'}"
+               decoration-danger="solde_caisse_consolide &lt; 0"
+               optional="show"/>
+        <field name="anciennete_annees" string="Ancienneté (ans)" optional="hide"/>
+        <field name="is_payer" string="Payeur famille" optional="hide"/>
+        <field name="currency_id" invisible="1"/>
+      </tree>
+    </field>
+  </record>
+
+  <!-- ══════════════════════════════════════════════════════════════════════ -->
+  <!--  3. VUE RECHERCHE — filtres et groupements métier assurance            -->
+  <!-- ══════════════════════════════════════════════════════════════════════ -->
+  <record id="view_partner_assurcore_search" model="ir.ui.view">
+    <field name="name">res.partner.assurcore.search</field>
+    <field name="model">res.partner</field>
+    <field name="arch" type="xml">
+      <search string="Rechercher un client">
+        <field name="name" string="Nom"/>
+        <field name="cin" string="N° CIN"/>
+        <field name="matricule_fiscal" string="Matricule Fiscal"/>
+        <field name="mobile" string="Mobile"/>
+        <field name="email" string="E-mail"/>
+
+        <!-- Filtres rapides -->
+        <filter string="Clients actifs" name="actifs"
+                domain="[('client_state', '=', 'actif')]"/>
+        <filter string="VIP" name="vip"
+                domain="[('client_state', '=', 'vip')]"/>
+        <!-- <filter string="Avec impayés" name="impayes" domain="[('impaye_count', '&gt;', 0)]"/> -->
+        <filter string="Payeurs famille" name="payeurs"
+                domain="[('is_payer', '=', True)]"/>
+        <filter string="Prospects" name="prospects"
+                domain="[('client_state', '=', 'prospect')]"/>
+        <separator/>
+        <filter string="Résiliés" name="resilies"
+                domain="[('client_state', '=', 'resilie')]"/>
+
+        <!-- Groupements -->
+        <group expand="0" string="Regrouper par">
+          <filter string="Statut client" name="group_state"
+                  context="{'group_by': 'client_state'}"/>
+          <filter string="Catégorie" name="group_categorie"
+                  context="{'group_by': 'categorie_client'}"/>
+          <filter string="Commercial" name="group_commercial"
+                  context="{'group_by': 'user_id'}"/>
+        </group>
+      </search>
+    </field>
+  </record>
+
+  <!-- ══════════════════════════════════════════════════════════════════════ -->
+  <!--  4. ACTION Fenêtre — Clients AssurCore                                 -->
+  <!-- ══════════════════════════════════════════════════════════════════════ -->
+  <record id="action_assurcore_clients" model="ir.actions.act_window">
+    <field name="name">Clients</field>
+    <field name="res_model">res.partner</field>
+    <field name="view_mode">tree,form</field>
+    <field name="view_ids"
+           eval="[(5, 0, 0),
+                  (0, 0, {'view_mode': 'tree', 'view_id': ref('view_partner_assurcore_list')}),
+                  (0, 0, {'view_mode': 'form', 'view_id': ref('view_partner_assurcore_form')})]"/>
+    <field name="domain">[('customer_rank', '&gt;', 0)]</field>
+    <field name="context">{
+      'default_customer_rank': 1,
+      'search_default_actifs': 1
+    }</field>
+    <field name="search_view_id" ref="view_partner_assurcore_search"/>
+    <field name="help" type="html">
+      <p class="o_view_nocontent_smiling_face">
+        Créez votre premier client AssurCore
+      </p>
+      <p>
+        Gérez vos assurés, leurs polices et le suivi des quittances
+        depuis cette vue unifiée. La structure Famille/Payeur vous permet
+        de centraliser les règl
+ements multi-membres.
+      </p>
+    </field>
+  </record>
+
+</odoo>

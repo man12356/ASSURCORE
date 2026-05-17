@@ -1,0 +1,333 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8" />
+<title>AssurCourtage — Maquette Odoo · Export PDF</title>
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
+
+<style>
+  /* Tokens — mirrors assurcourtage.scss as CSS vars */
+  :root {
+    --ac-blue-50:  #EFF4FF; --ac-blue-100: #DBE6FF; --ac-blue-200: #B6CCFF;
+    --ac-blue-500: #2D5BD6; --ac-blue-600: #1E40AF; --ac-blue-700: #1A3691; --ac-blue-900: #0F1F5C;
+    --ac-ink-900: #0B1220; --ac-ink-700: #2A3245; --ac-ink-500: #5A6276;
+    --ac-ink-300: #A4ABBC; --ac-ink-100: #E5E8EF; --ac-ink-50: #F0F2F7;
+    --ac-paper: #F7F8FB; --ac-white: #FFFFFF;
+    --ac-success: #15803D; --ac-success-bg: #E6F4EC;
+    --ac-danger: #B91C1C; --ac-danger-bg: #FCEAEA;
+    --ac-warning: #B45309; --ac-warning-bg: #FEF1DC;
+    --ac-info: #0369A1; --ac-info-bg: #E1F1FA;
+    --radius-sm: 6px; --radius: 8px; --radius-lg: 12px;
+    --shadow-sm: 0 1px 2px rgba(11,18,32,.04);
+    --shadow:    0 4px 12px -2px rgba(11,18,32,.06), 0 2px 4px -2px rgba(11,18,32,.04);
+    --shadow-lg: 0 18px 36px -12px rgba(11,18,32,.12);
+    --font-sans: 'Inter', -apple-system, 'Segoe UI', Roboto, sans-serif;
+    --font-mono: 'JetBrains Mono', 'SFMono-Regular', Consolas, monospace;
+    --fs-xs: 11px; --fs-sm: 12px; --fs-base: 13px; --fs-md: 14px;
+    --fs-lg: 17px; --fs-xl: 24px; --fs-display: 32px;
+  }
+  html, body { margin: 0; padding: 0; background: #ECEEF3; font-family: var(--font-sans); color: var(--ac-ink-900); font-size: var(--fs-base); line-height: 1.45; }
+  * { box-sizing: border-box; }
+  button { font-family: inherit; }
+
+  /* Force colour-accurate printing */
+  * { -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
+
+  /* ── Print layout ── */
+  .doc { display: flex; flex-direction: column; align-items: center; gap: 24px; padding: 24px 0; }
+  .page {
+    background: var(--ac-white);
+    box-shadow: 0 8px 24px rgba(0,0,0,.08);
+    position: relative;
+    overflow: hidden;
+  }
+  .page .page_meta {
+    position: absolute; bottom: 10px; left: 16px; right: 16px;
+    display: flex; justify-content: space-between;
+    font-family: var(--font-mono); font-size: 10px;
+    color: var(--ac-ink-300);
+    pointer-events: none;
+    z-index: 99;
+  }
+  .page_section {
+    width: 100%; height: 100%;
+    overflow: hidden;
+  }
+
+  /* Each page sized to its native artboard size — variable page-sizes,
+     declared as named @page rules below. */
+  .page.cover { width: 1280px; height: 900px; padding: 80px; display: flex; flex-direction: column; justify-content: space-between; }
+  .page.dash  { width: 1280px; height: 1700px; }
+  .page.form  { width: 1280px; height: 2200px; }
+  .page.qtt   { width: 1480px; height: 1320px; }
+  .page.sin   { width: 1280px; height: 1550px; }
+  .page.mob   { width: 420px;  height: 820px;  display: grid; place-items: center; }
+  .page.tok   { width: 780px;  height: 540px; }
+  .page.scss  { width: 1280px; height: 1700px; padding: 60px 80px; font-family: var(--font-mono); font-size: 13px; color: var(--ac-ink-900); line-height: 1.6; white-space: pre-wrap; overflow: hidden; }
+
+  /* Cover */
+  .cover .brand { display: flex; align-items: center; gap: 16px; }
+  .cover .brand .mono {
+    width: 64px; height: 64px; border-radius: 14px;
+    background: linear-gradient(135deg, var(--ac-blue-500), var(--ac-blue-700));
+    color: #fff; display: grid; place-items: center;
+    font-weight: 800; font-size: 36px; letter-spacing: -.02em;
+  }
+  .cover .brand .nm { font-size: 28px; font-weight: 700; letter-spacing: -.01em; }
+  .cover .brand .sub { font-size: 14px; color: var(--ac-ink-500); margin-top: 2px; }
+  .cover h1 { font-size: 88px; font-weight: 700; letter-spacing: -.03em; line-height: 1; margin: 0 0 24px; max-width: 1000px; }
+  .cover .lede { font-size: 22px; color: var(--ac-ink-700); line-height: 1.5; max-width: 900px; }
+  .cover .footer {
+    display: flex; justify-content: space-between; align-items: flex-end;
+    font-family: var(--font-mono); font-size: 13px; color: var(--ac-ink-500);
+  }
+  .cover .toc {
+    display: grid; grid-template-columns: 1fr 1fr; gap: 12px 32px;
+    margin-top: 24px; max-width: 900px;
+  }
+  .cover .toc .it {
+    display: flex; justify-content: space-between;
+    padding: 10px 0; border-bottom: 1px dashed var(--ac-ink-100);
+    font-size: 15px;
+  }
+  .cover .toc .it .n { color: var(--ac-ink-300); font-family: var(--font-mono); }
+  .cover .toc .it strong { font-weight: 600; }
+
+  @page { size: 1280px 1700px; margin: 0; }
+  @page cover { size: 1280px 900px; margin: 0; }
+  @page dash  { size: 1280px 1700px; margin: 0; }
+  @page form  { size: 1280px 2200px; margin: 0; }
+  @page qtt   { size: 1480px 1320px; margin: 0; }
+  @page sin   { size: 1280px 1550px; margin: 0; }
+  @page mob   { size: 420px 820px;   margin: 0; }
+  @page tok   { size: 780px 540px;   margin: 0; }
+  @page scss  { size: 1280px 1700px; margin: 0; }
+
+  .page.cover { page: cover; }
+  .page.dash  { page: dash; }
+  .page.form  { page: form; }
+  .page.qtt   { page: qtt; }
+  .page.sin   { page: sin; }
+  .page.mob   { page: mob; }
+  .page.tok   { page: tok; }
+  .page.scss  { page: scss; }
+
+  /* Print rules */
+  @media print {
+    html, body { background: #fff; }
+    .doc { gap: 0; padding: 0; }
+    .page { box-shadow: none; break-after: page; page-break-after: always; }
+    .page:last-child { break-after: auto; page-break-after: auto; }
+  }
+
+  /* Screen overrides: app shell becomes a static block, no scroll containers */
+  .page .o_action_manager { width: 100% !important; height: 100% !important; overflow: hidden !important; }
+  .page .o_content { overflow: hidden !important; }
+
+  /* Compact mobile cell — no full-screen background, just the phone */
+  .page.mob { background: linear-gradient(135deg, #EFF4FF, #DBE6FF); }
+  .page.mob > * { width: auto !important; height: auto !important; background: transparent !important; padding: 0 !important; }
+
+  /* SCSS view */
+  .page.scss .hd { font-family: var(--font-sans); display: flex; align-items: baseline; justify-content: space-between; margin-bottom: 18px; padding-bottom: 14px; border-bottom: 1px solid var(--ac-ink-100); }
+  .page.scss .hd h2 { margin: 0; font-size: 22px; font-weight: 700; letter-spacing: -.01em; }
+  .page.scss .hd .sub { font-family: var(--font-mono); font-size: 11px; color: var(--ac-ink-500); }
+  .page.scss code { color: var(--ac-blue-700); }
+  .page.scss .kw { color: var(--ac-danger); }
+  .page.scss .cm { color: var(--ac-ink-500); font-style: italic; }
+  .page.scss .val { color: var(--ac-success); }
+</style>
+
+<link rel="stylesheet" href="screens.css" />
+
+<script src="https://unpkg.com/react@18.3.1/umd/react.development.js" integrity="sha384-hD6/rw4ppMLGNu3tX5cjIb+uRZ7UkRJ6BPkLpg4hAu/6onKUg4lLsHAs9EBPT82L" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js" integrity="sha384-u6aeetuaXnQ38mYT8rp6sbXaQe3NL9t+IBXmnYxwkUI2Hw4bsp2Wvmx4yRQF1uAm" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/@babel/standalone@7.29.0/babel.min.js" integrity="sha384-m08KidiNqLdpJqLq95G/LEi8Qvjl/xUYll3QILypMoQ65QorJ9Lvtp2RXYGBFj1y" crossorigin="anonymous"></script>
+</head>
+
+<body>
+  <div id="root"></div>
+
+  <script type="text/babel" src="chrome.jsx"></script>
+  <script type="text/babel" src="dashboard.jsx"></script>
+  <script type="text/babel" src="form.jsx"></script>
+  <script type="text/babel" src="quittances.jsx"></script>
+  <script type="text/babel" src="sinistre.jsx"></script>
+  <script type="text/babel" src="mobile.jsx"></script>
+
+  <script type="text/babel">
+    /* global React, ReactDOM, Dashboard, Form, Quittances, Sinistre, MobileChatter, MobileActivity */
+
+    function PageMeta({ idx, total, label }) {
+      return (
+        <div className="page_meta">
+          <span>AssurCourtage · Maquette Odoo · {label}</span>
+          <span>{String(idx).padStart(2,'0')} / {String(total).padStart(2,'0')}</span>
+        </div>
+      );
+    }
+
+    const pages = [
+      { kind: "cover", label: "Couverture" },
+      { kind: "dash",  label: "Dashboard Trésorerie",       render: () => <Dashboard persona="courtier" variant="shadow" /> },
+      { kind: "qtt",   label: "Liste des Quittances",       render: () => <Quittances persona="courtier" variant="shadow" /> },
+      { kind: "form",  label: "Fiche Client Famille/Payeur",render: () => <Form persona="courtier" variant="shadow" /> },
+      { kind: "sin",   label: "Vue Sinistre + Timeline",    render: () => <Sinistre persona="courtier" variant="shadow" /> },
+      { kind: "mob",   label: "Mobile · Chatter",           render: () => <MobileChatter /> },
+      { kind: "mob",   label: "Mobile · Activités",         render: () => <MobileActivity /> },
+      { kind: "scss",  label: "SCSS Variables — surcharge Odoo" },
+    ];
+
+    function Cover() {
+      return (
+        <>
+          <div className="brand">
+            <div className="mono">A</div>
+            <div>
+              <div className="nm">AssurCourtage</div>
+              <div className="sub">Plateforme SaaS de courtage en assurance · Module Odoo 16/17</div>
+            </div>
+          </div>
+
+          <div>
+            <h1>Maquette UX<br />Backend Odoo</h1>
+            <div className="lede">
+              Thème backend Odoo modernisé pour une plateforme SaaS de courtage tunisienne — multi-compagnies STAR / GAT / LLOYD / COMAR / ASTREE, montants TND.
+              Composants natifs Odoo (Control Panel, Smart Buttons, Statusbar, Chatter, Notebook) surchargés via les variables SCSS, zéro CSS custom.
+            </div>
+
+            <div className="toc">
+              <div className="it"><strong>Dashboard Trésorerie</strong><span className="n">02</span></div>
+              <div className="it"><strong>Liste des Quittances</strong><span className="n">03</span></div>
+              <div className="it"><strong>Fiche Client Famille/Payeur</strong><span className="n">04</span></div>
+              <div className="it"><strong>Vue Sinistre + Chronologie</strong><span className="n">05</span></div>
+              <div className="it"><strong>Mobile · Chatter</strong><span className="n">06</span></div>
+              <div className="it"><strong>Mobile · Activités</strong><span className="n">07</span></div>
+              <div className="it"><strong>SCSS Variables</strong><span className="n">08</span></div>
+            </div>
+          </div>
+
+          <div className="footer">
+            <span>IPF · Design exploratoire</span>
+            <span>v1.0 · Mai 2026</span>
+          </div>
+        </>
+      );
+    }
+
+    function ScssPage() {
+      const block1 = `/* ── 1. Brand palette ───────────────── */
+$ac-blue-600: #1E40AF;   // PRIMARY
+$ac-blue-500: #2D5BD6;
+$ac-blue-100: #DBE6FF;
+$ac-blue-50:  #EFF4FF;
+
+$ac-success: #15803D;    // Payé
+$ac-danger:  #B91C1C;    // Impayé
+$ac-warning: #B45309;    // À échoir
+
+$ac-ink-900: #0B1220;
+$ac-ink-500: #5A6276;
+$ac-ink-100: #E5E8EF;
+$ac-paper:   #F7F8FB;
+
+/* ── 2. Bootstrap 5 overrides ──────── */
+$primary:      $ac-blue-600;
+$body-bg:      $ac-paper;
+$border-radius:    .5rem;
+$border-radius-lg: .75rem;
+$box-shadow:    0 4px 12px -2px rgba(0,0,0,.06),
+                0 2px 4px  -2px rgba(0,0,0,.04);
+
+$font-family-sans-serif: 'Inter', sans-serif;
+$font-size-base: .8125rem;`;
+
+      const block2 = `/* ── 3. Hooks Odoo natifs ──────────── */
+$o-brand-primary:         $ac-blue-600;
+$o-action:                $ac-blue-600;
+$o-view-background-color: $ac-paper;
+$o-main-text-color:       $ac-ink-900;
+$o-main-border-color:     $ac-ink-100;
+
+// Form view
+$o-form-sheet-bg:         $ac-white;
+$o-form-sheet-radius:     .75rem;
+$o-form-title-fontsize:   1.5rem;
+
+// Statusbar
+$o-statusbar-active-bg:    $ac-blue-600;
+$o-statusbar-active-color: $ac-white;
+
+// Smart buttons (oe_button_box)
+$o-button-box-radius:    .75rem;
+$o-button-box-bg-hover:  $ac-blue-50;
+
+// Kanban
+$o-kanban-record-radius: .75rem;
+$o-kanban-record-shadow: $box-shadow-sm;
+
+// Chatter
+$o-chatter-background:   $ac-paper;`;
+
+      const manifest = `# Charger _variables.scss AVANT les variables Odoo natives
+'assets': {
+    'web._assets_primary_variables': [
+        ('prepend', 'assurcourtage/static/src/scss/_variables.scss'),
+    ],
+}`;
+
+      return (
+        <>
+          <div className="hd">
+            <h2>assurcourtage.scss — extrait</h2>
+            <span className="sub">/static/src/scss/_variables.scss</span>
+          </div>
+          <div style={{display:'grid', gridTemplateColumns:'1fr 1fr', gap:36, fontSize:11.5}}>
+            <pre style={{margin:0, fontFamily:'var(--font-mono)', color:'var(--ac-ink-900)'}}>{block1}</pre>
+            <pre style={{margin:0, fontFamily:'var(--font-mono)', color:'var(--ac-ink-900)'}}>{block2}</pre>
+          </div>
+
+          <div style={{marginTop:30, padding:20, background:'var(--ac-paper)', borderRadius:12, fontFamily:'var(--font-mono)', fontSize:12, lineHeight:1.7, whiteSpace:'pre-wrap'}}>
+            <div style={{color:'var(--ac-ink-500)', marginBottom:8, fontFamily:'var(--font-sans)', fontSize:11, fontWeight:600, textTransform:'uppercase', letterSpacing:'.06em'}}>__manifest__.py</div>
+            {manifest}
+          </div>
+
+          <div style={{marginTop:24, fontFamily:'var(--font-sans)', fontSize:12, color:'var(--ac-ink-500)', lineHeight:1.6}}>
+            Cette approche zéro-CSS-custom permet à un développeur Odoo de reconstruire toutes les vues présentées avec du XML natif uniquement (<code>{'<form>'}</code>, <code>{'<header>'}</code>, <code>{'<div class="oe_button_box">'}</code>, <code>{'<notebook>'}</code>, <code>{'<chatter />'}</code>) — la maquette est intégralement reproductible dans une vue OWL.
+          </div>
+        </>
+      );
+    }
+
+    function PrintApp() {
+      return (
+        <div className="doc">
+          {pages.map((p, i) => (
+            <section key={i} className={"page " + p.kind}>
+              <div className="page_section">
+                {p.kind === "cover" && <Cover />}
+                {p.kind === "scss"  && <ScssPage />}
+                {p.render && p.render()}
+              </div>
+              {p.kind !== "cover" && <PageMeta idx={i + 1} total={pages.length} label={p.label} />}
+            </section>
+          ))}
+        </div>
+      );
+    }
+
+    ReactDOM.createRoot(document.getElementById("root")).render(<PrintApp />);
+
+    // Auto-print: wait for fonts + JSX transform + render then open print dialog.
+    (async () => {
+      try { await document.fonts.ready; } catch {}
+      await new Promise(r => requestAnimationFrame(() => requestAnimationFrame(r)));
+      await new Promise(r => setTimeout(r, 600));
+      window.print();
+    })();
+  </script>
+</body>
+</html>

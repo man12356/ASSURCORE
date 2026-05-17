@@ -1,0 +1,1220 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8" />
+<title>AssurCourtage — Deck</title>
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+
+<style>
+  :root {
+    --ac-blue-50:  #EFF4FF; --ac-blue-100: #DBE6FF; --ac-blue-200: #B6CCFF;
+    --ac-blue-500: #2D5BD6; --ac-blue-600: #1E40AF; --ac-blue-700: #1A3691; --ac-blue-900: #0F1F5C;
+    --ac-ink-900: #0B1220; --ac-ink-700: #2A3245; --ac-ink-500: #5A6276;
+    --ac-ink-300: #A4ABBC; --ac-ink-100: #E5E8EF; --ac-ink-50: #F0F2F7;
+    --ac-paper: #F7F8FB; --ac-white: #FFFFFF;
+    --ac-success: #15803D; --ac-success-bg: #E6F4EC;
+    --ac-danger: #B91C1C; --ac-danger-bg: #FCEAEA;
+    --ac-warning: #B45309; --ac-warning-bg: #FEF1DC;
+    --font-sans: 'Inter', -apple-system, 'Segoe UI', Roboto, sans-serif;
+    --font-mono: 'JetBrains Mono', 'SFMono-Regular', Consolas, monospace;
+  }
+  html, body { margin: 0; padding: 0; background: #0B1220; font-family: var(--font-sans); color: var(--ac-ink-900); }
+  * { box-sizing: border-box; -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
+
+  /* Slide canvas — 1920 × 1080 */
+  deck-stage > section {
+    width: 1920px; height: 1080px;
+    background: var(--ac-paper);
+    position: relative; overflow: hidden;
+    font-family: var(--font-sans);
+    color: var(--ac-ink-900);
+  }
+
+  /* ── Header / Footer ── */
+  .slide_header {
+    position: absolute; top: 0; left: 0; right: 0; height: 88px;
+    display: flex; align-items: center; padding: 0 56px;
+    background: var(--ac-white);
+    border-bottom: 1px solid var(--ac-ink-100);
+    gap: 16px; z-index: 10;
+  }
+  .slide_header .brand {
+    width: 44px; height: 44px; border-radius: 10px;
+    background: linear-gradient(135deg, var(--ac-blue-500), var(--ac-blue-700));
+    color: #fff; display: grid; place-items: center;
+    font-weight: 800; font-size: 22px; letter-spacing: -.02em;
+  }
+  .slide_header .brand_text { font-weight: 600; font-size: 18px; }
+  .slide_header .brand_text .s { display: block; font-size: 11px; color: var(--ac-ink-500); font-weight: 500; font-family: var(--font-mono); }
+  .slide_header .spacer { flex: 1; }
+  .slide_header .section_label { font-size: 14px; color: var(--ac-ink-500); font-family: var(--font-mono); letter-spacing: .04em; text-transform: uppercase; }
+  .slide_header .slide_num {
+    width: 44px; height: 44px; border-radius: 10px;
+    background: var(--ac-ink-50); display: grid; place-items: center;
+    font-weight: 700; font-size: 16px; font-variant-numeric: tabular-nums;
+  }
+  .slide_footer {
+    position: absolute; bottom: 0; left: 0; right: 0; height: 48px;
+    display: flex; align-items: center; padding: 0 56px;
+    background: var(--ac-ink-900); color: #94A1BF;
+    font-size: 12px; font-family: var(--font-mono);
+    justify-content: space-between; z-index: 10;
+  }
+
+  /* ── Two-column body ── */
+  .slide_body {
+    position: absolute; top: 88px; bottom: 48px; left: 0; right: 0;
+    display: grid; grid-template-columns: 600px 1fr;
+  }
+  .commentary {
+    padding: 60px 52px; display: flex; flex-direction: column; gap: 24px;
+    border-right: 1px solid var(--ac-ink-100); background: var(--ac-white);
+  }
+  .commentary .eyebrow {
+    font-size: 13px; text-transform: uppercase; letter-spacing: .1em;
+    font-weight: 700; color: var(--ac-blue-600);
+  }
+  .commentary h1 {
+    margin: 0; font-size: 56px; font-weight: 700; letter-spacing: -.02em; line-height: 1.05;
+  }
+  .commentary .lede {
+    font-size: 18px; color: var(--ac-ink-700); line-height: 1.5;
+  }
+  .commentary .bullets { display: flex; flex-direction: column; gap: 14px; margin-top: 8px; }
+  .commentary .bullets .b {
+    display: grid; grid-template-columns: 28px 1fr; gap: 12px; align-items: start;
+  }
+  .commentary .bullets .b .ico {
+    width: 28px; height: 28px; border-radius: 8px;
+    background: var(--ac-blue-50); color: var(--ac-blue-700);
+    display: grid; place-items: center; font-weight: 700; font-size: 14px;
+  }
+  .commentary .bullets .b .ico.success { background: var(--ac-success-bg); color: var(--ac-success); }
+  .commentary .bullets .b .ico.danger  { background: var(--ac-danger-bg);  color: var(--ac-danger); }
+  .commentary .bullets .b .ico.warning { background: var(--ac-warning-bg); color: var(--ac-warning); }
+  .commentary .bullets .b .txt {
+    font-size: 15px; color: var(--ac-ink-900); line-height: 1.45;
+  }
+  .commentary .bullets .b .txt strong { font-weight: 600; }
+  .commentary .bullets .b .txt .sub { display: block; font-size: 13px; color: var(--ac-ink-500); margin-top: 2px; }
+  .commentary .meta {
+    margin-top: auto; padding-top: 16px;
+    border-top: 1px dashed var(--ac-ink-100);
+    font-family: var(--font-mono); font-size: 12px; color: var(--ac-ink-500);
+    display: flex; flex-direction: column; gap: 4px;
+  }
+  .commentary .meta b { color: var(--ac-ink-700); font-weight: 600; }
+
+  /* ── Right-side stage with stylized preview ── */
+  .stage {
+    position: relative; overflow: hidden;
+    background: linear-gradient(180deg, #ECEEF3, #F7F8FB);
+    padding: 56px;
+    display: flex; align-items: center; justify-content: center;
+  }
+  .stage::before {
+    content: ''; position: absolute; inset: 0;
+    background-image:
+      linear-gradient(rgba(11,18,32,.025) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(11,18,32,.025) 1px, transparent 1px);
+    background-size: 24px 24px; pointer-events: none;
+  }
+  .preview {
+    width: 100%; height: 100%;
+    max-width: 1180px; max-height: 880px;
+    background: var(--ac-white);
+    border-radius: 18px;
+    box-shadow: 0 28px 56px -16px rgba(11,18,32,.18), 0 8px 16px -8px rgba(11,18,32,.08);
+    position: relative; overflow: hidden;
+    display: flex; flex-direction: column;
+  }
+
+  /* Mini-chrome shared across previews */
+  .mini_nav {
+    height: 36px; background: var(--ac-ink-900); display: flex; align-items: center;
+    padding: 0 16px; gap: 10px; color: #fff; font-size: 12px; flex: 0 0 36px;
+  }
+  .mini_nav .b {
+    width: 18px; height: 18px; border-radius: 5px;
+    background: linear-gradient(135deg, var(--ac-blue-500), var(--ac-blue-700));
+    display: grid; place-items: center; font-weight: 800; font-size: 10px;
+  }
+  .mini_nav .links { display: flex; gap: 4px; flex: 1; margin-left: 10px; }
+  .mini_nav .links span { padding: 4px 10px; font-size: 11px; color: rgba(255,255,255,.7); border-radius: 4px; }
+  .mini_nav .links span.active { background: rgba(255,255,255,.1); color: #fff; }
+  .mini_nav .av {
+    background: rgba(255,255,255,.08); padding: 3px 8px 3px 3px; border-radius: 999px;
+    display: flex; gap: 6px; align-items: center; font-size: 11px;
+  }
+  .mini_nav .av .a {
+    width: 18px; height: 18px; border-radius: 50%; background: var(--ac-blue-500);
+    display: grid; place-items: center; font-size: 9px; font-weight: 600;
+  }
+  .mini_body { flex: 1; display: flex; min-height: 0; }
+  .mini_side {
+    width: 44px; background: var(--ac-white); border-right: 1px solid var(--ac-ink-100);
+    display: flex; flex-direction: column; gap: 6px; padding: 8px 0; flex: 0 0 44px;
+  }
+  .mini_side .i {
+    width: 28px; height: 28px; margin: 0 8px; border-radius: 6px;
+    background: var(--ac-ink-50);
+  }
+  .mini_side .i.on { background: var(--ac-blue-50); position: relative; }
+  .mini_side .i.on::before {
+    content: ''; position: absolute; left: -8px; top: 4px; bottom: 4px;
+    width: 3px; background: var(--ac-blue-600); border-radius: 0 2px 2px 0;
+  }
+  .mini_main { flex: 1; padding: 18px 22px; overflow: hidden; background: var(--ac-paper); }
+  .mini_cp {
+    background: var(--ac-white); margin: -18px -22px 18px; padding: 12px 22px;
+    border-bottom: 1px solid var(--ac-ink-100);
+    display: flex; justify-content: space-between; align-items: center;
+  }
+  .mini_cp .bc { font-size: 11px; color: var(--ac-ink-500); }
+  .mini_cp .bc strong { color: var(--ac-ink-900); display: block; font-size: 14px; font-weight: 600; margin-top: 2px; }
+  .mini_cp .pill {
+    background: var(--ac-blue-600); color: #fff; padding: 5px 11px;
+    border-radius: 6px; font-size: 11px; font-weight: 500;
+  }
+
+  /* KPI tile preview */
+  .kpi_row { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; margin-bottom: 14px; }
+  .mini_kpi {
+    background: var(--ac-white); border-radius: 12px;
+    padding: 12px; box-shadow: 0 2px 6px rgba(11,18,32,.04);
+  }
+  .mini_kpi .lbl {
+    font-size: 9px; text-transform: uppercase; letter-spacing: .06em; font-weight: 700;
+    color: var(--ac-ink-500); display: flex; align-items: center; gap: 5px;
+  }
+  .mini_kpi .lbl .d { width: 5px; height: 5px; border-radius: 50%; background: var(--ac-blue-600); }
+  .mini_kpi.success .lbl .d { background: var(--ac-success); }
+  .mini_kpi.danger .lbl .d  { background: var(--ac-danger); }
+  .mini_kpi.warning .lbl .d { background: var(--ac-warning); }
+  .mini_kpi .v {
+    font-size: 22px; font-weight: 700; letter-spacing: -.02em; margin-top: 4px;
+    font-variant-numeric: tabular-nums;
+  }
+  .mini_kpi .v .u { font-size: 11px; font-weight: 500; color: var(--ac-ink-500); }
+  .mini_kpi .dl {
+    display: inline-block; font-size: 10px; font-weight: 700;
+    padding: 1px 5px; border-radius: 3px; margin-top: 4px;
+  }
+  .mini_kpi .dl.up   { color: var(--ac-success); background: var(--ac-success-bg); }
+  .mini_kpi .dl.down { color: var(--ac-danger);  background: var(--ac-danger-bg); }
+
+  /* Pipeline */
+  .mini_pipe { display: flex; height: 38px; margin: 0 0 14px; }
+  .mini_pipe .s {
+    flex: 1; background: var(--ac-ink-50); border-right: 2px solid var(--ac-paper);
+    padding: 5px 8px; font-size: 10px;
+    color: var(--ac-ink-500);
+  }
+  .mini_pipe .s strong { display: block; color: var(--ac-ink-900); font-size: 14px; font-weight: 700; margin-top: 1px; font-variant-numeric: tabular-nums; }
+  .mini_pipe .s:first-child { border-radius: 4px 0 0 4px; }
+  .mini_pipe .s:last-child { border-radius: 0 4px 4px 0; border-right: none; }
+  .mini_pipe .s.active { background: var(--ac-blue-50); color: var(--ac-blue-700); }
+  .mini_pipe .s.active strong { color: var(--ac-blue-700); }
+
+  /* Mini table */
+  .mini_t {
+    background: var(--ac-white); border-radius: 12px; overflow: hidden;
+    box-shadow: 0 2px 6px rgba(11,18,32,.04);
+  }
+  .mini_t .head {
+    display: flex; justify-content: space-between; align-items: center;
+    padding: 10px 14px; border-bottom: 1px solid var(--ac-ink-100);
+    font-size: 13px; font-weight: 600;
+  }
+  .mini_t .head .sub { font-size: 11px; color: var(--ac-ink-500); font-weight: 500; margin-left: 6px; }
+  .mini_t table { width: 100%; border-collapse: collapse; font-size: 11px; font-variant-numeric: tabular-nums; }
+  .mini_t th {
+    background: var(--ac-paper); text-align: left; padding: 7px 14px;
+    font-size: 9px; text-transform: uppercase; letter-spacing: .05em; font-weight: 700;
+    color: var(--ac-ink-500); border-bottom: 1px solid var(--ac-ink-100);
+  }
+  .mini_t td {
+    padding: 8px 14px; border-bottom: 1px solid var(--ac-ink-100);
+  }
+  .mini_t tr:last-child td { border-bottom: none; }
+  .mini_t td.r { text-align: right; font-weight: 600; }
+  .mini_t .cie {
+    display: inline-block; padding: 2px 6px; border-radius: 3px;
+    font-size: 9px; font-weight: 700;
+  }
+  .mini_t .cie.star  { background: #FCEAEC; color: #8B0E22; }
+  .mini_t .cie.comar { background: #FEF3D6; color: #92560A; }
+  .mini_t .cie.gat   { background: #E3F0FA; color: #034F87; }
+  .mini_t .cie.lloyd { background: #EDEFF3; color: #1F2937; }
+  .mini_t .bdg {
+    display: inline-flex; gap: 4px; align-items: center;
+    padding: 2px 7px; border-radius: 999px; font-size: 9px; font-weight: 700;
+  }
+  .mini_t .bdg .d { width: 5px; height: 5px; border-radius: 50%; }
+  .mini_t .bdg.paid   { color: var(--ac-success); background: var(--ac-success-bg); }
+  .mini_t .bdg.unpaid { color: var(--ac-danger);  background: var(--ac-danger-bg); }
+  .mini_t .bdg.pending{ color: var(--ac-warning); background: var(--ac-warning-bg); }
+  .mini_t .bdg.paid .d   { background: var(--ac-success); }
+  .mini_t .bdg.unpaid .d { background: var(--ac-danger); }
+  .mini_t .bdg.pending .d{ background: var(--ac-warning); }
+
+  /* Quittances: group rows + totals */
+  .mini_t tr.grp td {
+    background: linear-gradient(to right, var(--ac-blue-50), transparent 60%);
+    font-weight: 700;
+  }
+  .mini_t tfoot td {
+    background: var(--ac-paper); border-top: 2px solid var(--ac-ink-100);
+    padding: 11px 14px; font-weight: 700;
+  }
+  .mini_t tfoot .lbl-x { color: var(--ac-ink-500); font-weight: 600; font-size: 9px; text-transform: uppercase; letter-spacing: .05em; margin-right: 8px; }
+
+  /* Form preview */
+  .mini_statusbar {
+    background: var(--ac-paper); padding: 10px 16px; display: flex; justify-content: space-between;
+    border-bottom: 1px solid var(--ac-ink-100); margin: -18px -22px 0;
+  }
+  .mini_statusbar .stages { display: flex; }
+  .mini_statusbar .st {
+    position: relative; padding: 4px 14px 4px 18px;
+    font-size: 10px; font-weight: 500;
+    background: var(--ac-white); color: var(--ac-ink-500);
+    border-top: 1px solid var(--ac-ink-100); border-bottom: 1px solid var(--ac-ink-100);
+  }
+  .mini_statusbar .st:first-child { border-left: 1px solid var(--ac-ink-100); border-radius: 4px 0 0 4px; padding-left: 10px; }
+  .mini_statusbar .st:last-child { border-right: 1px solid var(--ac-ink-100); border-radius: 0 4px 4px 0; padding-right: 10px; }
+  .mini_statusbar .st::after {
+    content: ''; position: absolute; right: -6px; top: 50%;
+    width: 10px; height: 10px; transform: translateY(-50%) rotate(45deg);
+    background: var(--ac-white); border-top: 1px solid var(--ac-ink-100); border-right: 1px solid var(--ac-ink-100);
+    z-index: 1;
+  }
+  .mini_statusbar .st:last-child::after { display: none; }
+  .mini_statusbar .st.done { color: var(--ac-blue-700); }
+  .mini_statusbar .st.on { background: var(--ac-blue-600); color: #fff; border-color: var(--ac-blue-600); }
+  .mini_statusbar .st.on::after { background: var(--ac-blue-600); border-color: var(--ac-blue-600); }
+  .mini_statusbar .ribbon {
+    position: absolute; right: -14px; top: 4px;
+    background: var(--ac-success); color: #fff; font-size: 9px; font-weight: 700;
+    padding: 2px 20px; transform: rotate(45deg); letter-spacing: .06em;
+  }
+
+  .mini_smarts {
+    display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px;
+    padding: 18px 0;
+  }
+  .mini_smart {
+    background: var(--ac-white); border: 1px solid var(--ac-ink-100);
+    border-radius: 10px; padding: 8px 10px;
+    display: flex; gap: 8px; align-items: center;
+  }
+  .mini_smart .icn {
+    width: 26px; height: 26px; border-radius: 6px;
+    background: var(--ac-blue-50); color: var(--ac-blue-700);
+    display: grid; place-items: center; font-size: 12px; font-weight: 700;
+  }
+  .mini_smart.danger .icn { background: var(--ac-danger-bg); color: var(--ac-danger); }
+  .mini_smart.success .icn { background: var(--ac-success-bg); color: var(--ac-success); }
+  .mini_smart .v { font-size: 14px; font-weight: 700; line-height: 1; }
+  .mini_smart .l { font-size: 9px; color: var(--ac-ink-500); margin-top: 2px; }
+
+  .mini_form_title {
+    display: flex; align-items: flex-start; gap: 14px;
+    padding-top: 4px;
+  }
+  .mini_form_title .av {
+    width: 44px; height: 44px; border-radius: 11px;
+    background: linear-gradient(135deg, var(--ac-blue-500), var(--ac-blue-700));
+    color: #fff; display: grid; place-items: center;
+    font-weight: 800; font-size: 14px;
+  }
+  .mini_form_title .ttl { flex: 1; }
+  .mini_form_title .ttl h2 { margin: 0; font-size: 18px; font-weight: 700; letter-spacing: -.01em; }
+  .mini_form_title .ttl .s { font-size: 11px; color: var(--ac-ink-500); margin-top: 2px; }
+  .mini_form_title .bal {
+    background: var(--ac-danger-bg); border: 1px solid #F3C7C7; padding: 8px 14px;
+    border-radius: 10px;
+  }
+  .mini_form_title .bal .l { font-size: 9px; text-transform: uppercase; letter-spacing: .06em; font-weight: 700; color: var(--ac-danger); }
+  .mini_form_title .bal .v { font-size: 17px; font-weight: 700; color: var(--ac-danger); font-variant-numeric: tabular-nums; letter-spacing: -.01em; }
+
+  .mini_notebook {
+    display: flex; gap: 14px; padding: 12px 0 0;
+    border-top: 1px solid var(--ac-ink-100); margin-top: 14px;
+  }
+  .mini_notebook .tab { font-size: 11px; color: var(--ac-ink-500); padding: 6px 4px; font-weight: 500; }
+  .mini_notebook .tab.on { color: var(--ac-blue-700); border-bottom: 2px solid var(--ac-blue-600); padding-bottom: 4px; font-weight: 600; }
+  .mini_members { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; margin-top: 12px; }
+  .mini_member {
+    background: var(--ac-white); border: 1px solid var(--ac-ink-100);
+    border-radius: 8px; padding: 10px;
+  }
+  .mini_member .top { display: flex; gap: 8px; align-items: center; margin-bottom: 6px; }
+  .mini_member .av {
+    width: 24px; height: 24px; border-radius: 50%;
+    background: var(--ac-ink-50); color: var(--ac-ink-700);
+    display: grid; place-items: center; font-size: 9px; font-weight: 700;
+  }
+  .mini_member .nm { font-weight: 600; font-size: 11px; }
+  .mini_member .rl { font-size: 9px; color: var(--ac-ink-500); }
+  .mini_member .bdg {
+    display: inline-block; padding: 1px 6px; border-radius: 999px;
+    font-size: 8px; font-weight: 700; margin-top: 4px;
+  }
+  .mini_member .bdg.paid   { color: var(--ac-success); background: var(--ac-success-bg); }
+  .mini_member .bdg.unpaid { color: var(--ac-danger);  background: var(--ac-danger-bg); }
+
+  /* Sinistre timeline */
+  .mini_timeline { padding: 4px 0 0 24px; position: relative; }
+  .mini_timeline::before {
+    content: ''; position: absolute; left: 7px; top: 6px; bottom: 6px;
+    width: 2px; background: var(--ac-ink-100);
+  }
+  .mini_tl_e { position: relative; padding: 0 0 14px; }
+  .mini_tl_e:last-child { padding-bottom: 0; }
+  .mini_tl_e .dot {
+    position: absolute; left: -24px; top: 2px;
+    width: 16px; height: 16px; border-radius: 50%;
+    background: var(--ac-white); border: 2px solid var(--ac-ink-300);
+    display: grid; place-items: center;
+    color: var(--ac-ink-500); font-size: 8px;
+  }
+  .mini_tl_e.done .dot { background: var(--ac-success); border-color: var(--ac-success); color: #fff; }
+  .mini_tl_e.on .dot { background: var(--ac-blue-600); border-color: var(--ac-blue-600); color: #fff; box-shadow: 0 0 0 3px var(--ac-blue-100); }
+  .mini_tl_e .w { font-size: 9px; color: var(--ac-ink-500); font-family: var(--font-mono); }
+  .mini_tl_e .t { font-size: 12px; font-weight: 700; margin-top: 1px; }
+  .mini_tl_e .b {
+    font-size: 11px; color: var(--ac-ink-700); margin-top: 4px;
+    background: var(--ac-paper); padding: 6px 9px; border-radius: 6px;
+  }
+  .mini_tl_e .b .amt { font-weight: 700; color: var(--ac-ink-900); }
+
+  .mini_sin_split { display: grid; grid-template-columns: 1.3fr 1fr; gap: 14px; padding: 14px 0; }
+  .mini_sin_left .amt_row { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 8px; margin-bottom: 12px; }
+  .mini_sin_left .amt {
+    background: var(--ac-white); border: 1px solid var(--ac-ink-100);
+    border-radius: 8px; padding: 9px 10px;
+  }
+  .mini_sin_left .amt.s {
+    background: var(--ac-success-bg); border-color: #C4E6CF;
+  }
+  .mini_sin_left .amt .l {
+    font-size: 8px; text-transform: uppercase; letter-spacing: .05em; font-weight: 700;
+    color: var(--ac-ink-500);
+  }
+  .mini_sin_left .amt.s .l { color: var(--ac-success); }
+  .mini_sin_left .amt .v {
+    font-size: 15px; font-weight: 700; font-variant-numeric: tabular-nums; margin-top: 2px;
+  }
+  .mini_sin_left .amt.s .v { color: var(--ac-success); }
+  .mini_sin_left .fields {
+    background: var(--ac-paper); padding: 12px 14px; border-radius: 8px;
+    display: grid; grid-template-columns: 80px 1fr 80px 1fr; gap: 4px 10px;
+    align-items: baseline; font-size: 10px;
+  }
+  .mini_sin_left .fields label { color: var(--ac-ink-500); }
+  .mini_sin_left .fields .v { font-weight: 600; font-size: 11px; }
+
+  /* Mobile phones */
+  .mini_phones {
+    display: flex; gap: 24px; justify-content: center; padding: 24px;
+    background: linear-gradient(135deg, #EFF4FF, #DBE6FF); border-radius: 14px;
+    width: 100%; height: 100%;
+    align-items: center;
+  }
+  .mini_phone {
+    width: 280px; height: 580px; background: #0B1220;
+    border-radius: 34px; padding: 6px; box-shadow: 0 16px 40px -8px rgba(11,18,32,.3);
+    flex-shrink: 0; position: relative;
+  }
+  .mini_phone .notch {
+    position: absolute; left: 50%; top: 12px; transform: translateX(-50%);
+    width: 80px; height: 20px; border-radius: 10px; background: #0B1220; z-index: 2;
+  }
+  .mini_phone .screen {
+    width: 100%; height: 100%; background: var(--ac-white);
+    border-radius: 28px; overflow: hidden;
+    display: flex; flex-direction: column;
+  }
+  .mini_phone .sb {
+    height: 30px; flex: 0 0 30px;
+    display: flex; justify-content: space-between; align-items: center;
+    padding: 10px 18px 4px;
+    font-size: 11px; font-weight: 700;
+  }
+  .mini_phone .hd {
+    display: flex; gap: 8px; align-items: center;
+    padding: 4px 12px 10px; border-bottom: 1px solid var(--ac-ink-100);
+  }
+  .mini_phone .hd .av {
+    width: 28px; height: 28px; border-radius: 50%;
+    background: linear-gradient(135deg, var(--ac-blue-500), var(--ac-blue-700));
+    color: #fff; display: grid; place-items: center; font-weight: 700; font-size: 10px;
+  }
+  .mini_phone .hd .nm { font-size: 13px; font-weight: 700; }
+  .mini_phone .hd .s  { font-size: 9px; color: var(--ac-ink-500); }
+  .mini_phone .tabs {
+    display: flex; padding: 0 12px; border-bottom: 1px solid var(--ac-ink-100);
+    gap: 4px;
+  }
+  .mini_phone .tabs .tb {
+    padding: 8px 6px; font-size: 10px; color: var(--ac-ink-500); font-weight: 600;
+  }
+  .mini_phone .tabs .tb.on { color: var(--ac-blue-700); border-bottom: 2px solid var(--ac-blue-600); }
+  .mini_phone .feed { flex: 1; overflow: hidden; padding: 10px 12px; background: var(--ac-paper); }
+  .mini_phone .msg {
+    background: var(--ac-white); border: 1px solid var(--ac-ink-100);
+    border-radius: 10px; padding: 8px 10px; margin-bottom: 8px;
+  }
+  .mini_phone .msg.warn { background: var(--ac-warning-bg); border-color: #F5D8A6; }
+  .mini_phone .msg.danger {
+    background: var(--ac-danger-bg); border-color: #F3C7C7;
+  }
+  .mini_phone .msg.danger .ttl { color: var(--ac-danger); font-weight: 700; font-size: 11px; }
+  .mini_phone .msg .head {
+    display: flex; align-items: center; gap: 6px; margin-bottom: 3px;
+  }
+  .mini_phone .msg .head .av {
+    width: 18px; height: 18px; border-radius: 50%;
+    background: var(--ac-blue-500); color: #fff;
+    display: grid; place-items: center; font-size: 8px; font-weight: 700;
+  }
+  .mini_phone .msg .head .nm { font-size: 10px; font-weight: 700; }
+  .mini_phone .msg .head .tm { font-size: 8px; color: var(--ac-ink-500); margin-left: auto; }
+  .mini_phone .msg .bd { font-size: 10px; color: var(--ac-ink-700); line-height: 1.4; }
+  .mini_phone .day {
+    text-align: center; font-size: 8px; font-weight: 700; letter-spacing: .08em; text-transform: uppercase;
+    color: var(--ac-ink-500); margin: 4px 0 8px;
+  }
+  .mini_phone .composer {
+    border-top: 1px solid var(--ac-ink-100); padding: 8px 12px;
+    display: flex; gap: 6px; align-items: center; background: var(--ac-white);
+  }
+  .mini_phone .composer input {
+    flex: 1; height: 26px; border-radius: 999px; border: 1px solid var(--ac-ink-100);
+    background: var(--ac-paper); padding: 0 10px; font-size: 10px; font-family: inherit; outline: none;
+  }
+  .mini_phone .composer .snd {
+    width: 26px; height: 26px; border-radius: 50%;
+    background: var(--ac-blue-600); color: #fff;
+    display: grid; place-items: center; font-size: 12px;
+  }
+
+  /* ── Cover slide ── */
+  .slide_cover {
+    background: linear-gradient(135deg, #0F1F5C 0%, #1E40AF 50%, #2D5BD6 100%) !important;
+    color: #fff !important;
+    padding: 120px 120px;
+    display: flex; flex-direction: column; justify-content: space-between;
+  }
+  .slide_cover .brand {
+    display: flex; align-items: center; gap: 20px;
+  }
+  .slide_cover .brand .mono {
+    width: 80px; height: 80px; border-radius: 18px;
+    background: rgba(255,255,255,.12);
+    color: #fff; display: grid; place-items: center;
+    font-weight: 800; font-size: 44px; letter-spacing: -.02em;
+    border: 1px solid rgba(255,255,255,.2);
+  }
+  .slide_cover .brand .name { font-size: 32px; font-weight: 700; letter-spacing: -.01em; }
+  .slide_cover .brand .sub { font-size: 16px; opacity: .7; margin-top: 2px; }
+  .slide_cover h1 {
+    margin: 0; font-size: 144px; font-weight: 700; letter-spacing: -.04em; line-height: .95;
+  }
+  .slide_cover .lede {
+    font-size: 28px; line-height: 1.4; max-width: 1300px; opacity: .85;
+    margin-top: 32px;
+  }
+  .slide_cover .meta_row {
+    display: flex; gap: 80px; align-items: flex-end;
+    font-family: var(--font-mono); font-size: 16px; opacity: .7;
+  }
+  .slide_cover .meta_row .v { font-size: 22px; font-weight: 600; color: #fff; opacity: 1; display: block; }
+
+  /* ── Tokens & Arch slides ── */
+  .tokens_slide, .arch_slide {
+    padding: 56px 80px 80px;
+    display: flex; flex-direction: column; gap: 30px;
+  }
+  .tokens_slide h2, .arch_slide h2 {
+    font-size: 48px; margin: 0; font-weight: 700; letter-spacing: -.02em;
+  }
+  .tokens_slide .head_row {
+    display: flex; align-items: flex-start; gap: 16px;
+  }
+  .tokens_slide .head_row .col_text { flex: 1; }
+  .tokens_slide .head_row .eyebrow {
+    font-size: 13px; text-transform: uppercase; letter-spacing: .1em;
+    font-weight: 700; color: var(--ac-blue-600); margin-bottom: 8px;
+  }
+  .tokens_slide .head_row .slide_num {
+    width: 56px; height: 56px; border-radius: 14px;
+    background: var(--ac-ink-50); display: grid; place-items: center;
+    font-weight: 700; font-size: 22px; font-variant-numeric: tabular-nums;
+  }
+  .tokens_slide .swatch_row { display: grid; grid-template-columns: repeat(8, 1fr); gap: 14px; }
+  .tokens_slide .swatch {
+    border-radius: 14px; padding: 16px; aspect-ratio: 1;
+    display: flex; flex-direction: column; justify-content: space-between;
+    color: #fff;
+  }
+  .tokens_slide .swatch .hex { font-family: var(--font-mono); font-size: 14px; font-weight: 700; }
+  .tokens_slide .swatch .name { font-family: var(--font-mono); font-size: 11px; opacity: .85; }
+  .tokens_slide .swatch.light { color: var(--ac-ink-900); border: 1px solid var(--ac-ink-100); }
+  .tokens_slide .swatch.light .name { opacity: .6; }
+
+  .tokens_slide .grid2 { display: grid; grid-template-columns: 1.4fr 1fr; gap: 32px; }
+  .tokens_slide .typo_block .label, .tokens_slide .right_block .label {
+    font-size: 14px; text-transform: uppercase; letter-spacing: .06em;
+    color: var(--ac-ink-500); font-weight: 700; margin-bottom: 14px;
+  }
+  .tokens_slide .typo_block .display { font-size: 64px; font-weight: 700; letter-spacing: -.02em; line-height: 1; }
+  .tokens_slide .typo_block .h1 { font-size: 36px; font-weight: 700; letter-spacing: -.015em; margin-top: 14px; }
+  .tokens_slide .typo_block .body { font-size: 18px; margin-top: 14px; line-height: 1.5; color: var(--ac-ink-700); max-width: 700px; }
+  .tokens_slide .typo_block .mono { font-family: var(--font-mono); font-size: 16px; color: var(--ac-blue-700); margin-top: 8px; }
+
+  .radius_grid { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 14px; }
+  .radius_card {
+    background: var(--ac-white); border: 1px solid var(--ac-ink-100);
+    padding: 22px; display: flex; flex-direction: column; gap: 6px;
+    justify-content: center; align-items: center;
+  }
+  .radius_card .r { font-size: 32px; font-weight: 700; }
+  .radius_card .n { font-family: var(--font-mono); font-size: 12px; color: var(--ac-ink-500); }
+
+  .arch_slide .stack {
+    display: grid; grid-template-columns: repeat(4, 1fr); gap: 18px;
+  }
+  .arch_slide .layer {
+    background: var(--ac-white); border-radius: 14px;
+    padding: 24px; box-shadow: 0 4px 12px -2px rgba(11,18,32,.06);
+    display: flex; flex-direction: column; gap: 10px;
+  }
+  .arch_slide .layer .num {
+    width: 36px; height: 36px; border-radius: 10px;
+    background: var(--ac-blue-50); color: var(--ac-blue-700);
+    display: grid; place-items: center; font-weight: 700; font-size: 16px;
+  }
+  .arch_slide .layer h3 { margin: 0; font-size: 21px; font-weight: 700; letter-spacing: -.01em; }
+  .arch_slide .layer .desc { font-size: 13px; color: var(--ac-ink-700); line-height: 1.5; }
+  .arch_slide .layer ul {
+    margin: 0; padding: 0; list-style: none;
+    display: flex; flex-direction: column; gap: 5px;
+    font-family: var(--font-mono); font-size: 11px; color: var(--ac-ink-700);
+  }
+  .arch_slide .layer ul li::before { content: '· '; color: var(--ac-blue-500); font-weight: 700; }
+
+  .arch_slide .codeblock {
+    padding: 24px 32px; background: var(--ac-ink-900); border-radius: 14px;
+    color: #C8D0E4; font-family: var(--font-mono); font-size: 14px; line-height: 1.7;
+  }
+  .arch_slide .codeblock .label {
+    color: #94A1BF; font-size: 11px; font-weight: 700;
+    text-transform: uppercase; letter-spacing: .08em;
+    margin-bottom: 8px; font-family: var(--font-sans);
+  }
+  .arch_slide .codeblock .red { color: #FCA5A5; }
+  .arch_slide .codeblock .green { color: #6EE7B7; }
+</style>
+
+<script src="deck-stage.js"></script>
+
+<script type="application/json" id="speaker-notes">
+[
+  "Bienvenue. Cette maquette présente AssurCourtage — une plateforme SaaS de courtage en assurance bâtie comme un thème backend Odoo 16/17. Trois principes : zéro CSS custom (tout passe par les variables SCSS d'Odoo), architecture 100 % native (Control Panel, Smart Buttons, Statusbar, Notebook, Chatter), et un visuel SaaS Premium qui modernise Odoo sans le trahir. On va parcourir six écrans clés puis voir le système de tokens qui les sous-tend.",
+  "Le Dashboard Trésorerie est l'écran d'accueil du courtier. Quatre KPIs en haut : solde caisse consolidé toutes compagnies, top impayés au-delà de 30 jours, renouvellements à venir, production du mois. Chaque KPI a une sparkline, un delta de tendance, et un pied de contexte. En dessous, le pipeline horizontal montre le cycle de vie de la quittance — de l'émission au reversement compagnie — avec les compteurs. Le widget Top Impayés est le point d'action principal : tri par retard décroissant, bouton de relance en un clic.",
+  "La liste des quittances respecte la convention tree d'Odoo : sticky header, group_by Compagnie avec une ligne de sous-total mise en évidence à chaque rupture, et une ligne de footer de totalisation qui agrège l'ensemble. La barre bleue en haut apparaît dès qu'on coche au moins une ligne, et offre les actions de masse : encaisser, relancer, exporter. Tous les montants sont en dinars tunisiens avec trois décimales et alignement tabular-nums.",
+  "La fiche client adopte le pattern Famille / Payeur : un payeur principal (ici Mohamed Ben Salem) avec quatre membres, plusieurs polices réparties sur trois compagnies. La structure est typiquement Odoo : statusbar de cycle de vie en haut, oe_button_box avec huit smart buttons qui pointent chacun vers une action — quittances, sinistres, documents, communications. Le highlight de solde global à droite de l'oe_title rend visible immédiatement l'état financier. Le Notebook organise les détails en six onglets, dont les Membres rendus en cards.",
+  "La vue Sinistre combine un formulaire classique et une chronologie latérale. La statusbar gauche montre l'état d'avancement : déclaré, transmis, expertise, indemnisation — phase active en bleu. Trois cartes de montants à droite résument le réclamé, l'expertisé et l'indemnité finale après franchise. La timeline droite documente chaque étape — date, acteur, pièces jointes inline — et reste éditable depuis n'importe quel rôle (courtier, expert, service compagnie).",
+  "Le module mobile reprend exactement le chatter Odoo en format téléphone. Trois onglets : Chatter pour le fil de discussion, Activités pour les tâches à faire, Pièces pour les documents. La carte d'alerte rouge sur l'écran de droite — un impayé en retard — montre le pattern : alerte contextuelle + actions inline (appeler, reporter). Composer en bas avec segmented Message / Note interne, calqué sur le chatter desktop.",
+  "Tout le visuel cascade depuis ces tokens. Trois familles : le bleu d'assurance comme primary, les statuts paid / unpaid / pending avec leurs versions background, et l'échelle d'encre pour le texte. Trois radius (6 / 8 / 12 px), trois shadows graduées. Côté typo, Inter à 13 px de base — la densité Odoo native — et JetBrains Mono pour les valeurs financières et les identifiants techniques.",
+  "Voici comment ça s'intègre dans Odoo. Quatre couches : les tokens SCSS de marque qui définissent la palette et la typo ; les overrides Bootstrap 5 qui propagent automatiquement à tous les composants Bootstrap ; les hooks Odoo natifs (o-brand-primary, o-form-sheet-radius, o-kanban-record-shadow, etc.) qu'Odoo lit pour son propre theming ; et enfin les vues XML écrites en convention pure — pas une seule règle CSS custom à ajouter."
+]
+</script>
+</head>
+
+<body>
+  <deck-stage>
+
+    <!-- 1. Cover -->
+    <section data-screen-label="01 Couverture" class="slide_cover">
+      <div class="brand">
+        <div class="mono">A</div>
+        <div>
+          <div class="name">AssurCourtage</div>
+          <div class="sub">Plateforme SaaS · Module Odoo 16/17</div>
+        </div>
+      </div>
+      <div>
+        <h1>Maquette UX<br />Backend Odoo</h1>
+        <div class="lede">Un thème SaaS premium pour le courtage tunisien — multi-compagnies, multi-personas, 100&nbsp;% intégrable comme module Odoo natif.</div>
+      </div>
+      <div class="meta_row">
+        <div><span style="opacity:.6">Persona principal</span><span class="v">Courtier multi-compagnies</span></div>
+        <div><span style="opacity:.6">Compagnies</span><span class="v">STAR · GAT · LLOYD · COMAR · ASTREE</span></div>
+        <div><span style="opacity:.6">Stack</span><span class="v">OWL · Bootstrap 5 · SCSS overrides</span></div>
+        <div style="margin-left:auto"><span style="opacity:.6">Mai 2026</span><span class="v">v1.0</span></div>
+      </div>
+    </section>
+
+    <!-- 2. Dashboard -->
+    <section data-screen-label="02 Dashboard Trésorerie">
+      <div class="slide_header">
+        <div class="brand">A</div>
+        <div class="brand_text">AssurCourtage<span class="s">Module Odoo · Dashboard</span></div>
+        <div class="spacer"></div>
+        <div class="section_label">Vue Dashboard / Kanban</div>
+        <div class="slide_num">02</div>
+      </div>
+      <div class="slide_body">
+        <div class="commentary">
+          <div class="eyebrow">Dashboard Trésorerie</div>
+          <h1>Une lecture instantanée du portefeuille</h1>
+          <div class="lede">Quatre KPIs hiérarchisés, le pipeline natif Odoo des quittances, et les widgets Top Impayés + Production par compagnie en regard.</div>
+          <div class="bullets">
+            <div class="b"><div class="ico">€</div><div class="txt"><strong>Solde caisse consolidé</strong><span class="sub">Toutes compagnies réconciliées, sparkline 12 semaines, deltas signés.</span></div></div>
+            <div class="b"><div class="ico danger">!</div><div class="txt"><strong>Top Impayés &gt; 30j</strong><span class="sub">Tri par retard décroissant, bouton relance en masse, tags compagnies couleur.</span></div></div>
+            <div class="b"><div class="ico success">✓</div><div class="txt"><strong>Pipeline quittance</strong><span class="sub">Émise → Notifiée → Partielle → Encaissée → Reversée → Contentieux.</span></div></div>
+            <div class="b"><div class="ico warning">↻</div><div class="txt"><strong>Renouvellements 30j</strong><span class="sub">Kanban à 4 colonnes (7 / 14 / 21 / 30 jours), drag and drop entre échéances.</span></div></div>
+          </div>
+          <div class="meta">
+            <span>Modèle Odoo · <b>account.move.line</b> + <b>insurance.policy</b></span>
+            <span>Classes · <b>o_kanban_view · o_widget · o_searchview</b></span>
+          </div>
+        </div>
+        <div class="stage">
+          <div class="preview">
+            <div class="mini_nav">
+              <div class="b">A</div>
+              <div class="links">
+                <span class="active">Tableau de bord</span><span>Clients</span><span>Polices</span><span>Quittances</span><span>Sinistres</span><span>Reporting</span>
+              </div>
+              <div class="av"><div class="a">SH</div>Salim H.</div>
+            </div>
+            <div class="mini_body">
+              <div class="mini_side"><div class="i on"></div><div class="i"></div><div class="i"></div><div class="i"></div><div class="i"></div></div>
+              <div class="mini_main">
+                <div class="mini_cp">
+                  <div class="bc">Tableau de bord › Trésorerie<strong>Trésorerie Cabinet — Multi-compagnies</strong></div>
+                  <div class="pill">+ Nouvelle quittance</div>
+                </div>
+                <div class="kpi_row">
+                  <div class="mini_kpi"><div class="lbl"><span class="d"></span>Solde caisse</div><div class="v">412 840<span class="u"> TND</span></div><span class="dl up">↑ +6,8 %</span></div>
+                  <div class="mini_kpi danger"><div class="lbl"><span class="d"></span>Top Impayés &gt; 30j</div><div class="v">89 640<span class="u"> TND</span></div><span class="dl up">↑ +9,1 %</span></div>
+                  <div class="mini_kpi warning"><div class="lbl"><span class="d"></span>Renouvellements</div><div class="v">342<span class="u"> polices</span></div><span class="dl down">↓ −2,4 %</span></div>
+                  <div class="mini_kpi success"><div class="lbl"><span class="d"></span>Production MTD</div><div class="v">572 600<span class="u"> TND</span></div><span class="dl up">↑ +14,3 %</span></div>
+                </div>
+                <div class="mini_pipe">
+                  <div class="s">Émise<strong>218</strong></div>
+                  <div class="s">Notifiée<strong>174</strong></div>
+                  <div class="s active">Partielle<strong>41</strong></div>
+                  <div class="s">Encaissée<strong>894</strong></div>
+                  <div class="s">Reversée<strong>856</strong></div>
+                  <div class="s">Contentieux<strong>19</strong></div>
+                </div>
+                <div class="mini_t">
+                  <div class="head"><span>Top Impayés <span class="sub">&gt; 30 jours · toutes compagnies</span></span></div>
+                  <table>
+                    <thead><tr><th>Client</th><th>N° Police</th><th>Compagnie</th><th>Échéance</th><th style="text-align:right">Retard</th><th style="text-align:right">Montant</th></tr></thead>
+                    <tbody>
+                      <tr><td><strong>SARL TEXMODE</strong></td><td style="font-family:var(--font-mono); color:var(--ac-ink-500)">MRH-2023-0871</td><td><span class="cie star">STAR</span></td><td style="color:var(--ac-ink-500)">15/04/26</td><td class="r"><span class="bdg unpaid"><span class="d"></span>30j</span></td><td class="r">4 820,500</td></tr>
+                      <tr><td><strong>Ben Salem, Mohamed</strong></td><td style="font-family:var(--font-mono); color:var(--ac-ink-500)">AUTO-2024-0142</td><td><span class="cie comar">COMAR</span></td><td style="color:var(--ac-ink-500)">02/04/26</td><td class="r"><span class="bdg unpaid"><span class="d"></span>43j</span></td><td class="r">1 245,750</td></tr>
+                      <tr><td><strong>Trabelsi, Karim</strong></td><td style="font-family:var(--font-mono); color:var(--ac-ink-500)">SAN-2024-0312</td><td><span class="cie gat">GAT</span></td><td style="color:var(--ac-ink-500)">18/03/26</td><td class="r"><span class="bdg unpaid"><span class="d"></span>58j</span></td><td class="r">2 160,000</td></tr>
+                      <tr><td><strong>SOCOMENA</strong></td><td style="font-family:var(--font-mono); color:var(--ac-ink-500)">FLT-2023-0044</td><td><span class="cie lloyd">LLOYD</span></td><td style="color:var(--ac-ink-500)">10/03/26</td><td class="r"><span class="bdg unpaid"><span class="d"></span>66j</span></td><td class="r">8 975,250</td></tr>
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="slide_footer"><span>AssurCourtage · Maquette Odoo 16/17</span><span>02 / 08</span></div>
+    </section>
+
+    <!-- 3. Quittances -->
+    <section data-screen-label="03 Liste des Quittances">
+      <div class="slide_header">
+        <div class="brand">A</div>
+        <div class="brand_text">AssurCourtage<span class="s">Module Odoo · Quittances</span></div>
+        <div class="spacer"></div>
+        <div class="section_label">Vue Tree / List</div>
+        <div class="slide_num">03</div>
+      </div>
+      <div class="slide_body">
+        <div class="commentary">
+          <div class="eyebrow">Quittances · Tree dense</div>
+          <h1>Group_by Compagnie, totaux à chaque niveau</h1>
+          <div class="lede">La vue tree d'Odoo poussée au bout : sous-totaux par compagnie, ligne de totalisation finale, sélection multiple avec actions de masse.</div>
+          <div class="bullets">
+            <div class="b"><div class="ico">⌗</div><div class="txt"><strong>Groupes pliables</strong><span class="sub">STAR / COMAR / GAT / LLOYD / ASTREE — sous-totaux HT, taxes, TTC, commission.</span></div></div>
+            <div class="b"><div class="ico success">Σ</div><div class="txt"><strong>Footer de totalisation</strong><span class="sub">Total TTC, encaissé / impayé colorisés, commission cumulée du portefeuille.</span></div></div>
+            <div class="b"><div class="ico">☑</div><div class="txt"><strong>Sélection multiple</strong><span class="sub">Barre d'actions contextuelle : encaisser, relancer, exporter, annuler.</span></div></div>
+            <div class="b"><div class="ico warning">⏱</div><div class="txt"><strong>Badges d'état</strong><span class="sub">Encaissée · À échoir · Impayée avec compteur de jours de retard inline.</span></div></div>
+          </div>
+          <div class="meta">
+            <span>Modèle Odoo · <b>insurance.receipt</b> (héritage account.move)</span>
+            <span>Classes · <b>o_list_view · o_tree · o_optional_columns</b></span>
+          </div>
+        </div>
+        <div class="stage">
+          <div class="preview">
+            <div class="mini_nav">
+              <div class="b">A</div>
+              <div class="links"><span>Tableau de bord</span><span>Clients</span><span>Polices</span><span class="active">Quittances</span><span>Sinistres</span></div>
+              <div class="av"><div class="a">SH</div>Salim H.</div>
+            </div>
+            <div class="mini_body">
+              <div class="mini_side"><div class="i"></div><div class="i"></div><div class="i"></div><div class="i on"></div><div class="i"></div></div>
+              <div class="mini_main">
+                <div class="mini_cp">
+                  <div class="bc">Quittances › Toutes<strong>Quittances — Toutes compagnies</strong></div>
+                  <div class="pill">+ Émettre quittance</div>
+                </div>
+                <div class="mini_t" style="margin-top: -2px">
+                  <div style="background: var(--ac-blue-50); color: var(--ac-blue-700); padding: 6px 14px; font-size: 11px; font-weight: 600; border-bottom: 1px solid var(--ac-blue-100);">
+                    <span style="display:inline-block; width:10px; height:10px; background:var(--ac-blue-600); border-radius:2px; margin-right:6px; vertical-align: middle;"></span>
+                    1 ligne sélectionnée · 1 145,250 TND TTC
+                    <span style="float:right">Encaisser · Relancer · Exporter</span>
+                  </div>
+                  <table>
+                    <thead><tr><th></th><th>N° Quittance</th><th>Client</th><th>Police</th><th>Échéance</th><th style="text-align:right">TTC</th><th style="text-align:right">Commission</th><th>État</th></tr></thead>
+                    <tbody>
+                      <tr class="grp"><td colspan="4"><span class="cie star">STAR</span> <span style="color:var(--ac-ink-500); font-weight: 500">5 quittances</span></td><td class="r" style="color:var(--ac-ink-500); font-weight: 600">Sous-total</td><td class="r">18 975,750</td><td class="r" style="color:var(--ac-blue-700)">1 897,575</td><td></td></tr>
+                      <tr><td></td><td style="font-family:var(--font-mono); color:var(--ac-blue-700); font-weight:600">QT-26-04812</td><td><strong>SARL TEXMODE</strong></td><td style="font-family:var(--font-mono); color:var(--ac-ink-500)">MRH-2023-0871</td><td style="color:var(--ac-ink-500)">15/04/26</td><td class="r">4 820,500</td><td class="r" style="color:var(--ac-blue-700)">482,050</td><td><span class="bdg unpaid"><span class="d"></span>30j</span></td></tr>
+                      <tr style="background: var(--ac-blue-50)"><td><span style="display:inline-block; width:10px; height:10px; background:var(--ac-blue-600); border-radius:2px;"></span></td><td style="font-family:var(--font-mono); color:var(--ac-blue-700); font-weight:600">QT-26-04654</td><td><strong>Triki, Walid</strong></td><td style="font-family:var(--font-mono); color:var(--ac-ink-500)">AUTO-2024-0033</td><td style="color:var(--ac-ink-500)">25/05/26</td><td class="r">1 145,250</td><td class="r" style="color:var(--ac-blue-700)">114,525</td><td><span class="bdg paid"><span class="d"></span>Payée</span></td></tr>
+                      <tr class="grp"><td colspan="4"><span class="cie comar">COMAR</span> <span style="color:var(--ac-ink-500); font-weight: 500">4 quittances</span></td><td class="r" style="color:var(--ac-ink-500); font-weight: 600">Sous-total</td><td class="r">10 022,000</td><td class="r" style="color:var(--ac-blue-700)">1 002,200</td><td></td></tr>
+                      <tr><td></td><td style="font-family:var(--font-mono); color:var(--ac-blue-700); font-weight:600">QT-26-04588</td><td><strong>Ben Salem, M.</strong></td><td style="font-family:var(--font-mono); color:var(--ac-ink-500)">AUTO-2024-0142</td><td style="color:var(--ac-ink-500)">02/04/26</td><td class="r">1 245,750</td><td class="r" style="color:var(--ac-blue-700)">124,575</td><td><span class="bdg unpaid"><span class="d"></span>43j</span></td></tr>
+                      <tr class="grp"><td colspan="4"><span class="cie gat">GAT</span> <span style="color:var(--ac-ink-500); font-weight: 500">3 quittances</span></td><td class="r" style="color:var(--ac-ink-500); font-weight: 600">Sous-total</td><td class="r">4 240,500</td><td class="r" style="color:var(--ac-blue-700)">424,050</td><td></td></tr>
+                      <tr class="grp"><td colspan="4"><span class="cie lloyd">LLOYD</span> <span style="color:var(--ac-ink-500); font-weight: 500">2 quittances</span></td><td class="r" style="color:var(--ac-ink-500); font-weight: 600">Sous-total</td><td class="r">23 795,250</td><td class="r" style="color:var(--ac-blue-700)">2 379,525</td><td></td></tr>
+                    </tbody>
+                    <tfoot>
+                      <tr><td colspan="5"><span class="lbl-x">TOTAL</span>17 quittances · 5 compagnies</td><td class="r" style="font-size: 13px">57 033,500 TND</td><td class="r" style="color:var(--ac-blue-700)">5 703,350</td><td><span style="font-size:9px; display:block; color:var(--ac-success)">● Encaissé 32 893</span><span style="font-size:9px; color:var(--ac-danger)">● Impayé 24 140</span></td></tr>
+                    </tfoot>
+                  </table>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="slide_footer"><span>AssurCourtage · Maquette Odoo 16/17</span><span>03 / 08</span></div>
+    </section>
+
+    <!-- 4. Form -->
+    <section data-screen-label="04 Fiche Client">
+      <div class="slide_header">
+        <div class="brand">A</div>
+        <div class="brand_text">AssurCourtage<span class="s">Module Odoo · Fiche Client</span></div>
+        <div class="spacer"></div>
+        <div class="section_label">Vue Form</div>
+        <div class="slide_num">04</div>
+      </div>
+      <div class="slide_body">
+        <div class="commentary">
+          <div class="eyebrow">Fiche Client · Famille / Payeur</div>
+          <h1>Un payeur, plusieurs membres, plusieurs compagnies</h1>
+          <div class="lede">Toute l'architecture native d'une vue Form : statusbar de cycle de vie, oe_button_box de smart buttons, oe_title avec highlight financier, notebook et chatter.</div>
+          <div class="bullets">
+            <div class="b"><div class="ico">≡</div><div class="txt"><strong>Statusbar pipeline</strong><span class="sub">Prospect → Actif → Fidèle 5 ans → VIP → Résilié.</span></div></div>
+            <div class="b"><div class="ico">⊞</div><div class="txt"><strong>8 Smart Buttons</strong><span class="sub">Quittances, impayés, polices, sinistres, documents, encaissé YTD, communications, score fidélité.</span></div></div>
+            <div class="b"><div class="ico success">⌖</div><div class="txt"><strong>Highlight solde global</strong><span class="sub">À droite de l'oe_title — bleu si à jour, rouge si dû. Visible en premier coup d'œil.</span></div></div>
+            <div class="b"><div class="ico">📑</div><div class="txt"><strong>Notebook 6 onglets</strong><span class="sub">Membres (cards), Polices (lignes structurées), Quittances, Sinistres, Documents, Historique.</span></div></div>
+          </div>
+          <div class="meta">
+            <span>Modèle Odoo · <b>res.partner</b> (is_family, is_payer)</span>
+            <span>Classes · <b>o_form_view · oe_title · oe_button_box · oe_ribbon · o_chatter</b></span>
+          </div>
+        </div>
+        <div class="stage">
+          <div class="preview" style="max-width: 1100px; max-height: 880px">
+            <div class="mini_nav">
+              <div class="b">A</div>
+              <div class="links"><span>Tableau de bord</span><span class="active">Clients</span><span>Polices</span><span>Quittances</span></div>
+              <div class="av"><div class="a">SH</div>Salim H.</div>
+            </div>
+            <div class="mini_body">
+              <div class="mini_side"><div class="i"></div><div class="i on"></div><div class="i"></div><div class="i"></div><div class="i"></div></div>
+              <div class="mini_main">
+                <div class="mini_cp">
+                  <div class="bc">Clients › Familles › Ben Salem, Mohamed<strong style="font-size:0; line-height:0">·</strong></div>
+                  <div class="pill" style="background:var(--ac-blue-600)">Modifier</div>
+                </div>
+                <div style="background:var(--ac-white); border-radius:12px; padding: 0; box-shadow: 0 2px 6px rgba(11,18,32,.04); position: relative; overflow: hidden;">
+                  <div class="mini_statusbar">
+                    <div class="stages">
+                      <div class="st done">Prospect</div>
+                      <div class="st done">Actif</div>
+                      <div class="st on">Fidèle (5+ ans)</div>
+                      <div class="st">VIP</div>
+                      <div class="st">Résilié</div>
+                    </div>
+                    <div style="display:flex; gap:6px;">
+                      <span style="background:var(--ac-white); border:1px solid var(--ac-ink-100); border-radius:4px; padding:3px 8px; font-size:10px;">Relance</span>
+                      <span style="background:var(--ac-white); border:1px solid var(--ac-ink-100); border-radius:4px; padding:3px 8px; font-size:10px;">Promouvoir</span>
+                    </div>
+                    <div class="ribbon">VIP</div>
+                  </div>
+                  <div style="padding: 14px 20px;">
+                    <div class="mini_smarts">
+                      <div class="mini_smart"><div class="icn">📑</div><div><div class="v">47</div><div class="l">Quittances</div></div></div>
+                      <div class="mini_smart danger"><div class="icn">!</div><div><div class="v">1</div><div class="l">Impayé · 1 245 TND</div></div></div>
+                      <div class="mini_smart"><div class="icn">🛡</div><div><div class="v">5</div><div class="l">Polices actives</div></div></div>
+                      <div class="mini_smart success"><div class="icn">€</div><div><div class="v">7 150</div><div class="l">Encaissé YTD</div></div></div>
+                    </div>
+                    <div class="mini_form_title">
+                      <div class="av">BS</div>
+                      <div class="ttl">
+                        <h2>Famille Ben Salem</h2>
+                        <div class="s">Mohamed Ben Salem (payeur principal) · 4 membres · 3 compagnies</div>
+                      </div>
+                      <div class="bal">
+                        <div class="l">Solde global</div>
+                        <div class="v">−1 245,750 TND</div>
+                      </div>
+                    </div>
+                    <div class="mini_notebook">
+                      <div class="tab on">Membres <span style="background:var(--ac-blue-100); color:var(--ac-blue-700); border-radius:3px; padding:0 5px; font-size:9px; font-weight:700; margin-left:2px">4</span></div>
+                      <div class="tab">Polices <span style="background:var(--ac-ink-50); color:var(--ac-ink-500); border-radius:3px; padding:0 5px; font-size:9px; font-weight:700; margin-left:2px">5</span></div>
+                      <div class="tab">Quittances <span style="background:var(--ac-ink-50); color:var(--ac-ink-500); border-radius:3px; padding:0 5px; font-size:9px; font-weight:700; margin-left:2px">47</span></div>
+                      <div class="tab">Sinistres</div>
+                      <div class="tab">Documents</div>
+                    </div>
+                    <div class="mini_members">
+                      <div class="mini_member"><div class="top"><div class="av">MB</div><div><div class="nm">Mohamed B.S.</div><div class="rl">Payeur · 48 ans</div></div></div><span class="bdg paid">À jour</span></div>
+                      <div class="mini_member"><div class="top"><div class="av">LB</div><div><div class="nm">Leïla B.S.</div><div class="rl">Conjoint · 45 ans</div></div></div><span class="bdg paid">À jour</span></div>
+                      <div class="mini_member"><div class="top"><div class="av">YB</div><div><div class="nm">Yassine B.S.</div><div class="rl">Enfant · 18 ans</div></div></div><span class="bdg unpaid">1 245 TND dû</span></div>
+                      <div class="mini_member"><div class="top"><div class="av">SB</div><div><div class="nm">Sarra B.S.</div><div class="rl">Enfant · 14 ans</div></div></div></div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="slide_footer"><span>AssurCourtage · Maquette Odoo 16/17</span><span>04 / 08</span></div>
+    </section>
+
+    <!-- 5. Sinistre -->
+    <section data-screen-label="05 Vue Sinistre">
+      <div class="slide_header">
+        <div class="brand">A</div>
+        <div class="brand_text">AssurCourtage<span class="s">Module Odoo · Sinistre</span></div>
+        <div class="spacer"></div>
+        <div class="section_label">Vue Form + Timeline</div>
+        <div class="slide_num">05</div>
+      </div>
+      <div class="slide_body">
+        <div class="commentary">
+          <div class="eyebrow">Sinistre · Form + Chronologie</div>
+          <h1>Une timeline native dans la vue form Odoo</h1>
+          <div class="lede">Cycle de vie complet : déclaration, expertise, indemnisation, règlement. Chaque étape devient un événement chronologique avec pièces jointes inline.</div>
+          <div class="bullets">
+            <div class="b"><div class="ico">⇉</div><div class="txt"><strong>Statusbar 6 états</strong><span class="sub">Déclaré · Transmis · Expertise · Indemnisation · Réglé · Clos.</span></div></div>
+            <div class="b"><div class="ico">⊞</div><div class="txt"><strong>3 cartes financières</strong><span class="sub">Montant réclamé, expertise, indemnité finale après franchise — code couleur progressif.</span></div></div>
+            <div class="b"><div class="ico">⏱</div><div class="txt"><strong>Timeline chronologique</strong><span class="sub">Modèle insurance.claim.event — dots colorés done / active / vide, pièces jointes inline.</span></div></div>
+            <div class="b"><div class="ico warning">!</div><div class="txt"><strong>Tags & narratif</strong><span class="sub">Hashtags structurés (#collision-arriere, #constat-conteste) pour filtrer le portefeuille.</span></div></div>
+          </div>
+          <div class="meta">
+            <span>Modèle Odoo · <b>insurance.claim</b> + <b>insurance.claim.event</b></span>
+            <span>Classes · <b>o_form_view · oe_ribbon (warning) · timeline (custom widget OWL)</b></span>
+          </div>
+        </div>
+        <div class="stage">
+          <div class="preview" style="max-width: 1100px; max-height: 880px">
+            <div class="mini_nav">
+              <div class="b">A</div>
+              <div class="links"><span>Tableau de bord</span><span>Clients</span><span>Polices</span><span>Quittances</span><span class="active">Sinistres</span></div>
+              <div class="av"><div class="a">SH</div>Salim H.</div>
+            </div>
+            <div class="mini_body">
+              <div class="mini_side"><div class="i"></div><div class="i"></div><div class="i"></div><div class="i"></div><div class="i on"></div></div>
+              <div class="mini_main">
+                <div class="mini_cp">
+                  <div class="bc">Sinistres › Ouverts › SIN-2026-0421<strong style="font-size:0; line-height:0">·</strong></div>
+                  <div class="pill" style="background:var(--ac-blue-600)">Modifier</div>
+                </div>
+                <div style="background:var(--ac-white); border-radius:12px; box-shadow: 0 2px 6px rgba(11,18,32,.04); position: relative; overflow: hidden;">
+                  <div class="mini_statusbar" style="margin: 0;">
+                    <div class="stages">
+                      <div class="st done">Déclaré</div>
+                      <div class="st done">Transmis</div>
+                      <div class="st done">Expertise</div>
+                      <div class="st on">Indemnisation</div>
+                      <div class="st">Réglé</div>
+                      <div class="st">Clos</div>
+                    </div>
+                    <div class="ribbon" style="background:var(--ac-warning)">Attente</div>
+                  </div>
+                  <div style="padding: 14px 20px;">
+                    <div class="mini_form_title" style="padding-top: 0">
+                      <div class="av" style="background:linear-gradient(135deg,#F87171,#B91C1C)">🚗</div>
+                      <div class="ttl">
+                        <h2>Collision Av. Habib Bourguiba</h2>
+                        <div class="s">SIN-2026-0421 · Peugeot 208 · 183 TU 4521 · COMAR</div>
+                      </div>
+                      <div class="bal" style="background:var(--ac-blue-50); border-color:var(--ac-blue-100)">
+                        <div class="l" style="color:var(--ac-blue-700)">Indemnité proposée</div>
+                        <div class="v" style="color:var(--ac-blue-700)">8 240,500 TND</div>
+                      </div>
+                    </div>
+                    <div class="mini_sin_split">
+                      <div class="mini_sin_left">
+                        <div class="amt_row">
+                          <div class="amt"><div class="l">Réclamé</div><div class="v">9 500,000</div></div>
+                          <div class="amt"><div class="l">Expertise</div><div class="v">8 590,500</div></div>
+                          <div class="amt s"><div class="l">Indemnité finale</div><div class="v">8 240,500</div></div>
+                        </div>
+                        <div class="fields">
+                          <label>Client</label><div class="v" style="color:var(--ac-blue-700)">Famille Ben Salem</div>
+                          <label>Police</label><div class="v" style="font-family:var(--font-mono); font-size:10px">AUTO-2024-0142</div>
+                          <label>Véhicule</label><div class="v">Peugeot 208 — 183 TU 4521</div>
+                          <label>Conducteur</label><div class="v">Yassine B.S. (18 ans)</div>
+                          <label>Date</label><div class="v" style="font-family:var(--font-mono); font-size:10px">02/04/26 · 18h40</div>
+                          <label>Lieu</label><div class="v">Av. Habib Bourguiba, Tunis</div>
+                        </div>
+                      </div>
+                      <div>
+                        <div style="font-size:11px; font-weight:700; margin-bottom:10px; display:flex; justify-content:space-between;"><span>Chronologie</span><span style="font-family:var(--font-mono); color:var(--ac-ink-500); font-weight:400; font-size:9px">insurance.claim.event</span></div>
+                        <div class="mini_timeline">
+                          <div class="mini_tl_e done"><div class="dot">✓</div><div class="w">02/04 · 14h22</div><div class="t">Déclaration reçue</div></div>
+                          <div class="mini_tl_e done"><div class="dot">→</div><div class="w">03/04 · 09h05</div><div class="t">Transmis COMAR</div></div>
+                          <div class="mini_tl_e done"><div class="dot">👁</div><div class="w">08/04 · 11h30</div><div class="t">Expertise sur place</div></div>
+                          <div class="mini_tl_e on"><div class="dot">€</div><div class="w">12/05 · 10h12</div><div class="t">Indemnisation proposée</div><div class="b">Indemnité : <span class="amt">8 240,500 TND</span> · franchise 350,000 · ⚠ en attente accord.</div></div>
+                          <div class="mini_tl_e"><div class="dot">✎</div><div class="w">—</div><div class="t">Accord client</div></div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="slide_footer"><span>AssurCourtage · Maquette Odoo 16/17</span><span>05 / 08</span></div>
+    </section>
+
+    <!-- 6. Mobile -->
+    <section data-screen-label="06 Mobile">
+      <div class="slide_header">
+        <div class="brand">A</div>
+        <div class="brand_text">AssurCourtage<span class="s">Module Odoo · Mobile</span></div>
+        <div class="spacer"></div>
+        <div class="section_label">Chatter responsive</div>
+        <div class="slide_num">06</div>
+      </div>
+      <div class="slide_body">
+        <div class="commentary">
+          <div class="eyebrow">Mobile · Chatter &amp; Activités</div>
+          <h1>Le chatter Odoo natif, repensé pour le pouce</h1>
+          <div class="lede">Trois onglets, un fil persistant entre desktop et mobile, et un pattern d'alerte contextuelle pour les actions urgentes en déplacement.</div>
+          <div class="bullets">
+            <div class="b"><div class="ico">💬</div><div class="txt"><strong>Onglet Chatter</strong><span class="sub">Messages utilisateur, logs système, séparateurs de jour, références cliquables vers les polices.</span></div></div>
+            <div class="b"><div class="ico danger">⏰</div><div class="txt"><strong>Activités urgentes</strong><span class="sub">Carte d'alerte rouge en haut — Appeler / Reporter inline, pas de navigation requise.</span></div></div>
+            <div class="b"><div class="ico">⊞</div><div class="txt"><strong>Composer segmenté</strong><span class="sub">Bascule Msg / Note interne, comme le chatter desktop.</span></div></div>
+            <div class="b"><div class="ico">⤓</div><div class="txt"><strong>Pièces &amp; timeline</strong><span class="sub">Onglet pièces avec preview, timeline d'activités à venir avec pastilles de délai.</span></div></div>
+          </div>
+          <div class="meta">
+            <span>Vue Odoo · <b>mobile.web</b> qweb override</span>
+            <span>Breakpoint · <b>@media (max-width: 480px)</b></span>
+          </div>
+        </div>
+        <div class="stage">
+          <div class="mini_phones">
+            <!-- Phone 1: Chatter -->
+            <div class="mini_phone">
+              <div class="notch"></div>
+              <div class="screen">
+                <div class="sb"><span>9:41</span><span>●●●</span></div>
+                <div class="hd">
+                  <span style="color:var(--ac-blue-600); font-size:18px">‹</span>
+                  <div class="av">BS</div>
+                  <div><div class="nm">Famille Ben Salem</div><div class="s">Mohamed · payeur · 3 polices</div></div>
+                </div>
+                <div class="tabs">
+                  <div class="tb on">Chatter</div><div class="tb">Activités</div><div class="tb">Pièces</div>
+                </div>
+                <div class="feed">
+                  <div class="day">Aujourd'hui · 14 mai</div>
+                  <div class="msg warn">
+                    <div class="head"><div class="av" style="background:var(--ac-warning)">⚙</div><div class="nm">Système</div><div class="tm">09:14</div></div>
+                    <div class="bd"><strong>Appel de relance</strong> planifié pour <strong>17/05 — 10:00</strong>.</div>
+                  </div>
+                  <div class="msg">
+                    <div class="head"><div class="av">SH</div><div class="nm">Salim Hammami</div><div class="tm">12:02</div></div>
+                    <div class="bd">Relance WhatsApp pour <span style="color:var(--ac-blue-600)">AUTO-2024-0142</span>. Réponse attendue avant vendredi.</div>
+                  </div>
+                  <div class="day">Hier · 13 mai</div>
+                  <div class="msg">
+                    <div class="head"><div class="av" style="background:var(--ac-blue-700)">MA</div><div class="nm">Mehdi Aloui</div><div class="tm">16:48</div></div>
+                    <div class="bd">Renouvellement MRH validé par STAR. Avenant prêt à signer.</div>
+                  </div>
+                </div>
+                <div class="composer">
+                  <span style="background:var(--ac-ink-50); border-radius:999px; padding:2px; display:flex">
+                    <span style="background:var(--ac-white); padding:2px 7px; border-radius:999px; font-size:9px; font-weight:700">Msg</span>
+                    <span style="padding:2px 7px; font-size:9px; color:var(--ac-ink-500); font-weight:600">Note</span>
+                  </span>
+                  <input placeholder="Répondre…" />
+                  <div class="snd">›</div>
+                </div>
+              </div>
+            </div>
+            <!-- Phone 2: Activités -->
+            <div class="mini_phone">
+              <div class="notch"></div>
+              <div class="screen">
+                <div class="sb"><span>9:41</span><span>●●●</span></div>
+                <div class="hd">
+                  <span style="color:var(--ac-blue-600); font-size:18px">‹</span>
+                  <div class="av">BS</div>
+                  <div><div class="nm">Famille Ben Salem</div><div class="s">Mohamed · payeur · 3 polices</div></div>
+                </div>
+                <div class="tabs">
+                  <div class="tb">Chatter</div><div class="tb on">Activités</div><div class="tb">Pièces</div>
+                </div>
+                <div class="feed">
+                  <div class="msg danger">
+                    <div style="font-size:8px; color:var(--ac-warning); text-transform:uppercase; letter-spacing:.06em; font-weight:700">En retard · 2 jours</div>
+                    <div class="ttl">Relancer impayé AUTO-2024-0142</div>
+                    <div class="bd">Quittance 1 245,750 TND — Peugeot 208 Yassine.</div>
+                    <div style="display:flex; gap:6px; margin-top:8px;">
+                      <span style="flex:1; background:var(--ac-blue-600); color:#fff; padding:5px; border-radius:6px; text-align:center; font-size:10px; font-weight:600">Appeler</span>
+                      <span style="flex:1; background:var(--ac-white); border:1px solid var(--ac-ink-100); padding:5px; border-radius:6px; text-align:center; font-size:10px; font-weight:600">Reporter</span>
+                    </div>
+                  </div>
+                  <div class="day">À venir</div>
+                  <div class="msg">
+                    <div class="head"><div class="av">RB</div><div class="nm">Appel de relance</div><div class="tm">17/05 · 10h</div></div>
+                    <div class="bd">Assigné à Rim Ben Hadj.</div>
+                  </div>
+                  <div class="msg">
+                    <div class="head"><div class="av" style="background:var(--ac-blue-700)">MA</div><div class="nm">Signer avenant MRH</div><div class="tm">22/05</div></div>
+                    <div class="bd">Assigné à Mehdi Aloui.</div>
+                  </div>
+                  <div style="border:1px dashed var(--ac-ink-100); border-radius:10px; padding:8px; text-align:center; color:var(--ac-blue-600); font-size:11px; font-weight:600; margin-top:8px;">+ Planifier une activité</div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="slide_footer"><span>AssurCourtage · Maquette Odoo 16/17</span><span>06 / 08</span></div>
+    </section>
+
+    <!-- 7. Tokens -->
+    <section data-screen-label="07 Design Tokens" class="tokens_slide">
+      <div class="head_row">
+        <div class="col_text">
+          <div class="eyebrow">Design Tokens</div>
+          <h2>Bleu assurance, statuts, encre — Inter 13 / radius 8 / 12</h2>
+        </div>
+        <div class="slide_num">07</div>
+      </div>
+
+      <div class="swatch_row">
+        <div class="swatch" style="background:#1E40AF"><div class="hex">#1E40AF</div><div class="name">$ac-blue-600 · Primary</div></div>
+        <div class="swatch" style="background:#2D5BD6"><div class="hex">#2D5BD6</div><div class="name">$ac-blue-500</div></div>
+        <div class="swatch light" style="background:#DBE6FF"><div class="hex">#DBE6FF</div><div class="name">$ac-blue-100</div></div>
+        <div class="swatch light" style="background:#EFF4FF"><div class="hex">#EFF4FF</div><div class="name">$ac-blue-50</div></div>
+        <div class="swatch" style="background:#15803D"><div class="hex">#15803D</div><div class="name">$ac-success · Payé</div></div>
+        <div class="swatch" style="background:#B91C1C"><div class="hex">#B91C1C</div><div class="name">$ac-danger · Impayé</div></div>
+        <div class="swatch" style="background:#B45309"><div class="hex">#B45309</div><div class="name">$ac-warning · À échoir</div></div>
+        <div class="swatch" style="background:#0B1220"><div class="hex">#0B1220</div><div class="name">$ac-ink-900 · Texte</div></div>
+      </div>
+
+      <div class="grid2">
+        <div class="typo_block">
+          <div class="label">Typographie — Inter · JetBrains Mono</div>
+          <div class="display">Famille Ben Salem</div>
+          <div class="h1">Solde global · 1 245,750 TND</div>
+          <div class="body">$font-size-base à 13&nbsp;px — la densité native d'Odoo. Variantes 500 pour les libellés clés, 600 pour les titres, 700 pour les valeurs financières.</div>
+          <div class="mono">$font-family-monospace · 183 TU 4521 · QT-26-04812</div>
+        </div>
+        <div class="right_block">
+          <div class="label">Radius — surfaces</div>
+          <div class="radius_grid">
+            <div class="radius_card" style="border-radius: 6px"><div class="r">6</div><div class="n">$border-radius-sm</div></div>
+            <div class="radius_card" style="border-radius: 8px"><div class="r">8</div><div class="n">$border-radius</div></div>
+            <div class="radius_card" style="border-radius: 12px"><div class="r">12</div><div class="n">$border-radius-lg</div></div>
+          </div>
+        </div>
+      </div>
+      <div class="slide_footer"><span>AssurCourtage · Maquette Odoo 16/17</span><span>07 / 08</span></div>
+    </section>
+
+    <!-- 8. Architecture -->
+    <section data-screen-label="08 Architecture SCSS" class="arch_slide">
+      <div class="head_row" style="display:flex; align-items:flex-start; gap:16px;">
+        <div class="col_text" style="flex:1">
+          <div style="font-size:13px; text-transform:uppercase; letter-spacing:.1em; font-weight:700; color: var(--ac-blue-600); margin-bottom: 8px;">Architecture · Intégration Odoo</div>
+          <h2>Zéro CSS custom — la maquette est XML natif</h2>
+        </div>
+        <div style="width: 56px; height: 56px; border-radius: 14px; background: var(--ac-ink-50); display: grid; place-items: center; font-weight: 700; font-size: 22px;">08</div>
+      </div>
+
+      <div class="stack">
+        <div class="layer">
+          <div class="num">1</div>
+          <h3>Tokens marque</h3>
+          <div class="desc">Palette bleu assurance + statuts paid/unpaid/pending + échelle d'encre. Définis en variables SCSS.</div>
+          <ul>
+            <li>$ac-blue-600 · $ac-success · $ac-danger</li>
+            <li>$ac-ink-100 → $ac-ink-900</li>
+            <li>$radius-sm · $radius · $radius-lg</li>
+          </ul>
+        </div>
+        <div class="layer">
+          <div class="num">2</div>
+          <h3>Bootstrap 5</h3>
+          <div class="desc">Les tokens cascadent vers Bootstrap via les surcharges $primary, $border-radius, $body-bg.</div>
+          <ul>
+            <li>$primary → $ac-blue-600</li>
+            <li>$body-bg → $ac-paper</li>
+            <li>$box-shadow · $border-radius-lg</li>
+          </ul>
+        </div>
+        <div class="layer">
+          <div class="num">3</div>
+          <h3>Hooks Odoo</h3>
+          <div class="desc">Odoo lit ses propres variables SCSS — il suffit d'aligner les noms pour habiller tout le backend.</div>
+          <ul>
+            <li>$o-brand-primary · $o-action</li>
+            <li>$o-form-sheet-radius · $o-form-sheet-bg</li>
+            <li>$o-statusbar-active-bg</li>
+            <li>$o-kanban-record-radius</li>
+            <li>$o-button-box-radius · $o-chatter-background</li>
+          </ul>
+        </div>
+        <div class="layer">
+          <div class="num">4</div>
+          <h3>Vues XML</h3>
+          <div class="desc">Le développeur Odoo n'écrit que du XML standard — toutes les vues présentées sont reproductibles tel quel.</div>
+          <ul>
+            <li>&lt;form&gt; &lt;header&gt; &lt;sheet&gt;</li>
+            <li>&lt;div class="oe_button_box"&gt;</li>
+            <li>&lt;notebook&gt; &lt;page&gt;</li>
+            <li>&lt;chatter /&gt;</li>
+            <li>&lt;tree default_group_by="…"&gt;</li>
+          </ul>
+        </div>
+      </div>
+
+      <div class="codeblock">
+        <div class="label">__manifest__.py — un seul prepend suffit</div>
+        'assets': {<br />
+        &nbsp;&nbsp;&nbsp;&nbsp;'web._assets_primary_variables': [<br />
+        &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;(<span class="red">'prepend'</span>, <span class="green">'assurcourtage/static/src/scss/_variables.scss'</span>),<br />
+        &nbsp;&nbsp;&nbsp;&nbsp;],<br />
+        }
+      </div>
+
+      <div class="slide_footer"><span>AssurCourtage · Maquette Odoo 16/17</span><span>08 / 08</span></div>
+    </section>
+
+  </deck-stage>
+</body>
+</html>

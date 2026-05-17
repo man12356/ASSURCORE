@@ -1,0 +1,217 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+
+  <!-- ══════════════════════════════════════════════════════════════════════ -->
+  <!--  VUE FORM — Quittance d'Assurance                                       -->
+  <!-- ══════════════════════════════════════════════════════════════════════ -->
+  <record id="view_insurance_receipt_form_detail" model="ir.ui.view">
+    <field name="name">insurance.receipt.form.detail</field>
+    <field name="model">insurance.receipt</field>
+    <field name="arch" type="xml">
+      <form string="Quittance d'Assurance">
+
+        <header>
+          <field name="state" widget="statusbar"
+                 statusbar_visible="emise,notifiee,partielle,encaissee,reversee"/>
+          <button name="action_notifier" string="Notifier"
+                  type="object" class="btn-secondary"
+                  invisible="state != 'emise'"/>
+          <button name="action_partial_payment" string="Acompte reçu"
+                  type="object" class="btn-secondary"
+                  invisible="state not in ('emise','notifiee')"/>
+          <button name="action_encaisser" string="Encaisser"
+                  type="object" class="btn-primary"
+                  invisible="state not in ('emise','notifiee','partielle')"/>
+          <button name="action_reverser" string="Reverser à la compagnie"
+                  type="object" class="btn-secondary"
+                  invisible="state != 'encaissee'"/>
+          <button name="action_contentieux" string="Contentieux"
+                  type="object" class="btn-danger"
+                  invisible="state in ('encaissee','reversee')"/>
+          <button name="action_reopen" string="Remettre en circuit"
+                  type="object" class="btn-secondary"
+                  invisible="state != 'contentieux'"/>
+        </header>
+
+        <div class="alert alert-danger"
+             invisible="overdue_severity != 'severe'">
+          Retard de <field name="jours_retard"/> jours — Contentieux imminent
+        </div>
+        <div class="alert alert-warning"
+             invisible="overdue_severity != 'moderate'">
+          Retard de <field name="jours_retard"/> jours — Relance recommandée
+        </div>
+
+        <sheet>
+          <div name="button_box" class="oe_button_box">
+            <button name="action_view_settlements" type="object"
+                    class="oe_stat_button" icon="fa-money">
+              <field name="settlement_count" widget="statinfo" string="Règlements"/>
+            </button>
+          </div>
+
+          <div class="oe_title">
+            <label for="name"/>
+            <h1><field name="name" placeholder="QT-2026-00001"/></h1>
+            <div>
+              <field name="company_ins_id" class="badge"
+                     options="{'no_create': True}"/>
+              <field name="branche" class="badge badge-secondary ms-1"/>
+            </div>
+          </div>
+
+          <group>
+            <group string="Police">
+              <field name="policy_id" options="{'no_create': True}"/>
+              <field name="partner_id" readonly="1"/>
+              <field name="payer_id" readonly="1"
+                     invisible="payer_id == partner_id"/>
+              <field name="nature"/>
+              <field name="vehicule" invisible="branche != 'AUTO'"/>
+            </group>
+            <group string="Période">
+              <field name="date_emission"/>
+              <field name="date_echeance"/>
+              <field name="date_validite_du"/>
+              <field name="date_validite_au"/>
+            </group>
+          </group>
+
+          <notebook>
+            <page string="Montants" name="montants">
+              <group>
+                <group string="Détail">
+                  <field name="montant_prime" widget="monetary"
+                         options="{'currency_field': 'currency_id'}"/>
+                  <field name="montant_honoraire_ht" widget="monetary"
+                         options="{'currency_field': 'currency_id'}"/>
+                  <field name="taux_tva"/>
+                  <field name="montant_tva" widget="monetary"
+                         options="{'currency_field': 'currency_id'}" readonly="1"/>
+                  <field name="timbre_fiscal_tax_id"
+                         options="{'no_create': True}"/>
+                  <field name="timbre_fiscal" widget="monetary"
+                         options="{'currency_field': 'currency_id'}"/>
+                </group>
+                <group string="Totaux">
+                  <field name="amount_total" widget="monetary"
+                         options="{'currency_field': 'currency_id'}"
+                         readonly="1" class="fw-bold"/>
+                  <field name="amount_paid" widget="monetary"
+                         options="{'currency_field': 'currency_id'}" readonly="1"/>
+                  <field name="amount_residual" widget="monetary"
+                         options="{'currency_field': 'currency_id'}"
+                         readonly="1" class="text-danger"/>
+                  <field name="commission" widget="monetary"
+                         options="{'currency_field': 'currency_id'}"/>
+                </group>
+              </group>
+            </page>
+
+            <page string="Règlements" name="reglements">
+              <field name="settlement_ids">
+                <tree editable="bottom"
+                      decoration-danger="state == 'impaye'"
+                      decoration-success="state in ('regle','encaisse')">
+                  <field name="date_reg"/>
+                  <field name="type_reg"/>
+                  <field name="partner_id"/>
+                  <field name="num_cheque"
+                         column_invisible="type_reg != 'C'"/>
+                  <field name="date_echeance_cheque"
+                         column_invisible="type_reg != 'C'"/>
+                  <field name="montant_reg" widget="monetary"
+                         options="{'currency_field': 'currency_id'}"
+                         sum="Total règlements"/>
+                  <field name="state" widget="badge"
+                         decoration-success="state in ('regle','encaisse')"
+                         decoration-danger="state == 'impaye'"/>
+                  <field name="currency_id" column_invisible="1"/>
+                  <button name="action_confirmer" string="Confirmer"
+                          type="object" icon="fa-check"
+                          invisible="state not in ('brouillon','remis')"/>
+                  <button name="action_rejeter" string="Rejeter"
+                          type="object" icon="fa-times"
+                          invisible="state in ('impaye','encaisse')"/>
+                </tree>
+              </field>
+            </page>
+          </notebook>
+        </sheet>
+        <div class="oe_chatter">
+          <field name="message_follower_ids"/>
+          <field name="activity_ids"/>
+          <field name="message_ids"/>
+        </div>
+      </form>
+    </field>
+  </record>
+
+  <!-- ══════════════════════════════════════════════════════════════════════ -->
+  <!--  VUE LISTE DENSE — Quittances (groupée par compagnie)                   -->
+  <!-- ══════════════════════════════════════════════════════════════════════ -->
+  <record id="view_insurance_receipt_tree_detail" model="ir.ui.view">
+    <field name="name">insurance.receipt.tree.detail</field>
+    <field name="model">insurance.receipt</field>
+    <field name="arch" type="xml">
+      <tree decoration-danger="state == 'contentieux' or overdue_severity == 'severe'"
+            decoration-warning="overdue_severity == 'moderate'"
+            decoration-success="state in ('encaissee','reversee')"
+            multi_edit="1">
+        <field name="name"/>
+        <field name="partner_id"/>
+        <field name="policy_id" optional="show"/>
+        <field name="company_ins_id"/>
+        <field name="branche" optional="show"/>
+        <field name="date_echeance"/>
+        <field name="amount_total" widget="monetary"
+               options="{'currency_field': 'currency_id'}" sum="Total TTC"/>
+        <field name="commission" widget="monetary"
+               options="{'currency_field': 'currency_id'}"
+               sum="Commission" optional="show"/>
+        <field name="amount_paid" widget="monetary"
+               options="{'currency_field': 'currency_id'}"
+               sum="Encaissé" optional="show"/>
+        <field name="amount_residual" widget="monetary"
+               options="{'currency_field': 'currency_id'}"
+               sum="Impayé total"
+               decoration-danger="amount_residual &gt; 0"/>
+        <field name="jours_retard"
+               decoration-danger="jours_retard &gt; 60"
+               decoration-warning="jours_retard &gt; 30 and jours_retard &lt;= 60"
+               optional="show"/>
+        <field name="state" widget="badge"
+               decoration-success="state in ('encaissee','reversee')"
+               decoration-warning="state == 'partielle'"
+               decoration-danger="state == 'contentieux'"
+               decoration-info="state in ('emise','notifiee')"/>
+        <field name="overdue_severity" column_invisible="1"/>
+        <field name="currency_id" column_invisible="1"/>
+      </tree>
+    </field>
+  </record>
+
+  <!-- ══════════════════════════════════════════════════════════════════════ -->
+  <!--  ACTION + MENUS — Quittances                                            -->
+  <!-- ══════════════════════════════════════════════════════════════════════ -->
+  <record id="action_insurance_receipts_detail" model="ir.actions.act_window">
+    <field name="name">Quittances</field>
+    <field name="res_model">insurance.receipt</field>
+    <field name="view_mode">tree,form,kanban</field>
+    <field name="view_ids" eval="[(5,0,0),
+      (0,0,{'view_mode':'tree','view_id':ref('view_insurance_receipt_tree_detail')}),
+      (0,0,{'view_mode':'form','view_id':ref('view_insurance_receipt_form_detail')}),
+      (0,0,{'view_mode':'kanban','view_id':ref('view_insurance_receipt_kanban')})]"/>
+    <field name="search_view_id" ref="view_insurance_receipt_search"/>
+    <field name="context">{'search_default_group_compagnie': 1}</field>
+  </record>
+
+  <!-- Le menu Quittances est géré dans dashboard_views.xml (menu_tresorerie) -->
+  <!-- Action disponible pour référence depuis d'autres menus -->
+  <menuitem id="menu_assurcore_receipts_all"
+            name="Quittances (Liste)"
+            parent="menu_tresorerie"
+            action="action_insurance_receipts_detail"
+            sequence="26"/>
+
+</odoo>

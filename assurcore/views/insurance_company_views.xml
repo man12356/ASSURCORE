@@ -1,0 +1,103 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+
+  <!-- ══════════════════════════════════════════════════════════════════════ -->
+  <!--  VUE FORM — Compagnie d'Assurance                                       -->
+  <!-- ══════════════════════════════════════════════════════════════════════ -->
+  <record id="view_insurance_company_form" model="ir.ui.view">
+    <field name="name">insurance.company.form</field>
+    <field name="model">insurance.company</field>
+    <field name="arch" type="xml">
+      <form string="Compagnie d'Assurance">
+        <sheet>
+          <div name="button_box" class="oe_button_box">
+            <button name="action_view_policies" type="object"
+                    class="oe_stat_button" icon="fa-file-text-o"
+                    invisible="policy_count == 0">
+              <field name="policy_count" widget="statinfo" string="Polices"/>
+            </button>
+            <button name="action_view_policies" type="object"
+                    class="oe_stat_button" icon="fa-list-alt"
+                    invisible="receipt_count == 0">
+              <field name="receipt_count" widget="statinfo" string="Quittances"/>
+            </button>
+          </div>
+
+          <div class="oe_title">
+            <label for="name"/>
+            <h1><field name="name" placeholder="Ex: STAR, GAT, LLOYD..."/></h1>
+          </div>
+
+          <group>
+            <group string="Identification">
+              <field name="raison_sociale"/>
+              <field name="code"/>
+              <field name="partner_id" options="{'no_create': True}"/>
+            </group>
+            <group string="Contact">
+              <field name="email"/>
+              <field name="phone"/>
+              <field name="website"/>
+            </group>
+          </group>
+          <group>
+            <group string="Paramètres courtage">
+              <field name="priorite_envoi"/>
+              <field name="delai_reversement"/>
+              <field name="taux_commission_defaut" widget="percentage"/>
+              <field name="agence_courtier"/>
+            </group>
+          </group>
+          <field name="notes" placeholder="Conditions conventionnelles, contacts..."/>
+        </sheet>
+      </form>
+    </field>
+  </record>
+
+  <!-- ══════════════════════════════════════════════════════════════════════ -->
+  <!--  VUE LISTE — Compagnies                                                 -->
+  <!-- ══════════════════════════════════════════════════════════════════════ -->
+  <record id="view_insurance_company_tree" model="ir.ui.view">
+    <field name="name">insurance.company.tree</field>
+    <field name="model">insurance.company</field>
+    <field name="arch" type="xml">
+      <tree>
+        <field name="name"/>
+        <field name="raison_sociale" optional="show"/>
+        <field name="email" optional="show"/>
+        <field name="phone" optional="show"/>
+        <field name="priorite_envoi"/>
+        <field name="taux_commission_defaut" widget="percentage"/>
+        <field name="policy_count"/>
+        <field name="active"/>
+      </tree>
+    </field>
+  </record>
+
+  <!-- ══════════════════════════════════════════════════════════════════════ -->
+  <!--  ACTION + MENUS                                                          -->
+  <!-- ══════════════════════════════════════════════════════════════════════ -->
+  <record id="action_insurance_companies" model="ir.actions.act_window">
+    <field name="name">Compagnies d'Assurance</field>
+    <field name="res_model">insurance.company</field>
+    <field name="view_mode">tree,form</field>
+    <field name="help" type="html">
+      <p class="o_view_nocontent_smiling_face">
+        Ajoutez vos compagnies partenaires (STAR, GAT, LLOYD, COMAR, ASTREE...)
+      </p>
+    </field>
+  </record>
+
+  <menuitem id="menu_assurcore_parametrage"
+            name="Paramétrage"
+            parent="menu_assurcore_root"
+            sequence="90"
+            groups="assurcore.group_assurcore_manager"/>
+
+  <menuitem id="menu_assurcore_companies"
+            name="Compagnies"
+            parent="menu_assurcore_parametrage"
+            action="action_insurance_companies"
+            sequence="10"/>
+
+</odoo>

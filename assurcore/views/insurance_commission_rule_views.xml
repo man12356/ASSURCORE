@@ -1,0 +1,88 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+
+  <!-- ══════════════════════════════════════════════════════════════════════ -->
+  <!--  VUE FORM — Règle de Commission                                         -->
+  <!-- ══════════════════════════════════════════════════════════════════════ -->
+  <record id="view_insurance_commission_rule_form" model="ir.ui.view">
+    <field name="name">insurance.commission.rule.form</field>
+    <field name="model">insurance.commission.rule</field>
+    <field name="arch" type="xml">
+      <form string="Règle de Commission">
+        <sheet>
+          <div class="oe_title">
+            <h3><field name="display_name" readonly="1"/></h3>
+          </div>
+          <group>
+            <group string="Clé de la règle">
+              <field name="company_ins_id"
+                     options="{'no_create': True}"
+                     placeholder="(toutes compagnies)"/>
+              <field name="branche"
+                     placeholder="(toutes branches)"/>
+              <field name="priorite"/>
+            </group>
+            <group string="Taux appliqués">
+              <field name="taux_commission" widget="percentage"/>
+              <field name="taux_honoraire" widget="percentage"/>
+            </group>
+          </group>
+          <group string="Validité temporelle">
+            <field name="date_debut"/>
+            <field name="date_fin"/>
+          </group>
+          <field name="notes" placeholder="Conditions, date de négociation..."/>
+        </sheet>
+      </form>
+    </field>
+  </record>
+
+  <!-- ══════════════════════════════════════════════════════════════════════ -->
+  <!--  VUE LISTE — Grille de commissions (matrice)                            -->
+  <!-- ══════════════════════════════════════════════════════════════════════ -->
+  <record id="view_insurance_commission_rule_tree" model="ir.ui.view">
+    <field name="name">insurance.commission.rule.tree</field>
+    <field name="model">insurance.commission.rule</field>
+    <field name="arch" type="xml">
+      <tree editable="top">
+        <field name="company_ins_id" options="{'no_create': True}"
+               placeholder="(toutes)"/>
+        <field name="branche" placeholder="(toutes)"/>
+        <field name="taux_commission" widget="percentage"/>
+        <field name="taux_honoraire" widget="percentage"/>
+        <field name="priorite"/>
+        <field name="date_debut" optional="show"/>
+        <field name="date_fin" optional="show"/>
+        <field name="active" optional="hide"/>
+      </tree>
+    </field>
+  </record>
+
+  <!-- ══════════════════════════════════════════════════════════════════════ -->
+  <!--  ACTION + MENUS                                                          -->
+  <!-- ══════════════════════════════════════════════════════════════════════ -->
+  <record id="action_insurance_commission_rules" model="ir.actions.act_window">
+    <field name="name">Grille de Commissions</field>
+    <field name="res_model">insurance.commission.rule</field>
+    <field name="view_mode">tree,form</field>
+    <field name="view_ids" eval="[(5,0,0),
+      (0,0,{'view_mode':'tree','view_id':ref('view_insurance_commission_rule_tree')}),
+      (0,0,{'view_mode':'form','view_id':ref('view_insurance_commission_rule_form')})]"/>
+    <field name="help" type="html">
+      <p class="o_view_nocontent_smiling_face">
+        Définissez la grille des commissions par Compagnie × Branche
+      </p>
+      <p>
+        Exemple : STAR + AUTO = 10% · GAT + SANTÉ = 9% · Défaut = 7%
+      </p>
+    </field>
+  </record>
+
+  <menuitem id="menu_assurcore_commissions"
+            name="Grille de Commissions"
+            parent="menu_assurcore_parametrage"
+            action="action_insurance_commission_rules"
+            sequence="20"
+            groups="assurcore.group_assurcore_manager"/>
+
+</odoo>

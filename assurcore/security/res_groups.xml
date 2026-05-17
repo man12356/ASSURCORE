@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+  <data>
+
+    <record id="module_category_assurcore" model="ir.module.category">
+      <field name="name">AssurCore Courtage Assurance</field>
+      <field name="sequence">50</field>
+      <field name="visible">True</field>
+    </record>
+
+    <record id="group_assurcore_agent" model="res.groups">
+      <field name="name">Agent de Saisie</field>
+      <field name="category_id" ref="module_category_assurcore"/>
+      <field name="implied_ids" eval="[(4, ref('base.group_user'))]"/>
+    </record>
+
+    <record id="group_assurcore_manager" model="res.groups">
+      <field name="name">Responsable</field>
+      <field name="category_id" ref="module_category_assurcore"/>
+      <field name="implied_ids" eval="[(4, ref('group_assurcore_agent'))]"/>
+      <field name="users" eval="[(4, ref('base.user_root')), (4, ref('base.user_admin'))]"/>
+    </record>
+
+  </data>
+</odoo>

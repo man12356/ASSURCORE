@@ -1,0 +1,30 @@
+# Docker and Database data
+data_db/
+addons/
+
+# Python compiled files and caches
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+
+# Large data dumps and SQL files
+extract_DDL_DATA.sql
+DATA_ASS.txt
+*.xlsx
+*.xls
+*.csv
+
+# Logs
+*.log
+
+# Large PDF files and documents
+*.pdf
+*.docx
+*.doc
+
+# IDE settings
+.vscode/
+.idea/
+.tempmediaStorage/
+ASSURPROD.code-workspace

@@ -1,0 +1,137 @@
+# ==============================================================================
+#  docker-compose.yml — AssurCore : Odoo 17.0 + PostgreSQL 15
+#
+#  Usage :
+#    ./deploy_local.sh          (recommandé — gestion intelligente du port)
+#    ODOO_PORT=8069 docker compose -p assurcore up -d   (manuel)
+#
+#  Architecture :
+#    ┌─────────────────────────────────────────────────────────────┐
+#    │  HOST                                                        │
+#    │  localhost:${ODOO_PORT} ──► [web:8069]  Odoo 17.0           │
+#    │                              ↕  réseau interne Docker        │
+#    │                          [db:5432]  PostgreSQL 15            │
+#    │                          (port 5432 NON exposé vers l'hôte)  │
+#    └─────────────────────────────────────────────────────────────┘
+#
+#  Volumes :
+#    ./addons   → /mnt/extra-addons   (modules Odoo custom, dont assurcore)
+#    ./config   → /etc/odoo           (odoo.conf)
+#    ./data_db  → /var/lib/postgresql/data  (persistance PostgreSQL)
+# ==============================================================================
+
+services:
+
+  # ── Base de données PostgreSQL 15 ──────────────────────────────────────────
+  db:
+    image: postgres:15-alpine
+    # !! Port 5432 intentionnellement NON exposé vers l'hôte !!
+    # Cela évite tout conflit avec une instance PostgreSQL locale.
+    # Odoo communique avec PostgreSQL via le réseau interne Docker.
+    # expose:
+    #   - "5432"   # visible uniquement aux autres services du réseau assurcore_net
+    container_name: assurcore_db
+    restart: unless-stopped
+
+    environment:
+      # IMPORTANT : on nomme la base système "postgres_system" et NON "odoo"
+      # afin qu'Odoo ne s'y connecte pas avant initialisation.
+      # Odoo créera sa propre base (assurcore_db) lors du premier démarrage.
+      POSTGRES_DB:       postgres_system
+      POSTGRES_USER:     odoo
+      POSTGRES_PASSWORD: odoo
+      POSTGRES_INITDB_ARGS: "--encoding=UTF8"
+
+    volumes:
+      # Persistance des données : survit aux redémarrages et mises à jour
+      - ./data_db:/var/lib/postgresql/data
+
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U odoo -d postgres_system"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+
+    networks:
+      - assurcore_net
+
+    # Limitation des ressources (évite qu'un test local ne consomme trop)
+    deploy:
+      resources:
+        limits:
+          memory: 512M
+
+  # ── Odoo 17.0 ──────────────────────────────────────────────────────────────
+  web:
+    image: odoo:17.0
+    container_name: assurcore_web
+    restart: unless-stopped
+
+    depends_on:
+      db:
+        condition: service_healthy  # Attend que PostgreSQL soit prêt
+
+    # ── Port dynamique ────────────────────────────────────────────────────────
+    # La variable ODOO_PORT est exportée par deploy_local.sh après détection
+    # du premier port libre. La syntaxe ${VAR:-défaut} garantit un fallback.
+    ports:
+      - "${ODOO_PORT:-8069}:8069"
+
+    environment:
+      # Connexion à la base de données
+      HOST:     db
+      PORT:     5432
+      USER:     odoo
+      PASSWORD: odoo
+      # Variables Odoo supplémentaires
+      ODOO_RC:  /etc/odoo/odoo.conf
+
+    volumes:
+      # Modules custom (dont assurcore) — monté en lecture-écriture
+      - ./addons:/mnt/extra-addons
+      # Configuration Odoo (odoo.conf)
+      - ./config:/etc/odoo
+      # Stockage des fichiers uploadés (pièces jointes, documents)
+      - odoo_filestore:/var/lib/odoo
+
+    # Commande de démarrage Odoo.
+    # CORRECTION : supprimer le "--" parasitaire qui empêchait le chargement
+    # du fichier de configuration et forçait Odoo à chercher la base "odoo".
+    command: odoo --config=/etc/odoo/odoo.conf
+
+    healthcheck:
+      test: ["CMD-SHELL",
+             "curl -sf http://localhost:8069/web/health || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 60s
+
+    networks:
+      - assurcore_net
+
+    # Limites ressources (développement local)
+    deploy:
+      resources:
+        limits:
+          memory: 1G
+
+    # Dépendance stricte : ne démarre que si db est healthy
+    links:
+      - db
+
+# ── Volumes nommés ──────────────────────────────────────────────────────────
+volumes:
+  # Stockage des fichiers Odoo (pièces jointes, rapports, images)
+  # Nommé pour survivre aux docker compose down (sans -v)
+  odoo_filestore:
+    name: assurcore_filestore
+
+# ── Réseau interne isolé ────────────────────────────────────────────────────
+networks:
+  assurcore_net:
+    name: assurcore_network
+    driver: bridge
+    # Réseau isolé : seuls les containers de ce compose peuvent communiquer
+    # PostgreSQL n'est PAS accessible depuis l'hôte ni depuis d'autres réseaux

@@ -1,0 +1,690 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+================================================================================
+  AssurCore — Dashboard Trésorerie
+  Référence maquette : deck2.pdf pages 02, 03
+
+  Architecture Odoo native (zéro JSX / zéro React) :
+
+  PAGE 02 — Dashboard Trésorerie :
+    ┌─────────────────────────────────────────────────────────────┐
+    │  SOLDE CAISSE │ IMPAYÉS >30J │ RENOUVELLEMENTS │ PROD. MTD │  ← <dashboard> + <aggregate>
+    ├──────────────────────────────┬──────────────────────────────┤
+    │  Pipeline quittances (Kanban)│  Top Impayés (List)          │  ← vue kanban groupée
+    │  Émise→Notifiée→…→Reversée  │  trié par retard décrois.    │
+    └──────────────────────────────┴──────────────────────────────┘
+
+  PAGE 03 — Quittances Tree Dense :
+    Groupé par compagnie, sous-totaux HT/TTC/Commission, badges état
+
+  Vues utilisées :
+    1. <dashboard>   sur insurance.receipt  → 4 KPI agrégats natifs Odoo
+    2. <kanban>      sur insurance.receipt  → Pipeline groupé par state
+    3. <tree>        sur insurance.receipt  → Top Impayés dense (page 03)
+    4. <search>      sur insurance.receipt  → Filtres trésorerie
+================================================================================
+-->
+<odoo>
+
+  <!-- ══════════════════════════════════════════════════════════════════════ -->
+  <!--  1. VUE RECHERCHE — insurance.receipt (partagée par toutes les vues)  -->
+  <!-- ══════════════════════════════════════════════════════════════════════ -->
+  <record id="view_insurance_receipt_search" model="ir.ui.view">
+    <field name="name">insurance.receipt.search</field>
+    <field name="model">insurance.receipt</field>
+    <field name="arch" type="xml">
+      <search string="Rechercher une quittance">
+
+        <field name="name" string="N° Quittance"/>
+        <field name="partner_id" string="Assuré"/>
+        <field name="payer_id" string="Payeur"/>
+        <field name="policy_id" string="Police"/>
+        <field name="company_ins_id" string="Compagnie"/>
+
+        <!-- ── Filtres Trésorerie ─────────────────────────────────────────── -->
+        <filter string="Impayées > 30 j" name="overdue_30"
+                domain="[('is_overdue', '=', True), ('jours_retard', '&gt;', 30)]"/>
+        <filter string="Impayées > 60 j" name="overdue_60"
+                domain="[('is_overdue', '=', True), ('jours_retard', '&gt;', 60)]"/>
+        <filter string="Contentieux" name="contentieux"
+                domain="[('state', '=', 'contentieux')]"/>
+        <separator/>
+        <filter string="Encaissées" name="encaissees"
+                domain="[('state', '=', 'encaissee')]"/>
+        <filter string="Reversées" name="reversees"
+                domain="[('state', '=', 'reversee')]"/>
+        <separator/>
+        <!-- Renouvellements à 30 jours — lien avec la police parente -->
+        <filter string="Échéance ≤ 30 j" name="echeance_30"
+                domain="[('date_echeance', '&lt;=', (context_today() + datetime.timedelta(days=30)).strftime('%Y-%m-%d')),
+                         ('date_echeance', '&gt;=', context_today().strftime('%Y-%m-%d'))]"/>
+        <filter string="Ce mois" name="ce_mois"
+                domain="[('date_emission', '&gt;=', (context_today()).strftime('%Y-%m-01'))]"/>
+
+        <!-- ── Filtres Branches ──────────────────────────────────────────── -->
+        <separator/>
+        <filter string="Automobile" name="auto"   domain="[('branche', '=', 'AUTO')]"/>
+        <filter string="Santé"      name="sante"  domain="[('branche', '=', 'SANTE')]"/>
+        <filter string="MRH"        name="mrh"    domain="[('branche', '=', 'MRH')]"/>
+
+        <!-- ── Groupements ──────────────────────────────────────────────── -->
+        <group expand="0" string="Regrouper par">
+          <filter string="État"       name="group_state"
+                  context="{'group_by': 'state'}"/>
+          <filter string="Compagnie"  name="group_compagnie"
+                  context="{'group_by': 'company_ins_id'}"/>
+          <filter string="Branche"    name="group_branche"
+                  context="{'group_by': 'branche'}"/>
+          <filter string="Commercial" name="group_commercial"
+                  context="{'group_by': 'commercial_id'}"/>
+          <filter string="Mois"       name="group_mois"
+                  context="{'group_by': 'date_emission:month'}"/>
+        </group>
+      </search>
+    </field>
+  </record>
+
+  <!-- ══════════════════════════════════════════════════════════════════════ -->
+  <!--  2. VUE DASHBOARD — 4 KPI Trésorerie (Odoo native dashboard view)     -->
+  <!--     Maquette page 02 : Solde Caisse · Impayés >30j · Renouv. · MTD   -->
+  <!-- ══════════════════════════════════════════════════════════════════════ -->
+  <!-- <record id="view_insurance_receipt_dashboard" model="ir.ui.view">
+    <field name="name">insurance.receipt.dashboard</field>
+    <field name="model">insurance.receipt</field>
+    <field name="arch" type="xml">
+      <dashboard>
+
+        <group>
+          <aggregate name="kpi_solde_caisse" field="amount_paid" string="Solde Caisse (TND)" domain="[('state', 'in', ('encaissee',))]" group_operator="sum" widget="monetary" help="Total des primes encaissées par le cabinet, en attente de reversement compagnie."/>
+          <aggregate name="kpi_impayes_30j" field="amount_residual" string="Impayés &gt; 30 j (TND)" domain="[('is_overdue', '=', True), ('jours_retard', '&gt;', 30)]" group_operator="sum" widget="monetary" help="Montant total des quittances impayées depuis plus de 30 jours."/>
+          <aggregate name="kpi_echeances_30j" field="id" string="Renouvellements ≤ 30 j" domain="[('state', 'in', ('emise','notifiee','partielle')), ('date_echeance', '&gt;=', context_today().strftime('%Y-%m-%d'))]" group_operator="count" help="Nombre de quittances arrivant à échéance dans les 30 prochains jours."/>
+          <aggregate name="kpi_production_mtd" field="amount_total" string="Production MTD (TND)" domain="[('date_emission', '&gt;=', context_today().strftime('%Y-%m-01'))]" group_operator="sum" widget="monetary" help="Total des primes émises depuis le 1er du mois (Month To Date)."/>
+        </group>
+
+        <view type="graph" ref="assurcore.view_insurance_receipt_graph"/>
+        <view type="pivot" ref="assurcore.view_insurance_receipt_pivot"/>
+
+      </dashboard>
+    </field>
+  </record> -->
+
+  <!-- ══════════════════════════════════════════════════════════════════════ -->
+  <!--  3. VUE GRAPHIQUE — Production par compagnie                          -->
+  <!-- ══════════════════════════════════════════════════════════════════════ -->
+  <record id="view_insurance_receipt_graph" model="ir.ui.view">
+    <field name="name">insurance.receipt.graph</field>
+    <field name="model">insurance.receipt</field>
+    <field name="arch" type="xml">
+      <graph string="Production par compagnie" type="bar" stacked="0">
+        <field name="company_ins_id" type="row"/>
+        <field name="branche" type="row"/>
+        <field name="amount_total" type="measure" string="Total TTC (TND)"/>
+        <field name="commission" type="measure" string="Commission (TND)"/>
+        <field name="amount_paid" type="measure" string="Encaissé (TND)"/>
+      </graph>
+    </field>
+  </record>
+
+  <!-- ══════════════════════════════════════════════════════════════════════ -->
+  <!--  4. VUE PIVOT — Analyse trésorerie                                     -->
+  <!-- ══════════════════════════════════════════════════════════════════════ -->
+  <record id="view_insurance_receipt_pivot" model="ir.ui.view">
+    <field name="name">insurance.receipt.pivot</field>
+    <field name="model">insurance.receipt</field>
+    <field name="arch" type="xml">
+      <pivot string="Analyse trésorerie" display_quantity="1">
+        <field name="company_ins_id" type="row"/>
+        <field name="branche" type="row"/>
+        <field name="state" type="col"/>
+        <field name="amount_total"    type="measure" string="Total TTC (TND)"/>
+        <field name="amount_paid"     type="measure" string="Encaissé (TND)"/>
+        <field name="amount_residual" type="measure" string="Reste dû (TND)"/>
+        <field name="commission"      type="measure" string="Commission (TND)"/>
+        <field name="timbre_fiscal"   type="measure" string="Timbre Fiscal (TND)"/>
+      </pivot>
+    </field>
+  </record>
+
+  <!-- ══════════════════════════════════════════════════════════════════════ -->
+  <!--  5. VUE KANBAN — Pipeline Quittances                                   -->
+  <!--     Maquette page 02 : Émise · Notifiée · Partielle · Encaissée       -->
+  <!--     Colonnes colorées, badge compagnie, montant TTC visible            -->
+  <!-- ══════════════════════════════════════════════════════════════════════ -->
+  <record id="view_insurance_receipt_kanban" model="ir.ui.view">
+    <field name="name">insurance.receipt.kanban</field>
+    <field name="model">insurance.receipt</field>
+    <field name="arch" type="xml">
+      <kanban default_group_by="state"
+              class="o_kanban_small_column"
+              quick_create="false">
+
+        <field name="name"/>
+        <field name="partner_id"/>
+        <field name="payer_id"/>
+        <field name="company_ins_id"/>
+        <field name="branche"/>
+        <field name="amount_total"/>
+        <field name="amount_residual"/>
+        <field name="date_echeance"/>
+        <field name="jours_retard"/>
+        <field name="overdue_severity"/>
+        <field name="state"/>
+        <field name="currency_id"/>
+
+        <!-- Couleurs Kanban par état (alignées avec les design tokens SCSS) -->
+        <field name="state"/>
+
+        <templates>
+          <t t-name="kanban-box">
+            <div t-attf-class="oe_kanban_global_click o_kanban_record #{record.overdue_severity.raw_value == 'severe' ? 'ac-card-danger' : (record.overdue_severity.raw_value == 'moderate' ? 'ac-card-warning' : '')}">
+
+              <!-- En-tête : N° Quittance + Badge Compagnie -->
+              <div class="o_kanban_record_top">
+                <div class="o_kanban_record_headings">
+                  <strong class="o_kanban_record_title">
+                    <field name="name"/>
+                  </strong>
+                  <!-- Badge compagnie coloré (design tokens $ac-star-color…) -->
+                  <span class="badge ac-badge-compagnie">
+                    <field name="company_ins_id"/>
+                  </span>
+                </div>
+                <!-- Badge branche -->
+                <span class="badge badge-secondary">
+                  <field name="branche"/>
+                </span>
+              </div>
+
+              <!-- Corps : Assuré + Montant -->
+              <div class="o_kanban_record_body">
+                <div>
+                  <i class="fa fa-user-o me-1"/>
+                  <field name="partner_id"/>
+                </div>
+                <!-- Payeur différent → cas famille -->
+                <div t-if="record.payer_id.raw_value != record.partner_id.raw_value"
+                     class="text-muted small">
+                  <i class="fa fa-users me-1"/>
+                  Payeur : <field name="payer_id"/>
+                </div>
+                <div class="mt-2">
+                  <strong>
+                    <field name="amount_total"
+                           widget="monetary"
+                           options="{'currency_field': 'currency_id'}"/>
+                  </strong>
+                  <span class="text-muted ms-1">TTC</span>
+                </div>
+                <!-- Reste dû (affiché si partielle) -->
+                <div t-if="record.amount_residual.raw_value > 0"
+                     class="text-danger small">
+                  Reste : <field name="amount_residual"
+                                 widget="monetary"
+                                 options="{'currency_field': 'currency_id'}"/>
+                </div>
+              </div>
+
+              <!-- Bas de carte : Date échéance + Retard -->
+              <div class="o_kanban_record_bottom">
+                <div class="oe_kanban_bottom_left">
+                  <i class="fa fa-calendar me-1"/>
+                  <field name="date_echeance"/>
+                </div>
+                <div class="oe_kanban_bottom_right">
+                  <!-- Badge retard -->
+                  <span t-if="record.jours_retard.raw_value > 0"
+                        t-attf-class="badge #{record.overdue_severity.raw_value == 'severe' ? 'bg-danger' : 'bg-warning text-dark'}">
+                    <field name="jours_retard"/>j
+                  </span>
+                </div>
+              </div>
+
+            </div>
+          </t>
+        </templates>
+      </kanban>
+    </field>
+  </record>
+
+  <!-- ══════════════════════════════════════════════════════════════════════ -->
+  <!--  6. VUE TREE DENSE — Quittances (maquette page 03)                    -->
+  <!--     Groupé par compagnie · Sous-totaux · Badges état inline           -->
+  <!--     Sélection multiple → actions de masse                             -->
+  <!-- ══════════════════════════════════════════════════════════════════════ -->
+  <record id="view_insurance_receipt_tree" model="ir.ui.view">
+    <field name="name">insurance.receipt.tree</field>
+    <field name="model">insurance.receipt</field>
+    <field name="arch" type="xml">
+      <tree string="Quittances"
+            multi_edit="1"
+            decoration-danger="state == 'contentieux' or overdue_severity == 'severe'"
+            decoration-warning="overdue_severity == 'moderate'"
+            decoration-success="state in ('encaissee','reversee')"
+            decoration-muted="state == 'reversee'">
+
+        <!-- Colonnes principales -->
+        <field name="name" string="N° Quittance"/>
+        <field name="partner_id" string="Client / Assuré"/>
+        <field name="policy_id" string="Police" optional="show"/>
+        <field name="company_ins_id" string="Compagnie"/>
+        <field name="branche" string="Branche" optional="show"/>
+        <field name="date_echeance" string="Échéance"/>
+
+        <!-- Montants — maquette : TTC · Commission · État -->
+        <field name="amount_total"
+               string="TTC (TND)"
+               widget="monetary"
+               options="{'currency_field': 'currency_id'}"
+               sum="Total TTC"/>
+        <field name="commission"
+               string="Commission (TND)"
+               widget="monetary"
+               options="{'currency_field': 'currency_id'}"
+               sum="Commission totale"
+               optional="show"/>
+        <field name="amount_paid"
+               string="Encaissé (TND)"
+               widget="monetary"
+               options="{'currency_field': 'currency_id'}"
+               sum="Encaissé"
+               optional="show"/>
+        <field name="amount_residual"
+               string="Reste dû (TND)"
+               widget="monetary"
+               options="{'currency_field': 'currency_id'}"
+               sum="Impayé total"
+               decoration-danger="amount_residual &gt; 0"/>
+        <field name="timbre_fiscal"
+               string="Timbre (TND)"
+               widget="monetary"
+               options="{'currency_field': 'currency_id'}"
+               sum="Timbre Total"
+               optional="hide"/>
+
+        <!-- Badge retard inline (maquette : "30j", "43j" coloré) -->
+        <field name="jours_retard"
+               string="Retard"
+               decoration-danger="jours_retard &gt; 60"
+               decoration-warning="jours_retard &gt; 30 and jours_retard &lt;= 60"
+               optional="show"/>
+
+        <!-- Badge état (maquette : Encaissée / 30j / Payée) -->
+        <field name="state"
+               string="État"
+               widget="badge"
+               decoration-success="state in ('encaissee', 'reversee')"
+               decoration-warning="state in ('partielle',)"
+               decoration-danger="state == 'contentieux'"
+               decoration-info="state in ('emise', 'notifiee')"/>
+
+        <!-- Colonnes cachées nécessaires aux décorations -->
+        <field name="overdue_severity" invisible="1"/>
+        <field name="is_overdue" invisible="1"/>
+        <field name="currency_id" invisible="1"/>
+
+        <!-- Actions de masse (Barre contextuelle sélection) -->
+        <!-- Déclenchées depuis le bouton "Actions" quand des lignes sont cochées -->
+
+      </tree>
+    </field>
+  </record>
+
+  <!-- ══════════════════════════════════════════════════════════════════════ -->
+  <!--  7. VUE FORM — Fiche Quittance                                         -->
+  <!-- ══════════════════════════════════════════════════════════════════════ -->
+  <record id="view_insurance_receipt_form" model="ir.ui.view">
+    <field name="name">insurance.receipt.form</field>
+    <field name="model">insurance.receipt</field>
+    <field name="arch" type="xml">
+      <form string="Quittance d'Assurance">
+
+        <!-- ── Statusbar pipeline (maquette page 02) ──────────────────── -->
+        <header>
+          <field name="state"
+                 widget="statusbar"
+                 statusbar_visible="emise,notifiee,partielle,encaissee,reversee"/>
+
+          <!-- Boutons de transition -->
+          <button name="action_notifier"
+                  string="Notifier le client"
+                  type="object"
+                  class="btn-secondary"
+                  invisible="state != 'emise'"/>
+          <button name="action_partial_payment"
+                  string="Acompte reçu"
+                  type="object"
+                  class="btn-secondary"
+                  invisible="state not in ('emise', 'notifiee')"/>
+          <button name="action_encaisser"
+                  string="Encaisser"
+                  type="object"
+                  class="btn-primary"
+                  invisible="state not in ('emise', 'notifiee', 'partielle')"/>
+          <button name="action_reverser"
+                  string="Reverser à la compagnie"
+                  type="object"
+                  class="btn-secondary"
+                  invisible="state != 'encaissee'"/>
+          <button name="action_contentieux"
+                  string="Mettre en contentieux"
+                  type="object"
+                  class="btn-danger"
+                  invisible="state in ('encaissee', 'reversee')"/>
+          <button name="action_reopen"
+                  string="Remettre en circuit"
+                  type="object"
+                  class="btn-secondary"
+                  invisible="state != 'contentieux'"/>
+        </header>
+
+        <!-- ── Ruban d'alerte retard ───────────────────────────────────── -->
+        <div class="alert alert-danger o_form_label"
+             role="alert"
+             invisible="overdue_severity != 'severe'">
+          <i class="fa fa-exclamation-triangle me-2"/>
+          Quittance en contentieux — Retard de <field name="jours_retard" class="fw-bold"/> jours
+        </div>
+        <div class="alert alert-warning o_form_label"
+             role="alert"
+             invisible="overdue_severity != 'moderate'">
+          <i class="fa fa-clock-o me-2"/>
+          Retard de <field name="jours_retard"/> jours — Relance recommandée
+        </div>
+
+        <sheet>
+          <field name="overdue_severity" invisible="1"/>
+          <field name="move_id" invisible="1"/>
+          <!-- ── Smart Buttons ────────────────────────────────────────── -->
+          <div name="button_box" class="oe_button_box">
+            <button name="action_view_settlements"
+                    type="object"
+                    class="oe_stat_button"
+                    icon="fa-money">
+              <field name="settlement_count"
+                     widget="statinfo"
+                     string="Règlements"/>
+            </button>
+            <button name="action_view_accounting_move"
+                    type="object"
+                    class="oe_stat_button"
+                    icon="fa-book"
+                    invisible="move_id == False">
+              <div class="o_field_widget o_stat_info">
+                <span class="o_stat_value">1</span>
+                <span class="o_stat_text">Écriture compta.</span>
+              </div>
+            </button>
+          </div>
+
+          <!-- ── En-tête : N° Quittance + Compagnie ──────────────────── -->
+          <div class="oe_title">
+            <label for="name" string="N° Quittance"/>
+            <h1>
+              <field name="name" placeholder="QT-AAAA-XXXXX"/>
+            </h1>
+            <div>
+              <field name="company_ins_id"
+                     options="{'no_create': True}"
+                     class="ac-badge-compagnie badge"/>
+              <field name="branche" class="badge badge-secondary ms-1"/>
+            </div>
+          </div>
+
+          <!-- ── Montant TTC mis en évidence ─────────────────────────── -->
+          <div class="ac-montant-highlight">
+            <span class="o_form_label">Total TTC</span>
+            <span class="ac-montant-value">
+              <field name="amount_total"
+                     widget="monetary"
+                     options="{'currency_field': 'currency_id'}"/>
+            </span>
+            <span class="ac-montant-restant text-danger"
+                  invisible="amount_residual &lt;= 0">
+              Reste : <field name="amount_residual"
+                             widget="monetary"
+                             options="{'currency_field': 'currency_id'}"/>
+            </span>
+          </div>
+
+          <!-- ── Corps principal ─────────────────────────────────────── -->
+          <group>
+            <group string="Assuré &amp; Police">
+              <field name="policy_id"
+                     options="{'no_create': True}"
+                     domain="[('state', 'in', ('active','unpaid'))]"/>
+              <field name="partner_id" readonly="1"/>
+              <field name="payer_id"
+                     invisible="payer_id == False"/>
+              <field name="nature"/>
+              <field name="designation"/>
+              <field name="vehicule"
+                     invisible="branche != 'AUTO'"/>
+            </group>
+            <group string="Dates de validité">
+              <field name="date_emission"/>
+              <field name="date_echeance"/>
+              <field name="date_validite_du"/>
+              <field name="date_validite_au"/>
+              <field name="jours_retard"
+                     invisible="jours_retard &lt;= 0"
+                     class="text-danger fw-bold"/>
+            </group>
+          </group>
+
+          <!-- ── Onglets ─────────────────────────────────────────────── -->
+          <notebook>
+
+            <!-- Onglet Montants -->
+            <page string="Montants &amp; Taxes" name="montants">
+              <group>
+                <group string="Décomposition des montants">
+                  <field name="montant_prime"
+                         widget="monetary"
+                         options="{'currency_field': 'currency_id'}"/>
+                  <field name="commission"
+                         widget="monetary"
+                         options="{'currency_field': 'currency_id'}"/>
+                  <field name="montant_honoraire_ht"
+                         widget="monetary"
+                         options="{'currency_field': 'currency_id'}"/>
+                  <field name="taux_tva" widget="percentage"/>
+                  <field name="montant_tva"
+                         widget="monetary"
+                         options="{'currency_field': 'currency_id'}"
+                         readonly="1"/>
+                  <!-- Timbre Fiscal Tunisie — champ clé -->
+                  <field name="timbre_fiscal"
+                         widget="monetary"
+                         options="{'currency_field': 'currency_id'}"/>
+                </group>
+                <group string="Totaux">
+                  <field name="amount_total"
+                         widget="monetary"
+                         options="{'currency_field': 'currency_id'}"
+                         readonly="1"
+                         class="fw-bold"/>
+                  <field name="amount_paid"
+                         widget="monetary"
+                         options="{'currency_field': 'currency_id'}"
+                         readonly="1"/>
+                  <field name="amount_residual"
+                         widget="monetary"
+                         options="{'currency_field': 'currency_id'}"
+                         readonly="1"
+                         class="text-danger"/>
+                </group>
+              </group>
+            </page>
+
+            <!-- Onglet Règlements -->
+            <page string="Règlements" name="reglements">
+              <field name="settlement_ids">
+                <tree editable="bottom"
+                      decoration-danger="state == 'impaye'"
+                      decoration-success="state in ('regle','encaisse')">
+                  <field name="date_reg" string="Date"/>
+                  <field name="type_reg" string="Mode"/>
+                  <field name="partner_id" string="Payeur"/>
+                  <field name="num_cheque" string="N° Chèque"
+                         invisible="type_reg != 'C'"/>
+                  <field name="banque_tireur" string="Banque"
+                         invisible="type_reg != 'C'"/>
+                  <field name="date_echeance_cheque" string="Éch. Chèque"
+                         invisible="type_reg != 'C'"/>
+                  <field name="montant_reg"
+                         string="Montant (TND)"
+                         widget="monetary"
+                         options="{'currency_field': 'currency_id'}"
+                         sum="Total règlements"/>
+                  <field name="state"
+                         string="État"
+                         widget="badge"
+                         decoration-success="state in ('regle','encaisse')"
+                         decoration-danger="state == 'impaye'"/>
+                  <field name="imputer" optional="hide"/>
+                  <field name="currency_id" invisible="1"/>
+                  <button name="action_confirmer"
+                          string="Confirmer"
+                          type="object"
+                          icon="fa-check"
+                          invisible="state not in ('brouillon', 'remis')"/>
+                  <button name="action_rejeter"
+                          string="Rejeter"
+                          type="object"
+                          icon="fa-times"
+                          class="btn-danger"
+                          invisible="state in ('impaye', 'encaisse')"/>
+                </tree>
+              </field>
+            </page>
+
+            <!-- Onglet Notes -->
+            <page string="Notes" name="notes">
+              <field name="notes" placeholder="Remarques internes…"/>
+            </page>
+
+          </notebook>
+        </sheet>
+
+        <!-- ── Chatter Odoo natif ─────────────────────────────────────── -->
+        <div class="oe_chatter">
+          <field name="message_follower_ids"/>
+          <field name="activity_ids"/>
+          <field name="message_ids"/>
+        </div>
+
+      </form>
+    </field>
+  </record>
+
+  <!-- ══════════════════════════════════════════════════════════════════════ -->
+  <!--  8. ACTIONS — Fenêtres d'action                                        -->
+  <!-- ══════════════════════════════════════════════════════════════════════ -->
+
+  <!-- Action Dashboard Trésorerie (vue dashboard comme vue principale) -->
+  <record id="action_assurcore_dashboard" model="ir.actions.act_window">
+    <field name="name">Tableau de Bord Trésorerie</field>
+    <field name="res_model">insurance.receipt</field>
+    <field name="view_mode">graph,pivot,kanban,tree</field>
+    <field name="view_ids"
+           eval="[(5, 0, 0),
+                  (0, 0, {'view_mode': 'graph',     'view_id': ref('view_insurance_receipt_graph')}),
+                  (0, 0, {'view_mode': 'pivot',     'view_id': ref('view_insurance_receipt_pivot')}),
+                  (0, 0, {'view_mode': 'kanban',    'view_id': ref('view_insurance_receipt_kanban')}),
+                  (0, 0, {'view_mode': 'tree',      'view_id': ref('view_insurance_receipt_tree')})]"/>
+    <field name="search_view_id" ref="view_insurance_receipt_search"/>
+    <field name="context">{}</field>
+    <field name="help" type="html">
+      <p class="o_view_nocontent_smiling_face">
+        Aucune quittance enregistrée pour l'instant
+      </p>
+      <p>
+        Créez des polices d'assurance et émettez des quittances
+        pour visualiser ici le tableau de bord trésorerie.
+      </p>
+    </field>
+  </record>
+
+  <!-- Action Top Impayés (accès rapide depuis le menu) -->
+  <record id="action_top_impayes" model="ir.actions.act_window">
+    <field name="name">Top Impayés (&gt; 30 jours)</field>
+    <field name="res_model">insurance.receipt</field>
+    <field name="view_mode">tree,form</field>
+    <field name="view_id" ref="view_insurance_receipt_tree"/>
+    <field name="search_view_id" ref="view_insurance_receipt_search"/>
+    <field name="domain">[('is_overdue', '=', True), ('jours_retard', '&gt;', 30)]</field>
+    <field name="context">{
+      'search_default_group_compagnie': 1,
+      'order': 'jours_retard desc'
+    }</field>
+  </record>
+
+  <!-- Action Pipeline Quittances (Kanban) -->
+  <record id="action_pipeline_quittances" model="ir.actions.act_window">
+    <field name="name">Pipeline Quittances</field>
+    <field name="res_model">insurance.receipt</field>
+    <field name="view_mode">kanban,tree,form</field>
+    <field name="view_ids"
+           eval="[(5, 0, 0),
+                  (0, 0, {'view_mode': 'kanban', 'view_id': ref('view_insurance_receipt_kanban')}),
+                  (0, 0, {'view_mode': 'tree',   'view_id': ref('view_insurance_receipt_tree')})]"/>
+    <field name="search_view_id" ref="view_insurance_receipt_search"/>
+    <field name="context">{'search_default_group_state': 1}</field>
+  </record>
+
+  <!-- Action Toutes les Quittances (List dense — maquette page 03) -->
+  <record id="action_all_quittances" model="ir.actions.act_window">
+    <field name="name">Quittances</field>
+    <field name="res_model">insurance.receipt</field>
+    <field name="view_mode">tree,form,kanban,graph</field>
+    <field name="view_ids"
+           eval="[(5, 0, 0),
+                  (0, 0, {'view_mode': 'tree',   'view_id': ref('view_insurance_receipt_tree')}),
+                  (0, 0, {'view_mode': 'form',   'view_id': ref('view_insurance_receipt_form')}),
+                  (0, 0, {'view_mode': 'kanban', 'view_id': ref('view_insurance_receipt_kanban')}),
+                  (0, 0, {'view_mode': 'graph',  'view_id': ref('view_insurance_receipt_graph')})]"/>
+    <field name="search_view_id" ref="view_insurance_receipt_search"/>
+    <field name="context">{'search_default_group_compagnie': 1}</field>
+  </record>
+
+  <!-- ══════════════════════════════════════════════════════════════════════ -->
+  <!--  9. MENUS                                                              -->
+  <!-- ══════════════════════════════════════════════════════════════════════ -->
+
+  <!-- Menu racine déplacé vers res_partner_views.xml -->
+
+  <!-- Dashboard (entrée principale — maquette page 02) -->
+  <menuitem id="menu_assurcore_dashboard"
+            name="Tableau de Bord"
+            parent="menu_assurcore_root"
+            action="action_assurcore_dashboard"
+            sequence="10"/>
+
+  <!-- Sous-menu Trésorerie (déplacé vers res_partner_views.xml) -->
+
+  <menuitem id="menu_top_impayes"
+            name="Top Impayés &gt; 30 j"
+            parent="menu_tresorerie"
+            action="action_top_impayes"
+            sequence="10"/>
+
+  <menuitem id="menu_pipeline_quittances"
+            name="Pipeline Quittances"
+            parent="menu_tresorerie"
+            action="action_pipeline_quittances"
+            sequence="20"/>
+
+  <menuitem id="menu_all_quittances"
+            name="Toutes les Quittances"
+            parent="menu_tresorerie"
+            action="action_all_quittances"
+            sequence="30"/>
+
+  <!-- Clients -->
+  <menuitem id="menu_clients"
+            name="Clients"
+            parent="menu_assurcore_root"
+            action="action_assurcore_clients"
+            sequence="30"/>
+
+</odoo>

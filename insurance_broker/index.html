@@ -1,0 +1,91 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8" />
+<title>AssurCourtage — Odoo Backend Theme</title>
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
+
+<style>
+  /* ─────────────────────────────────────────────────────────────────────
+     Tokens (mirror of assurcourtage.scss — kept in sync as CSS vars so the
+     HTML mockup renders standalone outside the Odoo build pipeline).
+     ───────────────────────────────────────────────────────────────────── */
+  :root {
+    --ac-blue-50:  #EFF4FF;
+    --ac-blue-100: #DBE6FF;
+    --ac-blue-200: #B6CCFF;
+    --ac-blue-500: #2D5BD6;
+    --ac-blue-600: #1E40AF;
+    --ac-blue-700: #1A3691;
+    --ac-blue-900: #0F1F5C;
+
+    --ac-ink-900: #0B1220;
+    --ac-ink-700: #2A3245;
+    --ac-ink-500: #5A6276;
+    --ac-ink-300: #A4ABBC;
+    --ac-ink-100: #E5E8EF;
+    --ac-ink-50:  #F0F2F7;
+    --ac-paper:   #F7F8FB;
+    --ac-white:   #FFFFFF;
+
+    --ac-success: #15803D;
+    --ac-success-bg: #E6F4EC;
+    --ac-danger: #B91C1C;
+    --ac-danger-bg: #FCEAEA;
+    --ac-warning: #B45309;
+    --ac-warning-bg: #FEF1DC;
+    --ac-info: #0369A1;
+    --ac-info-bg: #E1F1FA;
+
+    --radius-sm: 6px;
+    --radius:    8px;
+    --radius-lg: 12px;
+
+    --shadow-sm: 0 1px 2px rgba(11,18,32,.04);
+    --shadow:    0 4px 12px -2px rgba(11,18,32,.06), 0 2px 4px -2px rgba(11,18,32,.04);
+    --shadow-lg: 0 18px 36px -12px rgba(11,18,32,.12);
+
+    --font-sans: 'Inter', -apple-system, 'Segoe UI', Roboto, sans-serif;
+    --font-mono: 'JetBrains Mono', 'SFMono-Regular', Consolas, monospace;
+
+    --fs-xs: 11px;
+    --fs-sm: 12px;
+    --fs-base: 13px;
+    --fs-md: 14px;
+    --fs-lg: 17px;
+    --fs-xl: 24px;
+    --fs-display: 32px;
+  }
+
+  html, body { margin: 0; padding: 0; background: #ECEEF3; }
+  body { font-family: var(--font-sans); color: var(--ac-ink-900); font-size: var(--fs-base); line-height: 1.45; }
+  * { box-sizing: border-box; }
+  button { font-family: inherit; }
+</style>
+
+<!-- Screen-level styles (Odoo-class-aware). Live in a single override block
+     so a developer can read each class' visual contract before porting to SCSS. -->
+<link rel="stylesheet" href="screens.css" />
+
+<script src="https://unpkg.com/react@18.3.1/umd/react.development.js" integrity="sha384-hD6/rw4ppMLGNu3tX5cjIb+uRZ7UkRJ6BPkLpg4hAu/6onKUg4lLsHAs9EBPT82L" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js" integrity="sha384-u6aeetuaXnQ38mYT8rp6sbXaQe3NL9t+IBXmnYxwkUI2Hw4bsp2Wvmx4yRQF1uAm" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/@babel/standalone@7.29.0/babel.min.js" integrity="sha384-m08KidiNqLdpJqLq95G/LEi8Qvjl/xUYll3QILypMoQ65QorJ9Lvtp2RXYGBFj1y" crossorigin="anonymous"></script>
+</head>
+
+<body>
+  <div id="root"></div>
+
+  <script type="text/babel" src="design-canvas.jsx"></script>
+  <script type="text/babel" src="tweaks-panel.jsx"></script>
+  <script type="text/babel" src="chrome.jsx"></script>
+  <script type="text/babel" src="dashboard.jsx"></script>
+  <script type="text/babel" src="form.jsx"></script>
+  <script type="text/babel" src="quittances.jsx"></script>
+  <script type="text/babel" src="sinistre.jsx"></script>
+  <script type="text/babel" src="mobile.jsx"></script>
+  <script type="text/babel" src="app.jsx"></script>
+</body>
+</html>
