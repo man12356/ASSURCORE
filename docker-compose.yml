@@ -71,14 +71,11 @@ services:
     restart: unless-stopped
 
     depends_on:
-      db:
-        condition: service_healthy  # Attend que PostgreSQL soit prêt
+      - db
 
-    # ── Port dynamique ────────────────────────────────────────────────────────
-    # La variable ODOO_PORT est exportée par deploy_local.sh après détection
-    # du premier port libre. La syntaxe ${VAR:-défaut} garantit un fallback.
+    # ── Port Statique (Production & Compatibilité) ──────────────────────────
     ports:
-      - "${ODOO_PORT}:8069"
+      - "8071:8069"
 
     environment:
       # Connexion à la base de données

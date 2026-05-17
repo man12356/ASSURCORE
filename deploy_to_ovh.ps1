@@ -88,7 +88,7 @@ $RemoteZip  = "/root/assurcore_latest.zip"
     "call cp -rf $RemoteDir/assurcore $RemoteDir/addons/" `
     "echo --- Restarting Docker Containers ---" `
     "call cd $RemoteDir && docker-compose down" `
-    "call cd $RemoteDir && ODOO_PORT=8071 docker-compose up -d --build" `
+    "call cd $RemoteDir && docker-compose up -d --build" `
     "echo --- Waiting for database to be ready (15s) ---" `
     "call sleep 15" `
     "echo --- Restoring PostgreSQL Database Dump ---" `
