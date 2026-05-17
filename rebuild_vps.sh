@@ -6,23 +6,30 @@
 # Ensure execution halts on error if needed, but allow compose down warnings
 set -e
 
-echo "=== [1/5] Preparing Addons ==="
+echo "=== [1/6] Preparing Addons ==="
 mkdir -p addons
 cp -rf assurcore addons/
 
-echo "=== [2/5] Stopping existing containers ==="
+echo "=== [2/6] Stopping existing containers ==="
 docker-compose down || true
 
-echo "=== [3/5] Starting containers in background ==="
+echo "=== [3/6] Starting containers in background ==="
 docker-compose up -d --build
 
-echo "=== [4/5] Waiting for database container to be healthy ==="
+echo "=== [4/6] Waiting for database container to be healthy ==="
 sleep 15
 
-echo "=== [5/5] Restoring PostgreSQL database dump ==="
-docker-compose exec -T db pg_restore -U odoo -d postgres_system --clean --create /backups/assurcore_db.dump
+echo "=== [5/6] Recreating PostgreSQL database assurcore_db ==="
+# Stop Odoo container temporarily to close all active connections
+docker-compose stop web || true
+# Drop and recreate assurcore_db cleanly
+docker-compose exec -T db dropdb -U odoo --if-exists assurcore_db || true
+docker-compose exec -T db createdb -U odoo assurcore_db
+
+echo "=== [6/6] Restoring PostgreSQL database dump ==="
+docker-compose exec -T db pg_restore -U odoo -d assurcore_db /backups/assurcore_db.dump
 
 echo "=== Restarting Odoo web service to clear cache ==="
-docker-compose restart web
+docker-compose start web
 
-echo "=== Rebuild sequence completed! ==="
+echo "=== Rebuild sequence completed successfully! ==="
