@@ -43,9 +43,9 @@ if (Test-Path $ZipFile)   { Remove-Item $ZipFile -Force }
 
 New-Item -ItemType Directory -Path $BundleDir | Out-Null
 
-Write-Host "  → Copying files to bundle (excluding heavy database folders and logs)..." -ForegroundColor Gray
-# Utilisation de robocopy pour sa robustesse
-& robocopy $ProjectDir $BundleDir /S /XD .git data_db addons __pycache__ scratch .vscode /XF *.zip *.log *.xlsx *.pdf *.docx | Out-Null
+Write-Host "  → Copying files to bundle (excluding heavy database folders, test data, and logs)..." -ForegroundColor Gray
+# Utilisation de robocopy pour sa robustesse (exclusion de DATA_TEST pour alléger le zip)
+& robocopy $ProjectDir $BundleDir /S /XD .git data_db addons __pycache__ scratch .vscode DATA_TEST /XF *.zip *.log *.xlsx *.pdf *.docx | Out-Null
 
 # Copier le dump de la base de données spécifique pour la restauration en production
 $DumpSrc = "d:\Robot\ASSURPROD\data_db\assurcore_db.dump"
@@ -58,8 +58,8 @@ if (Test-Path $DumpSrc) {
     Write-Warning "  ⚠ Database dump file not found at $DumpSrc! Restoring database might fail."
 }
 
-Write-Host "  → Compressing bundle..." -ForegroundColor Gray
-Compress-Archive -Path "$BundleDir\*" -DestinationPath $ZipFile -Force
+Write-Host "  → Compressing bundle (using Python for memory efficiency)..." -ForegroundColor Gray
+& python -c "import shutil; shutil.make_archive('d:\Robot\assurcore_prod_latest', 'zip', '$BundleDir')"
 
 Write-Host "  → Cleaning up bundle..." -ForegroundColor Gray
 Remove-Item $BundleDir -Recurse -Force
