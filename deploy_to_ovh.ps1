@@ -83,18 +83,8 @@ $RemoteZip  = "/root/assurcore_latest.zip"
     "echo --- Remote Rebuild Sequence ---" `
     "call mkdir -p $RemoteDir" `
     "call unzip -o $RemoteZip -d $RemoteDir" `
-    "echo --- Copying AssurCore to Addons ---" `
-    "call mkdir -p $RemoteDir/addons" `
-    "call cp -rf $RemoteDir/assurcore $RemoteDir/addons/" `
-    "echo --- Restarting Docker Containers ---" `
-    "call cd $RemoteDir && docker-compose down" `
-    "call cd $RemoteDir && docker-compose up -d --build" `
-    "echo --- Waiting for database to be ready (15s) ---" `
-    "call sleep 15" `
-    "echo --- Restoring PostgreSQL Database Dump ---" `
-    "call docker-compose exec -T db pg_restore -U odoo -d postgres_system --clean --create /var/lib/postgresql/data/assurcore_db.dump" `
-    "echo --- Restarting Odoo to load restored database cache ---" `
-    "call docker-compose restart web" `
+    "echo --- Running Rebuild Script Natively ---" `
+    "call cd $RemoteDir && chmod +x rebuild_vps.sh && ./rebuild_vps.sh" `
     "echo --- Cleaning up ---" `
     "call rm -f $RemoteZip" `
     "exit"
