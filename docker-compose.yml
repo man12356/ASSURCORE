@@ -20,6 +20,8 @@
 #    ./data_db  → /var/lib/postgresql/data  (persistance PostgreSQL)
 # ==============================================================================
 
+version: '3.7'
+
 services:
 
   # ── Base de données PostgreSQL 15 ──────────────────────────────────────────
