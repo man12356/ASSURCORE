@@ -87,7 +87,7 @@
   <menuitem id="menu_insurance_mouvement_report_wizard"
             name="Etat Mouvement Clients primes"
             parent="menu_tresorerie"
-            action="action_insurance_mouvement_report_wizard"
+            action="action_insurance_operations"
             sequence="30"/>
 
 </odoo>

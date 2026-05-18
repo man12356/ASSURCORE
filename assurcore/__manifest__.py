@@ -29,7 +29,7 @@
         'views/insurance_receipt_views.xml',
         'views/insurance_claim_views.xml',
         'views/insurance_risk_views.xml',
-        'views/insurance_mouvement_report_wizard_views.xml',
+        'views/insurance_operation_views.xml',
     ],
     'assets': {
         'web._assets_primary_variables': [

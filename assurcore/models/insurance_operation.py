@@ -156,6 +156,68 @@ class InsuranceOperation(models.Model):
         string='Agence',
     )
 
+    # ── Champs liés au rapport de mouvement (Etat Mouvement Clients primes) ──
+
+    num_police = fields.Char(
+        string='N° Police',
+        related='policy_id.num_police',
+        store=True,
+    )
+
+    num_client = fields.Char(
+        string='Code Client',
+        related='partner_id.ref',
+        store=True,
+    )
+
+    raison_sociale = fields.Char(
+        string='Raison Sociale',
+        related='partner_id.name',
+        store=True,
+    )
+
+    type_client = fields.Selection(
+        selection=[('E', 'Entreprise'), ('P', 'Particulier')],
+        string='Type Client',
+        related='policy_id.type_client',
+        store=True,
+    )
+
+    annee_fact_prime = fields.Integer(
+        string='Année Fact. Prime',
+        default=0,
+    )
+
+    num_edit_facture_prime = fields.Char(
+        string='Réf Facture Prime',
+        size=30,
+    )
+
+    annee_fact_hon = fields.Integer(
+        string='Année Fact. Hon.',
+        default=0,
+    )
+
+    num_edit_facture_hon = fields.Char(
+        string='Réf Facture Hon.',
+        size=30,
+    )
+
+    categorie_facture_prime = fields.Char(
+        string='Cat. Facture Prime',
+        size=20,
+    )
+
+    categorie_facture_hon = fields.Char(
+        string='Cat. Facture Hon.',
+        size=20,
+    )
+
+    attribut_client = fields.Char(
+        string='Attribut Client',
+        size=50,
+    )
+
     # ── Dates ─────────────────────────────────────────────────────────────────
 
     date_op = fields.Date(

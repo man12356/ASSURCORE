@@ -33,6 +33,9 @@
                   invisible="state != 'contentieux'"/>
         </header>
 
+        <field name="overdue_severity" invisible="1"/>
+        <field name="jours_retard" invisible="1"/>
+
         <div class="alert alert-danger"
              invisible="overdue_severity != 'severe'">
           Retard de <field name="jours_retard"/> jours — Contentieux imminent

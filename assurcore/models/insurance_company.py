@@ -128,6 +128,8 @@ class InsuranceCompany(models.Model):
     _sql_constraints = [
         ('name_uniq', 'UNIQUE(name)',
          'Ce nom de compagnie existe déjà.'),
+        ('code_uniq', 'UNIQUE(code)',
+         'Ce code compagnie existe déjà.'),
     ]
 
     @api.constrains('taux_commission_defaut')

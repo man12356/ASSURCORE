@@ -1,0 +1,159 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+
+  <!-- ══════════════════════════════════════════════════════════════════════ -->
+  <!--  VUE LISTE — Rapport Mouvement Clients Primes (SQL View)              -->
+  <!-- ══════════════════════════════════════════════════════════════════════ -->
+  <record id="view_insurance_mouvement_report_tree" model="ir.ui.view">
+    <field name="name">insurance.mouvement.report.tree</field>
+    <field name="model">insurance.mouvement.report</field>
+    <field name="arch" type="xml">
+      <!-- Read-only, no editing or creation since it is a PostgreSQL View -->
+      <tree string="Etat Mouvement Clients primes" 
+            create="false" 
+            edit="false" 
+            delete="false" 
+            default_order="date_op desc, num_operation desc">
+        <field name="num_police"/>
+        <field name="num_operation"/>
+        <field name="date_op"/>
+        <field name="designation" optional="show"/>
+        <field name="num_quittance"/>
+        <field name="num_attestation" optional="show"/>
+        <field name="vehicule" optional="show"/>
+        <field name="compagnie"/>
+        <field name="date_validite_du"/>
+        <field name="date_validite_au"/>
+        <field name="montant_prime" sum="Total Primes"/>
+        <field name="montant_honoraire_ht" sum="Total Honoraires"/>
+        <field name="annee_fact_prime" optional="show"/>
+        <field name="num_edit_facture_prime" optional="show"/>
+        <field name="annee_fact_hon" optional="show"/>
+        <field name="num_edit_facture_hon" optional="show"/>
+        <field name="num_client"/>
+        <field name="categorie_facture_prime" optional="hide"/>
+        <field name="categorie_facture_hon" optional="hide"/>
+        <field name="attribut_client" optional="show"/>
+        <field name="type_client" widget="badge" decoration-info="type_client == 'P'" decoration-success="type_client == 'E'"/>
+        <field name="raison_sociale"/>
+        <field name="t_c" optional="show"/>
+      </tree>
+    </field>
+  </record>
+
+  <!-- ══════════════════════════════════════════════════════════════════════ -->
+  <!--  VUE FORM — Consultation Rapport Mouvement                            -->
+  <!-- ══════════════════════════════════════════════════════════════════════ -->
+  <record id="view_insurance_mouvement_report_form" model="ir.ui.view">
+    <field name="name">insurance.mouvement.report.form</field>
+    <field name="model">insurance.mouvement.report</field>
+    <field name="arch" type="xml">
+      <form string="Consultation Mouvement Client Prime" create="false" edit="false" delete="false">
+        <sheet>
+          <div class="oe_title">
+            <label for="num_operation" string="N° Opération"/>
+            <h1>
+              <field name="num_operation"/>
+            </h1>
+          </div>
+          <group>
+            <group string="Contrat &amp; Client">
+              <field name="num_police"/>
+              <field name="num_client"/>
+              <field name="raison_sociale"/>
+              <field name="type_client"/>
+              <field name="t_c"/>
+            </group>
+            <group string="Détails Opération">
+              <field name="date_op"/>
+              <field name="designation"/>
+              <field name="vehicule"/>
+              <field name="compagnie"/>
+              <field name="num_quittance"/>
+              <field name="num_attestation"/>
+            </group>
+          </group>
+          <group>
+            <group string="Dates de Couverture">
+              <field name="date_validite_du"/>
+              <field name="date_validite_au"/>
+            </group>
+            <group string="Finances (TND)">
+              <field name="montant_prime"/>
+              <field name="montant_honoraire_ht"/>
+            </group>
+          </group>
+          <group string="Historique Facturation Oracle">
+            <group string="Facturation Prime">
+              <field name="annee_fact_prime"/>
+              <field name="num_edit_facture_prime"/>
+              <field name="categorie_facture_prime"/>
+            </group>
+            <group string="Facturation Honoraires">
+              <field name="annee_fact_hon"/>
+              <field name="num_edit_facture_hon"/>
+              <field name="categorie_facture_hon"/>
+            </group>
+          </group>
+          <group string="Autres Informations">
+            <field name="attribut_client"/>
+          </group>
+        </sheet>
+      </form>
+    </field>
+  </record>
+
+  <!-- ══════════════════════════════════════════════════════════════════════ -->
+  <!--  VUE RECHERCHE — Filtrage et Regroupement du Rapport Mouvement       -->
+  <!-- ══════════════════════════════════════════════════════════════════════ -->
+  <record id="view_insurance_mouvement_report_search" model="ir.ui.view">
+    <field name="name">insurance.mouvement.report.search</field>
+    <field name="model">insurance.mouvement.report</field>
+    <field name="arch" type="xml">
+      <search string="Filtrer le rapport mouvement">
+        <field name="num_operation" string="N° Opération"/>
+        <field name="num_police" string="N° Police"/>
+        <field name="num_client" string="Code Client"/>
+        <field name="raison_sociale" string="Client / Raison Sociale"/>
+        <field name="compagnie" string="Compagnie"/>
+        <field name="vehicule" string="Véhicule"/>
+        <field name="num_quittance" string="N° Quittance"/>
+
+        <!-- Filtres rapides -->
+        <filter string="Particuliers" name="particuliers" domain="[('type_client', '=', 'P')]"/>
+        <filter string="Entreprises" name="entreprises" domain="[('type_client', '=', 'E')]"/>
+        <separator/>
+        <filter string="Type Contrat Tiers" name="tiers" domain="[('t_c', '=', 'T')]"/>
+        <filter string="Type Contrat Propre" name="propre" domain="[('t_c', '=', 'P')]"/>
+
+        <!-- Groupements -->
+        <group expand="0" string="Regrouper par">
+          <filter string="Client" name="grp_partner" context="{'group_by': 'raison_sociale'}"/>
+          <filter string="Compagnie" name="grp_company" context="{'group_by': 'compagnie'}"/>
+          <filter string="Type Client" name="grp_type_client" context="{'group_by': 'type_client'}"/>
+          <filter string="Type Contrat (T_C)" name="grp_tc" context="{'group_by': 't_c'}"/>
+          <filter string="Année Facture Prime" name="grp_annee_p" context="{'group_by': 'annee_fact_prime'}"/>
+        </group>
+      </search>
+    </field>
+  </record>
+
+  <!-- Action de fenêtre pour le Rapport Consultatif -->
+  <record id="action_insurance_operations" model="ir.actions.act_window">
+    <field name="name">Etat Mouvement Clients primes</field>
+    <field name="res_model">insurance.mouvement.report</field>
+    <field name="view_mode">tree,form</field>
+    <field name="search_view_id" ref="view_insurance_mouvement_report_search"/>
+    <field name="context">{}</field>
+    <field name="help" type="html">
+      <p class="o_view_nocontent_smiling_face">
+        Aucune donnée de mouvement trouvée.
+      </p>
+      <p>
+        Ce rapport consultatif interroge en temps réel les données de vos tables d'opérations,
+        de polices, de clients et de compagnies pour générer l'état de mouvement complet.
+      </p>
+    </field>
+  </record>
+
+</odoo>

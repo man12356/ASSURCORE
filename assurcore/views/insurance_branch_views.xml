@@ -1,0 +1,74 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+
+    <!-- Vue Liste -->
+    <record id="view_insurance_branch_tree" model="ir.ui.view">
+        <field name="name">insurance.branch.tree</field>
+        <field name="model">insurance.branch</field>
+        <field name="arch" type="xml">
+            <tree string="Branches" editable="bottom">
+                <field name="sequence" widget="handle"/>
+                <field name="name"/>
+                <field name="code"/>
+                <field name="active" widget="boolean_toggle"/>
+            </tree>
+        </field>
+    </record>
+
+    <!-- Vue Formulaire -->
+    <record id="view_insurance_branch_form" model="ir.ui.view">
+        <field name="name">insurance.branch.form</field>
+        <field name="model">insurance.branch</field>
+        <field name="arch" type="xml">
+            <form string="Branche">
+                <sheet>
+                    <widget name="web_ribbon" title="Archivé" bg_color="text-bg-danger" invisible="active"/>
+                    <group>
+                        <group>
+                            <field name="name"/>
+                            <field name="code"/>
+                        </group>
+                        <group>
+                            <field name="sequence"/>
+                            <field name="active"/>
+                        </group>
+                    </group>
+                    <notebook>
+                        <page string="Notes" name="notes">
+                            <field name="notes" placeholder="Description de la branche..."/>
+                        </page>
+                    </notebook>
+                </sheet>
+            </form>
+        </field>
+    </record>
+
+    <!-- Action -->
+    <record id="action_insurance_branch" model="ir.actions.act_window">
+        <field name="name">Branches</field>
+        <field name="res_model">insurance.branch</field>
+        <field name="view_mode">tree,form</field>
+        <field name="help" type="html">
+            <p class="o_view_nocontent_smiling_face">
+                Définissez vos branches d'assurance
+            </p>
+            <p>
+                Exemple : Automobile, Santé, MRH...
+            </p>
+        </field>
+    </record>
+
+    <!-- Menus -->
+    <menuitem id="menu_assurcore_config"
+              name="Configuration"
+              parent="menu_assurcore_root"
+              sequence="100"
+              groups="base.group_system"/>
+
+    <menuitem id="menu_insurance_branch"
+              name="Branches"
+              parent="menu_assurcore_config"
+              action="action_insurance_branch"
+              sequence="10"/>
+
+</odoo>

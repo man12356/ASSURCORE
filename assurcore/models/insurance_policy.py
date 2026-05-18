@@ -71,8 +71,8 @@ class InsurancePolicy(models.Model):
     _order = 'date_effect desc, num_police desc'
     _rec_name = 'num_police'
 
-    # ── Identification ────────────────────────────────────────────────────────
-
+    # ── 1. Identification ────────────────────────────────────────────────────────
+    
     num_police = fields.Char(
         string='N° Police',
         size=30,
@@ -99,6 +99,20 @@ class InsurancePolicy(models.Model):
         tracking=True,
         copy=False,
         help='Cycle de vie de la police.',
+    )
+
+    branch_id = fields.Many2one(
+        comodel_name='insurance.branch',
+        string='Branche (Paramétrable)',
+        tracking=True,
+        help='Branche paramétrable.',
+    )
+
+    branche = fields.Selection(
+        selection=BRANCHE_LIST,
+        string='Ancienne Branche',
+        tracking=True,
+        help='Ancien champ de sélection (conservé pour migration).',
     )
 
     # ── Client & Payeur (Gestion Famille) ─────────────────────────────────────
@@ -170,11 +184,10 @@ class InsurancePolicy(models.Model):
         help='Branche d\'assurance. Ex-champ Oracle : BRANCHE.',
     )
 
-    risque = fields.Many2one(
-        comodel_name='insurance.risk',
+    risque = fields.Char(
         string='Risque assuré',
-        ondelete='restrict',
-        help='Risque associé au contrat. Remplace l\'ancien champ texte.',
+        size=100,
+        help='Désignation précise du risque (ex: Peugeot 208, Appartement Lac 2…).',
     )
 
     # ── Véhicule (Branche AUTO — lien fleet.vehicle) ──────────────────────────

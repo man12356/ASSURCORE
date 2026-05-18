@@ -422,8 +422,7 @@ class ResPartner(models.Model):
         # Fidélisation automatique à 5 ans
         actifs = self.search([
             ('client_state', '=', 'actif'),
-            ('anciennete_annees', '>=', 5),
-        ])
+        ]).filtered(lambda p: p.anciennete_annees >= 5)
         if actifs:
             actifs.write({'client_state': 'fidele'})
             _logger.info(
