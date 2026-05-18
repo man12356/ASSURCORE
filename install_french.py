@@ -13,10 +13,20 @@ models = xmlrpc.client.ServerProxy(f"{url}/xmlrpc/2/object")
 
 print("Installing French (fr_FR) language...")
 try:
+    lang_ids_search = models.execute_kw(
+        db, uid, password,
+        'res.lang', 'search',
+        [[('code', '=', 'fr_FR')]],
+        {'context': {'active_test': False}}
+    )
+    if not lang_ids_search:
+        raise ValueError("French language (fr_FR) not found in res.lang!")
+    french_id = lang_ids_search[0]
+    
     wizard_id = models.execute_kw(
         db, uid, password,
         'base.language.install', 'create',
-        [{'lang': 'fr_FR', 'overwrite': True}]
+        [{'lang_ids': [(6, 0, [french_id])], 'overwrite': True}]
     )
     models.execute_kw(
         db, uid, password,

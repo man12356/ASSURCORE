@@ -565,7 +565,7 @@ class AssurCoreETLv2:
                     partner_id, _ = self.odoo.ensure(
                         'res.partner',
                         [('ref', '=', f'ORA-{num}')],
-                        {'name': rs, 'ref': f'ORA-{num}', 'customer_rank': 1},
+                        {'name': rs, 'ref': f'ORA-{num}'},
                     )
                     self.client_cache[num] = partner_id
                     self.stats['clients']['created'] += 1
@@ -972,6 +972,9 @@ class AssurCoreETLv2:
         link_writes = 0
         link_skipped = 0
 
+        # Grouper les règlements par receipt_id pour mise à jour par lots
+        settlements_by_receipt = defaultdict(list)
+
         for num_reg, facture_key in reg_to_facture:
             receipt_id = self.facture_key_map.get(facture_key)
             settlement_id = self.reg_cache.get(num_reg)
@@ -981,15 +984,7 @@ class AssurCoreETLv2:
                 if existing_links.get(settlement_id) == receipt_id:
                     link_skipped += 1
                 else:
-                    # Lier le settlement à la quittance
-                    try:
-                        self.odoo.execute(
-                            'insurance.settlement', 'write',
-                            [settlement_id], {'receipt_id': receipt_id, 'imputer': True}
-                        )
-                        link_writes += 1
-                    except Exception:
-                        pass  # Non bloquant
+                    settlements_by_receipt[receipt_id].append(settlement_id)
 
             if receipt_id and receipt_id not in receipts_to_update:
                 total_impute = facture_imputations.get(facture_key, 0.0)
@@ -1017,23 +1012,43 @@ class AssurCoreETLv2:
                     'amount_residual': max(0.0, total_facture - amount_paid),
                 }
 
+        # Lier les règlements aux quittances par batches groupés par receipt_id
+        for receipt_id, sett_ids in settlements_by_receipt.items():
+            try:
+                self.odoo.execute(
+                    'insurance.settlement', 'write',
+                    sett_ids, {'receipt_id': receipt_id, 'imputer': True}
+                )
+                link_writes += len(sett_ids)
+            except Exception:
+                pass  # Non bloquant
+
         log.info('  Liens de règlements : %d mis à jour, %d déjà corrects (ignorés)', link_writes, link_skipped)
 
         # Appliquer les mises à jour d'état en batch
         encaissees = 0
         partielles = 0
         receipt_writes = 0
+        
+        # Grouper les quittances par état pour mise à jour globale
+        receipts_by_state = defaultdict(list)
         for receipt_id, vals in receipts_to_update.items():
-            try:
-                self.odoo.execute('insurance.receipt', 'write', [receipt_id], vals)
-                receipt_writes += 1
-                if vals['state'] == 'encaissee':
-                    encaissees += 1
-                else:
-                    partielles += 1
-            except Exception as exc:
-                log.error('  Lettrage receipt %d : %s', receipt_id, exc)
-                self.stats['lettrage']['errors'] += 1
+            receipts_by_state[vals['state']].append(receipt_id)
+
+        for state, r_ids in receipts_by_state.items():
+            # Par batches de 500 pour optimiser et éviter la surcharge réseau
+            for i in range(0, len(r_ids), 500):
+                batch_ids = r_ids[i:i+500]
+                try:
+                    self.odoo.execute('insurance.receipt', 'write', batch_ids, {'state': state})
+                    receipt_writes += len(batch_ids)
+                    if state == 'encaissee':
+                        encaissees += len(batch_ids)
+                    else:
+                        partielles += len(batch_ids)
+                except Exception as exc:
+                    log.error('  Erreur mise à jour lettrage batch state=%s : %s', state, exc)
+                    self.stats['lettrage']['errors'] += len(batch_ids)
 
         self.stats['lettrage']['created'] = encaissees
         self.stats['lettrage']['updated'] = partielles

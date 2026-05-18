@@ -1,0 +1,271 @@
+
+================ insurance_bank.py ================
+  name: Nom de la banque
+  code_swift: Code SWIFT/BIC
+
+================ insurance_claim.py ================
+  name: Réf. Sinistre
+  ref_compagnie: Réf. Sinistre compagnie
+  state: État
+  policy_id: Police
+  partner_id: Assuré
+  company_ins_id: Compagnie
+  branche: Branche
+  commercial_id: Commercial
+  agence_courtier: Agence
+  date_sinistre: Date & heure du sinistre
+  date_declaration: Date de déclaration
+  lieu_sinistre: Lieu du sinistre
+  lib_sinistre: Description du sinistre
+  categorie_indemnisation: Catégorie d\
+  tiers: Tiers impliqués
+  vehicule: Véhicule / Bien sinistré
+  currency_id: Montant réclamé (TND)
+  montant_expertise: Montant expertise (TND)
+  franchise: Franchise (TND)
+  montant_indemnite: Indemnité finale (TND)
+  montant_indemnite_net: Indemnité nette franchise (TND)
+  montant_honoraire_sin_ht: Honoraires sinistre HT (TND)
+  expert_id: Expert mandaté
+  date_expertise: Date d\
+  hon_sin_facture: Honoraires facturés
+  facture_indemnite_id: Facture indemnité
+  event_ids: Chronologie
+  event_count: Événements
+  tag_ids: Tags
+  notes: Notes internes
+  supp_log: Année sinistre
+  claim_id: Sinistre
+  date_event: Date & heure
+  event_type: Type d\
+  description: Description
+  user_id: Auteur
+  montant: Montant concerné (TND)
+  currency_id: Pièces jointes
+  is_done: Réalisé
+  display_name: Tag
+  color: Couleur
+
+================ insurance_commission_rule.py ================
+  timbre_fiscal_tax_id: Taxe — Timbre Fiscal (TND)
+  tva_courtage_tax_id: TVA sur Honoraires de Courtage
+  seuil_contentieux_jours: Seuil Contentieux (jours)
+  seuil_relance_jours: Seuil Relance Automatique (jours)
+  journal_assurance_id: Journal Quittances Assurance
+  company_ins_id: Compagnie
+  branche: Branche
+  taux_commission: Taux Commission %
+  taux_honoraire: Taux Honoraires %
+  date_debut: Valable à partir du
+  date_fin: Valable jusqu\
+  priorite: Priorité
+  active: Notes
+  display_name: Règle
+
+================ insurance_company.py ================
+  name: Nom compagnie
+  raison_sociale: Raison sociale complète
+  code: Code
+  partner_id: Fiche partenaire Odoo
+  email: Email
+  phone: Téléphone
+  website: Site web
+  priorite_envoi: Priorité d\
+  delai_reversement: Délai de reversement (jours)
+  taux_commission_defaut: Taux commission par défaut (%)
+  agence_courtier: Agence de rattachement
+  notes: Notes / Conditions conventionnelles
+  active: Actif
+  policy_count: Polices
+  receipt_count: Quittances
+
+================ insurance_journal_enc.py ================
+  name: N° Journée
+  state: État
+  company_ins_id: Compagnie
+  date_creation: Date
+  currency_id: Total encaissé (TND)
+  total_jour_commission: Total commission (TND)
+  total_montant_enc_net: Net à reverser (TND)
+  montant_reg_enc: Règlement encaissement (TND)
+  date_reg_enc: Date règlement encaissement
+  type_reg_enc: Mode règlement
+  num_cheque_enc: N° Chèque
+  banque_enc: Banque
+  notes: Notes
+  agence_courtier: Agence
+
+================ insurance_operation.py ================
+  name: N° Opération
+  state: État
+  code_operation: Type d\
+  code_operation_2: Type secondaire
+  policy_id: Police
+  partner_id: Client / Assuré
+  company_ins_id: Compagnie
+  branche: Branche
+  agence_courtier: Agence
+  date_op: Date d\
+  date_validite_du: Couverture du
+  date_validite_au: Couverture au
+  date_echeance: Date d\
+  designation: Désignation
+  num_quittance: N° Quittance compagnie
+  num_attestation: N° Attestation
+  vehicule: Véhicule / Risque
+  nature: Nature
+  type_contrat: Type
+  avenant_rembourser: Avenant à rembourser
+  cxp: CXP (résiliation compagnie)
+  currency_id: Prime nette (TND)
+  prime_echeance: Prime à l\
+  commission: Commission (TND)
+  montant_honoraire_ht: Honoraires HT (TND)
+  libelle_honoraire: Libellé honoraires
+  case_a_cocher_hon: Honoraires à facturer
+  case_a_cocher_prime: Prime à facturer
+  receipt_id: Quittance générée
+  journal_enc_id: Journée d\
+  notes: Notes
+
+================ insurance_policy.py ================
+  num_police: N° Police
+  ref_interne: Réf. interne
+  state: État
+  type_client: Type client
+  partner_id: Assuré / Client
+  payer_id: Payeur (chef de famille)
+  is_family_policy: Police famille
+  raison_sociale: Raison sociale / Nom affiché
+  company_ins_id: Compagnie d\
+  branche: Branche
+  risque: Risque assuré
+  vehicle_id: Véhicule
+  matricule: Matricule tunisien
+  date_effect: Date d\
+  date_echeance: Date d\
+  date_prochain_renouvellement: Prochain renouvellement
+  jours_avant_echeance: Jours avant échéance
+  prime_nette: Prime nette TND
+  commission: Commission TND
+  commission_rule_id: Règle de commission appliquée
+  taux_commission: Taux commission %
+  currency_id: Devise
+  total_quittances: Total quittances TTC
+  total_encaisse: Total encaissé TND
+  total_impaye: Total impayé TND
+  operation_ids: Opérations / Avenants
+  receipt_ids: Quittances
+  claim_ids: Sinistres
+  receipt_count: Quittances
+  impaye_count: Impayées
+  claim_count: Sinistres
+  operation_count: Opérations
+  commercial_id: Commercial / Producteur
+  agence_courtier: Agence
+  notes: Notes
+  supp_log: Suppression logique
+  active: Actif
+  date_dernier_maj: Dernière mise à jour
+  user_dernier_maj: Modifié par
+
+================ insurance_receipt.py ================
+  name: N° Quittance
+  num_quittance_compagnie: N° Quittance compagnie
+  num_attestation: N° Attestation
+  state: État
+  policy_id: Police
+  partner_id: Assuré
+  payer_id: Payeur
+  company_ins_id: Compagnie
+  branche: Branche
+  commercial_id: Commercial
+  agence_courtier: Agence
+  date_emission: Date d\
+  date_echeance: Date d\
+  date_validite_du: Couverture du
+  date_validite_au: Couverture au
+  currency_id: Devise
+  montant_prime: Prime nette (TND)
+  commission: Commission courtier (TND)
+  montant_honoraire_ht: Honoraires HT (TND)
+  timbre_fiscal_tax_id: Taxe — Timbre Fiscal
+  tva_courtage_tax_id: TVA Courtage
+  taux_tva: Taux TVA %
+  timbre_fiscal: Timbre Fiscal (TND)
+  montant_tva: Montant TVA (TND)
+  amount_total: Total TTC (TND)
+  amount_paid: Encaissé (TND)
+  amount_residual: Reste dû (TND)
+  prime_echeance: Prime à l\
+  jours_retard: Retard (jours)
+  is_overdue: En retard
+  overdue_severity: Niveau de retard
+  nature: Nature
+  type_client_op: Type opération
+  designation: Désignation
+  vehicule: Véhicule / Risque
+  settlement_ids: Règlements
+  settlement_count: Règlements
+  move_id: Écriture comptable
+  journal_enc_id: Journée d\
+  notes: Notes internes
+  supp_log: Suppression logique
+  active: Dernière MAJ
+  name: Référence
+  receipt_id: Quittance
+  partner_id: Payeur
+  date_reg: Date de règlement
+  date_echeance_cheque: Date d\
+  type_reg: Mode de règlement
+  montant_reg: Montant (TND)
+  montant_restant: Montant restant non imputé (TND)
+  currency_id: N° Chèque
+  banque_tireur: Banque du tireur
+  cin_tireur: CIN tireur
+  state: État
+  imputer: Imputé
+  remis_chez: Remis chez
+  payment_id: Paiement Odoo
+  notes: Notes
+
+================ insurance_risk.py ================
+  name: Désignation du risque
+  branche: Branche
+  branche_oracle: Branche Oracle (original)
+  active: Code (3 chiffres)
+  designation: Désignation
+  libelle_honoraire: Libellé honoraires
+  description: Description détaillée
+  type_operation: Type normalisé Odoo
+  montant_honoraire_defaut: Honoraires par défaut (TND)
+  taux_honoraire_defaut: Taux honoraires par défaut (%)
+  active: Expert en assurance
+  specialite_expert: Spécialité
+
+================ res_partner.py ================
+  client_state: Statut client
+  date_premiere_police: Première police
+  anciennete_annees: Ancienneté (ans)
+  is_payer: Payeur principal (chef de famille)
+  payer_partner_id: Payeur / Chef de famille
+  family_member_ids: Membres de la famille
+  family_member_count: Membres
+  policy_ids: Polices d\
+  receipt_ids: Quittances
+  claim_ids: Sinistres
+  cin: N° CIN
+  matricule_fiscal: Matricule Fiscal
+  registre_commerce: N° RC
+  assujetti_tva: Assujetti TVA
+  categorie_client: Catégorie client
+  taux_remise: Taux de remise %
+  solde_caisse_consolide: Solde global famille (TND)
+  total_encaisse_ytd: Encaissé YTD (TND)
+  total_prime_portefeuille: Total primes portefeuille (TND)
+  policy_count: Polices actives
+  receipt_count: Quittances
+  impaye_count: Quittances impayées
+  claim_count: Sinistres
+
+================ __init__.py ================

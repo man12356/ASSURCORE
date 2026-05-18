@@ -11,3 +11,5 @@ from . import insurance_commission_rule
 from . import insurance_operation
 from . import insurance_receipt
 from . import insurance_claim
+from . import insurance_mouvement_report_wizard
+

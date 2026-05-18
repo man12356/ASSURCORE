@@ -1,0 +1,93 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+================================================================================
+  AssurCore — Assistant de Rapport Mouvement Clients Primes
+  Rapport demandé : "Etat Mouvement Clients primes"
+  Permet de télécharger l'état Excel trié sous le nom de fichier exact :
+  "Etat  Mouvement Clients primes.xlsx" (avec double espace).
+================================================================================
+-->
+<odoo>
+  
+  <!-- Vue Formulaire Assistant -->
+  <record id="view_insurance_mouvement_report_wizard_form" model="ir.ui.view">
+    <field name="name">insurance.mouvement.report.wizard.form</field>
+    <field name="model">insurance.mouvement.report.wizard</field>
+    <field name="arch" type="xml">
+      <form string="Etat Mouvement Clients primes">
+        <sheet>
+          <!-- Style/Alert de bienvenue en HSL adapté Navy -->
+          <div class="alert alert-info text-center" role="alert" style="margin-bottom: 22px; border-radius: 8px; font-weight: 500; border: 1px solid #AED6F1; background-color: #EBF5FB; color: #1B4F72;">
+            <i class="fa fa-info-circle" style="font-size: 16px; margin-right: 8px;"/>
+            Cet assistant génère l'état premium historique <strong>Etat Mouvement Clients primes.xlsx</strong> à partir des données legacy Oracle.
+          </div>
+          
+          <field name="state" invisible="1"/>
+          
+          <!-- Étape 1 : Génération -->
+          <div invisible="state != 'draft'">
+            <p class="text-muted text-center" style="font-size: 14px; margin-top: 15px; color: #566573;">
+              Cliquez sur le bouton ci-dessous pour lancer l'extraction, le tri strict par <strong>DATE_OP, NUM_OPERATION</strong> et la mise en forme Excel.
+            </p>
+            <div class="text-center" style="margin: 25px 0;">
+              <button name="action_generate_excel" 
+                      string="Générer le Fichier Excel" 
+                      type="object" 
+                      class="btn-primary btn-lg" 
+                      icon="fa-file-excel-o"
+                      style="padding: 12px 28px; font-size: 15px; font-weight: 600; box-shadow: 0 4px 10px rgba(31,78,120,0.25); border-radius: 6px; background-color: #1F4E78; border-color: #1F4E78; transition: all 0.3s;"/>
+            </div>
+          </div>
+          
+          <!-- Étape 2 : Téléchargement -->
+          <div invisible="state != 'done'">
+            <div class="text-center" style="margin: 20px 0;">
+              <h4 style="color: #1F4E78; font-weight: bold; margin-bottom: 15px;">
+                <i class="fa fa-check-circle" style="color: #28B463; font-size: 24px; vertical-align: middle; margin-right: 8px;"/>
+                Rapport généré avec succès !
+              </h4>
+              <p class="text-muted" style="margin-bottom: 22px; color: #5D6D7E;">
+                Votre rapport Excel est prêt. Cliquez ci-dessous pour lancer le téléchargement.
+              </p>
+              
+              <div style="display: inline-block; padding: 18px 30px; background: #F4F6F7; border: 1px solid #D5D8DC; border-radius: 8px; box-shadow: inset 0 1px 3px rgba(0,0,0,0.05); margin-bottom: 20px;">
+                <field name="excel_filename" invisible="1"/>
+                <field name="excel_file" filename="excel_filename" widget="binary" readonly="1" string="Télécharger l'Excel" style="font-weight: bold; font-size: 14px; color: #1F4E78;"/>
+              </div>
+            </div>
+          </div>
+          
+          <footer>
+            <button name="action_draft" 
+                    string="Recommencer" 
+                    type="object" 
+                    class="btn-secondary" 
+                    invisible="state != 'done'"
+                    icon="fa-refresh"
+                    style="border-radius: 4px;"/>
+            <button string="Fermer" 
+                    class="btn-secondary" 
+                    special="cancel"
+                    style="border-radius: 4px;"/>
+          </footer>
+        </sheet>
+      </form>
+    </field>
+  </record>
+
+  <!-- Action d'ouverture de l'Assistant -->
+  <record id="action_insurance_mouvement_report_wizard" model="ir.actions.act_window">
+    <field name="name">Etat Mouvement Clients primes</field>
+    <field name="res_model">insurance.mouvement.report.wizard</field>
+    <field name="view_mode">form</field>
+    <field name="target">new</field>
+  </record>
+
+  <!-- MenuItem dans le menu Trésorerie -->
+  <menuitem id="menu_insurance_mouvement_report_wizard"
+            name="Etat Mouvement Clients primes"
+            parent="menu_tresorerie"
+            action="action_insurance_mouvement_report_wizard"
+            sequence="30"/>
+
+</odoo>

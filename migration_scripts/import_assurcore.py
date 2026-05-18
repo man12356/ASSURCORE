@@ -651,7 +651,7 @@ class AssurCoreETL:
 
             # Idempotence : déjà en cache ?
             cache_key = f'{num_police}|{compagnie}'
-            if cache_key in self.police_cache:
+            if cache_key in self.police_cache or cache_key in batch_ids_map:
                 self.stats['policies']['skipped'] += 1
                 continue
 
@@ -796,8 +796,26 @@ class AssurCoreETL:
 
             # Idempotence
             if ora_name in existing_names:
-                self.operation_cache[num_op] = existing_names[ora_name]
-                self.stats['operations']['skipped'] += 1
+                op_id = existing_names[ora_name]
+                self.operation_cache[num_op] = op_id
+                try:
+                    self.odoo.execute(
+                        'insurance.operation', 'write',
+                        [op_id],
+                        {
+                            'annee_fact_prime': int(parse_float(row.get('ANNEE_FACT_PRIME', '0'))),
+                            'num_edit_facture_prime': clean_str(row.get('NUM_EDIT_FACTURE_PRIME', ''), 30),
+                            'annee_fact_hon': int(parse_float(row.get('ANNEE_FACT_HON', '0'))),
+                            'num_edit_facture_hon': clean_str(row.get('NUM_EDIT_FACTURE_HON', ''), 30),
+                            'categorie_facture_prime': clean_str(row.get('CATEGORIE_FACTURE_PRIME', ''), 20),
+                            'categorie_facture_hon': clean_str(row.get('CATEGORIE_FACTURE_HON', ''), 20),
+                            'attribut_client': clean_str(row.get('ATTRIBUT_CLIENT', ''), 50),
+                        }
+                    )
+                    self.stats['operations']['updated'] += 1
+                except Exception as exc:
+                    log.error('  Erreur de mise à jour op %s : %s', num_op, exc)
+                    self.stats['operations']['errors'] += 1
                 continue
 
             # Résolution police
@@ -833,6 +851,13 @@ class AssurCoreETL:
                 'nature': clean_str(row.get('NATURE', 'R'), 1),
                 'state': 'confirmed',
                 'active': not oracle_bool(row.get('SUPP_LOG', 'N')),
+                'annee_fact_prime': int(parse_float(row.get('ANNEE_FACT_PRIME', '0'))),
+                'num_edit_facture_prime': clean_str(row.get('NUM_EDIT_FACTURE_PRIME', ''), 30),
+                'annee_fact_hon': int(parse_float(row.get('ANNEE_FACT_HON', '0'))),
+                'num_edit_facture_hon': clean_str(row.get('NUM_EDIT_FACTURE_HON', ''), 30),
+                'categorie_facture_prime': clean_str(row.get('CATEGORIE_FACTURE_PRIME', ''), 20),
+                'categorie_facture_hon': clean_str(row.get('CATEGORIE_FACTURE_HON', ''), 20),
+                'attribut_client': clean_str(row.get('ATTRIBUT_CLIENT', ''), 50),
             }
 
             # Mise à jour des dates de la police depuis la première opération

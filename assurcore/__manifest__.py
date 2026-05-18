@@ -25,10 +25,11 @@
         'views/insurance_company_views.xml',
         'views/insurance_commission_rule_views.xml',
         'views/insurance_policy_views.xml',
+        'views/dashboard_views.xml',
         'views/insurance_receipt_views.xml',
         'views/insurance_claim_views.xml',
         'views/insurance_risk_views.xml',
-        'views/dashboard_views.xml',
+        'views/insurance_mouvement_report_wizard_views.xml',
     ],
     'assets': {
         'web._assets_primary_variables': [
