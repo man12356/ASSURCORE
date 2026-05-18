@@ -59,16 +59,10 @@
     </record>
 
     <!-- Menus -->
-    <menuitem id="menu_assurcore_config"
-              name="Configuration"
-              parent="menu_assurcore_root"
-              sequence="100"
-              groups="base.group_system"/>
-
     <menuitem id="menu_insurance_branch"
               name="Branches"
-              parent="menu_assurcore_config"
+              parent="menu_assurcore_parametrage"
               action="action_insurance_branch"
-              sequence="10"/>
+              sequence="20"/>
 
 </odoo>
