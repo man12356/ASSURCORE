@@ -35,4 +35,10 @@ docker-compose exec -T db pg_restore -U odoo -d assurcore_db /backups/assurcore_
 echo "=== Restarting Odoo web service to clear cache ==="
 docker-compose start web
 
+echo "=== Upgrading AssurCore module in Odoo ==="
+docker-compose exec -T web odoo -d assurcore_db -u assurcore --stop-after-init
+
+echo "=== Restarting Odoo web service to reload updated registry ==="
+docker-compose restart web
+
 echo "=== Rebuild sequence completed successfully! ==="

@@ -1,0 +1,271 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+
+  <!-- ══════════════════════════════════════════════════════════════════════ -->
+  <!--  ACTION D'IMPRESSION DE LA QUITTANCE (PDF QWeb)                       -->
+  <!-- ══════════════════════════════════════════════════════════════════════ -->
+  <record id="action_report_insurance_receipt" model="ir.actions.report">
+    <field name="name">Quittance d'Assurance (PDF)</field>
+    <field name="model">insurance.receipt</field>
+    <field name="report_type">qweb-pdf</field>
+    <field name="report_name">assurcore.report_insurance_receipt_template</field>
+    <field name="report_file">assurcore.report_insurance_receipt_template</field>
+    <field name="print_report_name">'Quittance_' + (object.name or '').replace('/', '_')</field>
+    <field name="binding_model_id" ref="model_insurance_receipt"/>
+    <field name="binding_type">report</field>
+  </record>
+
+  <!-- ══════════════════════════════════════════════════════════════════════ -->
+  <!--  GABARIT DE DESIGN QWEB PREMIUM DE LA QUITTANCE                       -->
+  <!-- ══════════════════════════════════════════════════════════════════════ -->
+  <template id="report_insurance_receipt_template">
+    <t t-call="web.html_container">
+      <t t-foreach="docs" t-as="o">
+        <t t-call="web.external_layout">
+          <!-- Curated CSS Styles for Premium Look & Feel -->
+          <style type="text/css">
+            .ac-receipt-container {
+              font-family: 'Inter', 'Helvetica Neue', Arial, sans-serif;
+              color: #2D3748;
+              font-size: 13px;
+              line-height: 1.5;
+            }
+            .ac-header-card {
+              border-left: 5px solid #0F766E; /* Teal primary accent */
+              background-color: #F0FDFA;
+              padding: 15px 20px;
+              margin-bottom: 25px;
+              border-radius: 4px;
+            }
+            .ac-title {
+              color: #0F766E;
+              font-weight: 800;
+              text-transform: uppercase;
+              letter-spacing: 0.5px;
+              font-size: 22px;
+              margin: 0;
+            }
+            .ac-meta-table td {
+              padding: 6px 12px;
+              border: none !important;
+            }
+            .ac-meta-label {
+              font-weight: 600;
+              color: #4A5568;
+              width: 160px;
+            }
+            .ac-meta-val {
+              color: #1A202C;
+            }
+            .ac-fin-table {
+              width: 100%;
+              border-collapse: collapse;
+              margin-top: 25px;
+            }
+            .ac-fin-table th {
+              background-color: #0F766E;
+              color: #FFFFFF;
+              font-weight: 600;
+              text-transform: uppercase;
+              font-size: 11px;
+              letter-spacing: 0.5px;
+              padding: 10px 15px;
+              border: 1px solid #0F766E;
+            }
+            .ac-fin-table td {
+              padding: 12px 15px;
+              border: 1px solid #E2E8F0;
+            }
+            .ac-fin-row-even {
+              background-color: #F8FAFC;
+            }
+            .ac-total-box {
+              background-color: #0F766E;
+              color: #FFFFFF;
+              font-weight: 700;
+              font-size: 16px;
+              border: 1px solid #0F766E !important;
+            }
+            .ac-signature-section {
+              margin-top: 45px;
+              page-break-inside: avoid;
+            }
+            .ac-signature-box {
+              border: 1px dashed #CBD5E0;
+              border-radius: 6px;
+              height: 110px;
+              width: 260px;
+              margin-top: 10px;
+              background-color: #F8FAFC;
+            }
+            .ac-badge-state {
+              padding: 4px 8px;
+              border-radius: 12px;
+              font-size: 11px;
+              font-weight: 600;
+              text-transform: uppercase;
+              display: inline-block;
+            }
+            .ac-badge-emise { background-color: #E0F2FE; color: #0369A1; }
+            .ac-badge-partielle { background-color: #FEF3C7; color: #B45309; }
+            .ac-badge-encaissee { background-color: #D1FAE5; color: #047857; }
+            .ac-badge-contentieux { background-color: #FEE2E2; color: #B91C1C; }
+          </style>
+
+          <div class="ac-receipt-container">
+            <!-- Header Block -->
+            <div class="row align-items-center mb-4">
+              <div class="col-7">
+                <div class="ac-header-card">
+                  <h1 class="ac-title">QUITTANCE D'ASSURANCE</h1>
+                  <div class="mt-2 text-muted">
+                    N° Quittance : <strong><t t-out="o.name"/></strong>
+                  </div>
+                </div>
+              </div>
+              <div class="col-5 text-end">
+                <h5 class="fw-bold text-teal m-0" style="color: #0F766E;">COURTIER KAMOUN</h5>
+                <small class="text-muted">
+                  Intermédiaire Agréé d'Assurances<br/>
+                  Devise d'opération : Dinar Tunisien (TND)
+                </small>
+              </div>
+            </div>
+
+            <!-- Details Block -->
+            <div class="row">
+              <div class="col-6">
+                <div class="card border-light shadow-sm">
+                  <div class="card-header bg-light py-2 fw-bold text-secondary">INFORMATIONS CONTRAT</div>
+                  <div class="card-body p-2">
+                    <table class="table ac-meta-table m-0">
+                      <tr>
+                        <td class="ac-meta-label">N° Police</td>
+                        <td class="ac-meta-val"><strong><t t-out="o.policy_id.num_police"/></strong></td>
+                      </tr>
+                      <tr>
+                        <td class="ac-meta-label">Compagnie</td>
+                        <td class="ac-meta-val"><t t-out="o.company_ins_id.name"/></td>
+                      </tr>
+                      <tr>
+                        <td class="ac-meta-label">Branche</td>
+                        <td class="ac-meta-val"><t t-out="o.branche"/></td>
+                      </tr>
+                      <tr>
+                        <td class="ac-meta-label">Période du</td>
+                        <td class="ac-meta-val">
+                          <t t-out="o.date_validite_du" t-options="{'widget': 'date'}"/> au 
+                          <t t-out="o.date_validite_au" t-options="{'widget': 'date'}"/>
+                        </td>
+                      </tr>
+                    </table>
+                  </div>
+                </div>
+              </div>
+              <div class="col-6">
+                <div class="card border-light shadow-sm">
+                  <div class="card-header bg-light py-2 fw-bold text-secondary">DÉTAILS PARTENAIRE</div>
+                  <div class="card-body p-2">
+                    <table class="table ac-meta-table m-0">
+                      <tr>
+                        <td class="ac-meta-label">Assuré</td>
+                        <td class="ac-meta-val"><strong><t t-out="o.partner_id.name"/></strong></td>
+                      </tr>
+                      <tr>
+                        <td class="ac-meta-label">Payeur</td>
+                        <td class="ac-meta-val"><t t-out="o.payer_id.name or o.partner_id.name"/></td>
+                      </tr>
+                      <tr>
+                        <td class="ac-meta-label">Statut Actuel</td>
+                        <td class="ac-meta-val">
+                          <span t-attf-class="ac-badge-state ac-badge-{{o.state}}">
+                            <t t-out="dict(o._fields['state'].selection).get(o.state)"/>
+                          </span>
+                        </td>
+                      </tr>
+                      <tr>
+                        <td class="ac-meta-label">Date d'Échéance</td>
+                        <td class="ac-meta-val text-danger fw-bold">
+                          <t t-out="o.date_echeance" t-options="{'widget': 'date'}"/>
+                        </td>
+                      </tr>
+                    </table>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Financial Table -->
+            <table class="ac-fin-table">
+              <thead>
+                <tr>
+                  <th style="width: 60%;">Désignation des Primes et Accessoires</th>
+                  <th class="text-end" style="width: 40%;">Montant de la prime (TND)</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <td>Prime Nette Compagnie (Reversement direct)</td>
+                  <td class="text-end fw-bold"><t t-out="o.montant_prime" t-options="{'widget': 'monetary', 'display_currency': o.currency_id}"/></td>
+                </tr>
+                <tr class="ac-fin-row-even">
+                  <td>Honoraires de Courtage HT</td>
+                  <td class="text-end"><t t-out="o.montant_honoraire_ht" t-options="{'widget': 'monetary', 'display_currency': o.currency_id}"/></td>
+                </tr>
+                <tr>
+                  <td>TVA sur Honoraires (<t t-out="o.taux_tva"/>%)</td>
+                  <td class="text-end"><t t-out="o.montant_tva" t-options="{'widget': 'monetary', 'display_currency': o.currency_id}"/></td>
+                </tr>
+                <tr class="ac-fin-row-even">
+                  <td>Timbre Fiscal Tunisien (Fixe L.F.)</td>
+                  <td class="text-end"><t t-out="o.timbre_fiscal" t-options="{'widget': 'monetary', 'display_currency': o.currency_id}"/></td>
+                </tr>
+                <tr class="ac-total-box">
+                  <td class="text-uppercase fw-bold">Montant Global TTC (Net à payer)</td>
+                  <td class="text-end fw-bold text-white"><t t-out="o.amount_total" t-options="{'widget': 'monetary', 'display_currency': o.currency_id}"/></td>
+                </tr>
+              </tbody>
+            </table>
+
+            <!-- Rapprochement / Reste à payer -->
+            <div class="row mt-3 justify-content-end" t-if="o.state in ('partielle', 'emise')">
+              <div class="col-5">
+                <table class="table table-sm border-0 m-0">
+                  <tr t-if="o.amount_residual &lt; o.amount_total">
+                    <td class="text-end text-muted">Total déjà réglé :</td>
+                    <td class="text-end fw-bold text-success">
+                      <t t-out="o.amount_total - o.amount_residual" t-options="{'widget': 'monetary', 'display_currency': o.currency_id}"/>
+                    </td>
+                  </tr>
+                  <tr>
+                    <td class="text-end text-danger fw-bold">Solde restant à régler :</td>
+                    <td class="text-end text-danger fw-bold" style="font-size: 15px;">
+                      <t t-out="o.amount_residual" t-options="{'widget': 'monetary', 'display_currency': o.currency_id}"/>
+                    </td>
+                  </tr>
+                </table>
+              </div>
+            </div>
+
+            <!-- Signature block -->
+            <div class="row ac-signature-section">
+              <div class="col-7">
+                <div class="text-muted" style="font-size: 11px;">
+                  * Ce document vaut quittance de règlement sous réserve de l'encaissement effectif des chèques.<br/>
+                  * Courtier Kamoun, Agrément Ministère des Finances N°123/2026.<br/>
+                  * Merci de libeller vos chèques à l'ordre exclusif de: <strong>COURTIER KAMOUN</strong>.
+                </div>
+              </div>
+              <div class="col-5 text-end">
+                <div class="fw-bold text-secondary">Cachet &amp; Signature Agréée</div>
+                <div class="ac-signature-box d-inline-block"></div>
+              </div>
+            </div>
+
+          </div>
+        </t>
+      </t>
+    </t>
+  </template>
+
+</odoo>

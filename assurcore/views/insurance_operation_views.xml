@@ -8,7 +8,6 @@
     <field name="name">insurance.mouvement.report.tree</field>
     <field name="model">insurance.mouvement.report</field>
     <field name="arch" type="xml">
-      <!-- Read-only, no editing or creation since it is a PostgreSQL View -->
       <tree string="Etat Mouvement Clients primes" 
             create="false" 
             edit="false" 
@@ -155,5 +154,150 @@
       </p>
     </field>
   </record>
+
+
+  <!-- ══════════════════════════════════════════════════════════════════════ -->
+  <!--  VUE LISTE — Opérations Contractuelles (insurance.operation)            -->
+  <!-- ══════════════════════════════════════════════════════════════════════ -->
+  <record id="view_insurance_operation_tree" model="ir.ui.view">
+    <field name="name">insurance.operation.tree</field>
+    <field name="model">insurance.operation</field>
+    <field name="arch" type="xml">
+      <tree string="Opérations Contractuelles" decoration-info="state == 'draft'" decoration-success="state == 'confirmed'" decoration-warning="state == 'invoiced'" decoration-danger="state == 'canceled'">
+        <field name="name"/>
+        <field name="policy_id"/>
+        <field name="partner_id"/>
+        <field name="company_ins_id"/>
+        <field name="branche"/>
+        <field name="code_operation"/>
+        <field name="date_op"/>
+        <field name="montant_prime" sum="Total Primes"/>
+        <field name="montant_honoraire_ht" sum="Total Honoraires"/>
+        <field name="state" widget="badge" decoration-info="state == 'draft'" decoration-success="state == 'confirmed'" decoration-warning="state == 'invoiced'" decoration-danger="state == 'canceled'"/>
+      </tree>
+    </field>
+  </record>
+
+  <!-- ══════════════════════════════════════════════════════════════════════ -->
+  <!--  VUE FORM — Opérations Contractuelles (insurance.operation)            -->
+  <!-- ══════════════════════════════════════════════════════════════════════ -->
+  <record id="view_insurance_operation_form" model="ir.ui.view">
+    <field name="name">insurance.operation.form</field>
+    <field name="model">insurance.operation</field>
+    <field name="arch" type="xml">
+      <form string="Opération Contractuelle">
+        <header>
+          <button name="action_confirm" string="Confirmer" type="object" class="oe_highlight" invisible="state != 'draft'"/>
+          <button name="action_generate_receipt" string="Générer Quittance" type="object" class="oe_highlight" invisible="state != 'confirmed'"/>
+          <button name="action_cancel" string="Annuler" type="object" invisible="state in ('invoiced', 'canceled')"/>
+          <field name="state" widget="statusbar" statusbar_visible="draft,confirmed,invoiced"/>
+        </header>
+        <sheet>
+          <div class="oe_title">
+            <label for="name" string="N° Opération"/>
+            <h1>
+              <field name="name" readonly="1"/>
+            </h1>
+          </div>
+          <group>
+            <group string="Contrat &amp; Risque">
+              <field name="policy_id" readonly="state != 'draft'"/>
+              <field name="partner_id"/>
+              <field name="company_ins_id"/>
+              <field name="branche"/>
+              <field name="vehicule" placeholder="Immatriculation ou Risque" readonly="state != 'draft'"/>
+            </group>
+            <group string="Détails Opération">
+              <field name="code_operation" readonly="state != 'draft'"/>
+              <field name="code_operation_2" readonly="state != 'draft'"/>
+              <field name="date_op" readonly="state != 'draft'"/>
+              <field name="date_validite_du" readonly="state != 'draft'"/>
+              <field name="date_validite_au" readonly="state != 'draft'"/>
+              <field name="date_echeance" readonly="state != 'draft'"/>
+              <field name="designation" placeholder="Ex: Renouvellement annuel" readonly="state != 'draft'"/>
+            </group>
+          </group>
+          <group string="Informations Financières (TND)">
+            <group>
+              <field name="montant_prime" readonly="state != 'draft'"/>
+              <field name="prime_echeance" readonly="state != 'draft'"/>
+              <field name="commission" readonly="state != 'draft'"/>
+              <field name="currency_id" invisible="1"/>
+            </group>
+            <group>
+              <field name="montant_honoraire_ht" readonly="state != 'draft'"/>
+              <field name="libelle_honoraire" placeholder="Ex: Frais de dossier" readonly="state != 'draft'"/>
+              <field name="case_a_cocher_hon" readonly="state != 'draft'"/>
+              <field name="case_a_cocher_prime" readonly="state != 'draft'"/>
+            </group>
+          </group>
+          <group string="Documents Générés" invisible="state != 'invoiced'">
+            <field name="receipt_id"/>
+            <field name="journal_enc_id"/>
+          </group>
+          <group string="Notes">
+            <field name="notes" placeholder="Notes internes..."/>
+          </group>
+        </sheet>
+        <div class="oe_chatter">
+          <field name="message_follower_ids"/>
+          <field name="activity_ids"/>
+          <field name="message_ids"/>
+        </div>
+      </form>
+    </field>
+  </record>
+
+  <!-- ══════════════════════════════════════════════════════════════════════ -->
+  <!--  VUE RECHERCHE — Opérations Contractuelles (insurance.operation)        -->
+  <!-- ══════════════════════════════════════════════════════════════════════ -->
+  <record id="view_insurance_operation_search" model="ir.ui.view">
+    <field name="name">insurance.operation.search</field>
+    <field name="model">insurance.operation</field>
+    <field name="arch" type="xml">
+      <search string="Rechercher une opération">
+        <field name="name" string="N° Opération"/>
+        <field name="policy_id" string="Police"/>
+        <field name="partner_id" string="Client"/>
+        <field name="company_ins_id" string="Compagnie"/>
+        <field name="code_operation" string="Type"/>
+        <field name="vehicule" string="Véhicule"/>
+        
+        <filter string="Brouillon" name="draft" domain="[('state', '=', 'draft')]"/>
+        <filter string="Confirmée" name="confirmed" domain="[('state', '=', 'confirmed')]"/>
+        <filter string="Facturée" name="invoiced" domain="[('state', '=', 'invoiced')]"/>
+        
+        <group expand="0" string="Regrouper par">
+          <filter string="État" name="grp_state" context="{'group_by': 'state'}"/>
+          <filter string="Type" name="grp_code" context="{'group_by': 'code_operation'}"/>
+          <filter string="Compagnie" name="grp_company" context="{'group_by': 'company_ins_id'}"/>
+        </group>
+      </search>
+    </field>
+  </record>
+
+  <!-- Action de fenêtre pour les Opérations Contractuelles -->
+  <record id="action_insurance_operation" model="ir.actions.act_window">
+    <field name="name">Opérations Contractuelles</field>
+    <field name="res_model">insurance.operation</field>
+    <field name="view_mode">tree,form</field>
+    <field name="search_view_id" ref="view_insurance_operation_search"/>
+    <field name="context">{}</field>
+    <field name="help" type="html">
+      <p class="o_view_nocontent_smiling_face">
+        Enregistrez une nouvelle opération contractuelle (avenant, renouvellement...)
+      </p>
+      <p>
+        Les opérations permettent d'ajuster les polices et de générer les quittances correspondantes.
+      </p>
+    </field>
+  </record>
+
+  <!-- Menuitem pour les Opérations Contractuelles -->
+  <menuitem id="menu_assurcore_operations"
+            name="Opérations contractuelles"
+            parent="menu_assurcore_root"
+            action="action_insurance_operation"
+            sequence="26"/>
 
 </odoo>

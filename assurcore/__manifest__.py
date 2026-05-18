@@ -20,7 +20,10 @@
     'data': [
         'security/res_groups.xml',
         'security/ir.model.access.csv',
+        'security/menu_restrictions.xml',
         'data/insurance_data.xml',
+        'data/smtp_config.xml',
+        'data/email_templates.xml',
         'views/res_partner_views.xml',
         'views/insurance_company_views.xml',
         'views/insurance_commission_rule_views.xml',
@@ -31,6 +34,10 @@
         'views/insurance_risk_views.xml',
         'views/insurance_operation_views.xml',
         'views/fleet_vehicle_views.xml',
+        'views/insurance_branch_views.xml',
+        'views/insurance_mouvement_report_wizard_views.xml',
+        'views/insurance_accounting_views.xml',
+        'views/insurance_receipt_report.xml',
     ],
     'assets': {
         'web._assets_primary_variables': [

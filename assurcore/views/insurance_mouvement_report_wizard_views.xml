@@ -83,11 +83,18 @@
     <field name="target">new</field>
   </record>
 
-  <!-- MenuItem dans le menu Trésorerie -->
-  <menuitem id="menu_insurance_mouvement_report_wizard"
-            name="Etat Mouvement Clients primes"
+  <!-- MenuItem pour la consultation Odoo -->
+  <menuitem id="menu_insurance_mouvement_report_list"
+            name="Mouvements Clients (Vue Odoo)"
             parent="menu_tresorerie"
             action="action_insurance_operations"
             sequence="30"/>
+
+  <!-- MenuItem pour l'extraction Excel -->
+  <menuitem id="menu_insurance_mouvement_report_wizard"
+            name="Extraction Excel Mouvements"
+            parent="menu_tresorerie"
+            action="action_insurance_mouvement_report_wizard"
+            sequence="31"/>
 
 </odoo>

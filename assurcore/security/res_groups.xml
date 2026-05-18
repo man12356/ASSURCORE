@@ -2,22 +2,64 @@
 <odoo>
   <data>
 
+    <!-- Catégorie du module AssurCore -->
     <record id="module_category_assurcore" model="ir.module.category">
       <field name="name">AssurCore Courtage Assurance</field>
       <field name="sequence">50</field>
       <field name="visible">True</field>
     </record>
 
+    <!--
+    ─────────────────────────────────────────────────────────────────────────
+      AGENT DE SAISIE
+      ─────────────────────────────────────────────────────────────────────
+      Droits :
+        • Accès à AssurCore (polices, quittances, sinistres)
+        • Lecture/création des données métier
+        • PAS d'accès au menu Apps
+        • PAS d'accès au menu Parc automobile (Fleet)
+        • PAS d'accès aux Paramètres Odoo
+
+      Hérite de : base.group_user (Utilisateur interne de base)
+    ─────────────────────────────────────────────────────────────────────────
+    -->
     <record id="group_assurcore_agent" model="res.groups">
       <field name="name">Agent de Saisie</field>
       <field name="category_id" ref="module_category_assurcore"/>
-      <field name="implied_ids" eval="[(4, ref('base.group_user'))]"/>
+      <field name="implied_ids" eval="[(6, 0, [
+        ref('base.group_user'),
+      ])]"/>
     </record>
 
+    <!--
+    ─────────────────────────────────────────────────────────────────────────
+      RESPONSABLE ASSURCORE
+      ─────────────────────────────────────────────────────────────────────
+      Droits :
+        • Tous les droits de l'Agent de saisie
+        • Accès au Parc automobile AssurCore (menu Véhicules dans Paramétrage)
+        • Accès aux Paramètres Odoo (gestion utilisateurs, configuration)
+        • PAS d'accès au menu "Apps" (installation de modules)
+          → base.group_system donne accès à Paramètres SANS donner Apps
+
+      Hérite de : group_assurcore_agent + base.group_system (Paramètres)
+      N'hérite PAS de : base.group_erp_manager (qui donne accès à Apps)
+    ─────────────────────────────────────────────────────────────────────────
+    -->
     <record id="group_assurcore_manager" model="res.groups">
       <field name="name">Responsable</field>
       <field name="category_id" ref="module_category_assurcore"/>
-      <field name="implied_ids" eval="[(4, ref('group_assurcore_agent'))]"/>
+      <field name="implied_ids" eval="[(6, 0, [
+        ref('group_assurcore_agent'),
+        ref('base.group_system'),
+      ])]"/>
+      <field name="users" eval="[(4, ref('base.user_root')), (4, ref('base.user_admin'))]"/>
+    </record>
+
+    <!-- Groupe spécial pour gérer les applications (Apps) -->
+    <record id="group_apps_manager" model="res.groups">
+      <field name="name">Gestionnaire d'Applications (Apps)</field>
+      <field name="category_id" ref="module_category_assurcore"/>
       <field name="users" eval="[(4, ref('base.user_root')), (4, ref('base.user_admin'))]"/>
     </record>
 

@@ -1,7 +1,5 @@
-"NOM_UTILISATEUR"	"MOT_PASSE"	"TYPE_UTILISATEUR"	"DATE_DERNIER_MAJ"	"UTILISATEUR"	"AGENCE_COURTIER"	"NOTES"	"SUPP_LOG"
-"administrateur"	"g"	"A"	19/03/13	"administrateur"	"Tunis"	""	"N"
+"NOM_UTILISATEUR"	"MOT_PASSE"	"TYPE_UTILISATEUR"	"DATE_DERNIER_MAJ"	"UTILISATEUR"	"AGENCE_COURTIER"	"NOTES"
 "ZIED"	"kamz"	"A"		""	"Tunis"	""	"N"
-"KAMMOUN"	"KAM"	"A"		""	"Tunis"	""	"N"
 "HANEN"	"ZAKARIA"	"O"		""	"Tunis"	""	"N"
 "LEILA"	"YOUNESS"	"O"		""	"Tunis"	""	"N"
 "RIDHA"	"RIDHA"	"A"		""	"Tunis"	""	"N"

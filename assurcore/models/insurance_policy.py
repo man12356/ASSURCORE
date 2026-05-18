@@ -638,12 +638,10 @@ class InsurancePolicy(models.Model):
         Tâche planifiée quotidienne :
         1. Marque les polices expirées (date_echeance < aujourd'hui)
         2. Marque les polices impayées (impayé > 0 et active)
-        3. Crée les activités de relance CRM pour les échéances J-30
 
-        Équivalent de la logique PL/SQL cachée dans ASSKAREKAMOUN.
+        NOTE : Les relances e-mail J-30 sont gérées par _cron_send_renewal_emails().
         """
         today = fields.Date.today()
-        horizon_30j = today + relativedelta(days=30)
 
         # 1. Expirations
         expired = self.search([
@@ -663,26 +661,102 @@ class InsurancePolicy(models.Model):
             unpaid.write({'state': 'unpaid'})
             _logger.info('AssurCore: %d polices marquées Impayées.', len(unpaid))
 
-        # 3. Relances CRM J-30
+    @api.model
+    def _cron_send_renewal_emails(self):
+        """
+        Cron dédié — Envoi des e-mails de relance renouvellement (J-30 et J-7).
+
+        Fenêtre : polices dont l'échéance est entre aujourd'hui et J+30.
+        Pour éviter les doublons, on ne relance que si aucun message AssurCore
+        renouvellement n'a déjà été envoyé dans les 7 derniers jours.
+        Crée aussi une activité CRM pour le commercial.
+        """
+        today = fields.Date.today()
+        horizon = today + relativedelta(days=30)
+        seven_days_ago = fields.Datetime.now() - relativedelta(days=7)
+
+        template = self.env.ref(
+            'assurcore.email_template_policy_renewal', raise_if_not_found=False
+        )
+        if not template:
+            _logger.warning('AssurCore: template email_template_policy_renewal introuvable.')
+            return
+
         renewals = self.search([
             ('state', 'in', ('active', 'unpaid')),
             ('date_echeance', '>=', today),
-            ('date_echeance', '<=', horizon_30j),
+            ('date_echeance', '<=', horizon),
+            ('partner_id.email', '!=', False),
         ])
+
+        sent_count = 0
         for policy in renewals:
-            policy.activity_schedule(
-                'mail.mail_activity_data_call',
-                date_deadline=policy.date_echeance - relativedelta(days=7),
-                summary=_(
-                    'Relance renouvellement — Police %(num)s / %(client)s',
-                    num=policy.num_police,
-                    client=policy.partner_id.name,
-                ),
-                user_id=policy.commercial_id.id or self.env.user.id,
-            )
+            # Vérifier si un e-mail de relance a déjà été envoyé récemment
+            recent_msg = self.env['mail.message'].search([
+                ('res_id', '=', policy.id),
+                ('model', '=', 'insurance.policy'),
+                ('subtype_id.name', 'ilike', 'Email'),
+                ('date', '>=', seven_days_ago),
+                ('body', 'ilike', 'renouvellement'),
+            ], limit=1)
+            if recent_msg:
+                continue  # Déjà relancé cette semaine
+
+            try:
+                template.send_mail(policy.id, force_send=True, raise_exception=False)
+                sent_count += 1
+
+                # Créer aussi une activité CRM pour le commercial
+                deadline = policy.date_echeance - relativedelta(days=7)
+                if deadline >= today:
+                    policy.activity_schedule(
+                        'mail.mail_activity_data_call',
+                        date_deadline=deadline,
+                        summary=_(
+                            'Relance renouvellement — %(num)s / %(client)s (échéance %(date)s)',
+                            num=policy.num_police,
+                            client=policy.partner_id.name,
+                            date=str(policy.date_echeance),
+                        ),
+                        user_id=policy.commercial_id.id or self.env.user.id,
+                    )
+            except Exception as exc:
+                _logger.error(
+                    'AssurCore: Erreur envoi e-mail relance police %s : %s',
+                    policy.num_police, exc
+                )
+
         _logger.info(
-            'AssurCore: %d activités de relance créées (horizon 30j).', len(renewals)
+            'AssurCore: %d e-mails de relance renouvellement envoyés (horizon 30j).',
+            sent_count
         )
+
+    def action_send_renewal_email(self):
+        """Action manuelle : envoyer l'e-mail de relance depuis la fiche police."""
+        self.ensure_one()
+        template = self.env.ref(
+            'assurcore.email_template_policy_renewal', raise_if_not_found=False
+        )
+        if not template:
+            raise UserError(_('Template e-mail de relance introuvable. Vérifiez le module.'))
+        if not self.partner_id.email:
+            raise UserError(_(
+                'L\'assuré %s n\'a pas d\'adresse e-mail renseignée.',
+                self.partner_id.name
+            ))
+        template.send_mail(self.id, force_send=True)
+        return {
+            'type': 'ir.actions.client',
+            'tag': 'display_notification',
+            'params': {
+                'title': _('E-mail envoyé'),
+                'message': _(
+                    'E-mail de relance envoyé à %s.', self.partner_id.email
+                ),
+                'type': 'success',
+                'sticky': False,
+            },
+        }
 
     # ─────────────────────────────────────────────────────────────────────────
     #  Utilitaires internes

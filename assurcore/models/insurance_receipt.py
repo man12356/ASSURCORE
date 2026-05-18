@@ -882,6 +882,72 @@ class InsuranceReceipt(models.Model):
                 len(overdue),
             )
 
+    @api.model
+    def _cron_send_overdue_emails(self):
+        """
+        Cron dédié — Envoi des e-mails de relance quittances impayées.
+
+        Seuils de relance :
+          - 1ère relance : J+15 après date_echeance (retard modéré)
+          - 2ème relance : J+45 après date_echeance (retard sévère)
+
+        Garde-fou anti-doublon : on ne relance pas si un e-mail a déjà
+        été envoyé dans les 14 derniers jours pour cette quittance.
+        """
+        today = fields.Date.today()
+        seuil_1 = today - relativedelta(days=15)   # J+15
+        seuil_2 = today - relativedelta(days=45)   # J+45
+        fourteen_days_ago = fields.Datetime.now() - relativedelta(days=14)
+
+        template = self.env.ref(
+            'assurcore.email_template_receipt_overdue', raise_if_not_found=False
+        )
+        if not template:
+            _logger.warning('AssurCore: template email_template_receipt_overdue introuvable.')
+            return
+
+        # Quittances à relancer (J+15 OU J+45) avec e-mail disponible
+        overdue_receipts = self.search([
+            ('state', 'in', ('emise', 'notifiee', 'partielle')),
+            ('amount_residual', '>', 0),
+            ('date_echeance', '<=', seuil_1),           # Au moins J+15
+            ('date_echeance', '>=', today - relativedelta(days=89)),  # Pas encore Contentieux
+        ])
+
+        sent_count = 0
+        for rec in overdue_receipts:
+            email_dest = rec.payer_id.email or rec.partner_id.email
+            if not email_dest:
+                continue  # Pas d'e-mail disponible
+
+            # Anti-doublon : vérifier le dernier e-mail de relance
+            recent_msg = self.env['mail.message'].search([
+                ('res_id', '=', rec.id),
+                ('model', '=', 'insurance.receipt'),
+                ('subtype_id.name', 'ilike', 'Email'),
+                ('date', '>=', fourteen_days_ago),
+                ('body', 'ilike', 'quittance'),
+            ], limit=1)
+            if recent_msg:
+                continue  # Déjà relancé cette quinzaine
+
+            try:
+                template.send_mail(rec.id, force_send=True, raise_exception=False)
+                sent_count += 1
+                _logger.debug(
+                    'AssurCore: relance quittance %s envoyée à %s (retard: %s j)',
+                    rec.name, email_dest, (today - rec.date_echeance).days
+                )
+            except Exception as exc:
+                _logger.error(
+                    'AssurCore: Erreur relance quittance %s : %s', rec.name, exc
+                )
+
+        _logger.info(
+            'AssurCore: %d e-mails relance quittances impayées envoyés.', sent_count
+        )
+
+
     # ─────────────────────────────────────────────────────────────────────────
     #  Utilitaires internes
     # ─────────────────────────────────────────────────────────────────────────

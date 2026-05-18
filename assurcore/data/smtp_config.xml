@@ -1,0 +1,56 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+  <data noupdate="1">
+    <!--
+    ================================================================================
+      AssurCore — Configuration Serveur E-mail Sortant (SMTP)
+      data/smtp_config.xml
+
+      Stratégie :
+        • Authentification SMTP  : contact@exregister.io  (credentials EX REGISTER)
+        • Adresse expéditeur vue par le destinataire : noreply@assurcore.io
+        • Le champ "from_filter" = "assurcore.io" assure que tout e-mail envoyé
+          depuis un domaine "@assurcore.io" utilisera CE serveur SMTP.
+        • Le mot de passe SMTP n'est PAS stocké ici (sécurité) — il doit être
+          saisi une seule fois dans Odoo : Paramètres → E-mail sortant.
+
+      Paramètres SMTP typiques OVH / Ionos (à adapter selon le fournisseur) :
+        host  : ssl0.ovh.net  (ou smtp.ionos.fr, smtp.gmail.com…)
+        port  : 465  (SSL) ou 587 (STARTTLS)
+        user  : contact@exregister.io
+    ================================================================================
+    -->
+
+    <!-- ── Serveur SMTP sortant AssurCore ────────────────────────────────────── -->
+    <record id="smtp_server_assurcore" model="ir.mail_server">
+      <field name="name">AssurCore SMTP (via EX REGISTER)</field>
+      <field name="smtp_host">ssl0.ovh.net</field>
+      <field name="smtp_port">465</field>
+      <field name="smtp_encryption">ssl</field>
+      <field name="smtp_user">contact@exregister.io</field>
+      <!-- smtp_pass : NE PAS METTRE ICI — saisir dans Odoo Paramètres > E-mail sortant -->
+      <field name="from_filter">assurcore.io</field>
+      <field name="sequence">10</field>
+      <field name="active">True</field>
+    </record>
+
+    <!-- ── Paramètre système : domaine AssurCore ──────────────────────────────── -->
+    <!-- Configure le domaine catch-all et l'expéditeur par défaut              -->
+
+    <record id="assurcore_mail_catchall_domain" model="ir.config_parameter">
+      <field name="key">mail.catchall.domain</field>
+      <field name="value">assurcore.io</field>
+    </record>
+
+    <record id="assurcore_mail_default_from" model="ir.config_parameter">
+      <field name="key">mail.default.from</field>
+      <field name="value">noreply</field>
+    </record>
+
+    <record id="assurcore_mail_default_from_filter" model="ir.config_parameter">
+      <field name="key">mail.default.from_filter</field>
+      <field name="value">assurcore.io</field>
+    </record>
+
+  </data>
+</odoo>

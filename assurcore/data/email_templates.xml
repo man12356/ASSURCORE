@@ -1,0 +1,223 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+  <data noupdate="1">
+
+    <!-- ════════════════════════════════════════════════════════════════════ -->
+    <!--  1. TEMPLATE — RELANCE RENOUVELLEMENT POLICE (J-30)                 -->
+    <!-- ════════════════════════════════════════════════════════════════════ -->
+    <record id="email_template_policy_renewal" model="mail.template">
+      <field name="name">AssurCore — Rappel Renouvellement Police (J-30)</field>
+      <field name="model_id" search="[('model', '=', 'insurance.policy')]"/>
+      <field name="subject">🔔 Votre assurance {{object.branche}} arrive à échéance le {{object.date_echeance}}</field>
+      <field name="email_from">Courtier Kamoun | AssurCore &lt;noreply@assurcore.io&gt;</field>
+      <field name="email_to">{{object.partner_id.email}}</field>
+      <field name="partner_to">{{object.payer_id.id or object.partner_id.id}}</field>
+      <field name="body_html" type="html">
+<div style="font-family: 'Inter', Arial, sans-serif; max-width: 640px; margin: 0 auto; background-color: #ffffff;">
+
+  <!-- Header -->
+  <div style="background: linear-gradient(135deg, #0F766E 0%, #134E4A 100%); padding: 40px 35px; border-radius: 8px 8px 0 0;">
+    <table width="100%" cellpadding="0" cellspacing="0">
+      <tr>
+        <td>
+          <div style="color: #CCFBF1; font-size: 13px; font-weight: 500; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 8px;">COURTIER KAMOUN — Assurances</div>
+          <h1 style="color: #ffffff; font-size: 26px; font-weight: 800; margin: 0; line-height: 1.2;">Votre assurance arrive bientôt à échéance</h1>
+        </td>
+        <td style="text-align: right; vertical-align: top;">
+          <div style="background: rgba(255,255,255,0.15); border-radius: 50%; width: 64px; height: 64px; display: inline-flex; align-items: center; justify-content: center; font-size: 32px;">🔔</div>
+        </td>
+      </tr>
+    </table>
+  </div>
+
+  <!-- Alert Banner -->
+  <div style="background: #FEF3C7; border-left: 4px solid #D97706; padding: 14px 24px;">
+    <p style="margin: 0; color: #92400E; font-size: 14px; font-weight: 600;">
+      ⏰ Il vous reste <strong><t t-esc="(object.date_echeance - object.env.cr.now().date()).days"/> jours</strong> avant l'expiration de votre contrat.
+    </p>
+  </div>
+
+  <!-- Body -->
+  <div style="padding: 30px 35px;">
+    <p style="color: #374151; font-size: 15px; line-height: 1.7; margin-bottom: 20px;">
+      Cher(e) <strong><t t-esc="object.partner_id.name"/></strong>,
+    </p>
+    <p style="color: #4B5563; font-size: 14px; line-height: 1.7;">
+      Nous vous informons que votre contrat d'assurance référencé ci-dessous arrivera à échéance dans <strong>moins de 30 jours</strong>. Afin d'assurer la continuité de votre couverture, nous vous invitons à prendre contact avec votre conseiller dès maintenant.
+    </p>
+
+    <!-- Policy Card -->
+    <div style="background: #F8FAFC; border: 1px solid #E2E8F0; border-radius: 8px; padding: 20px; margin: 24px 0;">
+      <div style="font-size: 12px; font-weight: 700; color: #64748B; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 12px;">Détails du contrat</div>
+      <table width="100%" cellpadding="0" cellspacing="0" style="font-size: 14px;">
+        <tr>
+          <td style="color: #6B7280; padding: 5px 0; width: 45%;">N° Police</td>
+          <td style="color: #111827; font-weight: 700;"><t t-esc="object.num_police"/></td>
+        </tr>
+        <tr>
+          <td style="color: #6B7280; padding: 5px 0;">Branche</td>
+          <td style="color: #111827; font-weight: 600;"><t t-esc="dict(object._fields['branche'].selection).get(object.branche, object.branche)"/></td>
+        </tr>
+        <tr>
+          <td style="color: #6B7280; padding: 5px 0;">Compagnie</td>
+          <td style="color: #111827;"><t t-esc="object.company_ins_id.name"/></td>
+        </tr>
+        <tr>
+          <td style="color: #6B7280; padding: 5px 0;">Date d'effet</td>
+          <td style="color: #111827;"><t t-esc="object.date_effect" t-options="{'widget': 'date'}"/></td>
+        </tr>
+        <tr>
+          <td style="color: #6B7280; padding: 5px 0;">⚠️ Date d'échéance</td>
+          <td style="color: #DC2626; font-weight: 700; font-size: 15px;"><t t-esc="object.date_echeance" t-options="{'widget': 'date'}"/></td>
+        </tr>
+        <t t-if="object.risque">
+          <tr>
+            <td style="color: #6B7280; padding: 5px 0;">Risque assuré</td>
+            <td style="color: #111827;"><t t-esc="object.risque"/></td>
+          </tr>
+        </t>
+      </table>
+    </div>
+
+    <!-- CTA Button -->
+    <div style="text-align: center; margin: 30px 0;">
+      <a href="mailto:contact@courtier-kamoun.tn?subject=Renouvellement%20Police"
+         style="background: linear-gradient(135deg, #0F766E, #0D9488); color: #ffffff; text-decoration: none; padding: 14px 32px; border-radius: 6px; font-weight: 700; font-size: 15px; display: inline-block; box-shadow: 0 4px 12px rgba(15,118,110,0.3);">
+        📞 Demander mon renouvellement
+      </a>
+    </div>
+
+    <p style="color: #6B7280; font-size: 13px; line-height: 1.7;">
+      Pour toute question, contactez votre conseiller dédié :
+      <t t-if="object.commercial_id and object.commercial_id.email">
+        <a t-attf-href="mailto:{{object.commercial_id.email}}" style="color: #0F766E;"><t t-esc="object.commercial_id.name"/></a>
+      </t>
+      <t t-else="">notre équipe au <strong>+216 XX XXX XXX</strong></t>
+    </p>
+  </div>
+
+  <!-- Footer -->
+  <div style="background: #F1F5F9; padding: 20px 35px; border-radius: 0 0 8px 8px; border-top: 1px solid #E2E8F0;">
+    <p style="margin: 0; color: #94A3B8; font-size: 12px; text-align: center;">
+      <strong>COURTIER KAMOUN</strong> — Intermédiaire Agréé d'Assurances | Tunisie<br/>
+      Ce message est envoyé automatiquement par AssurCore. Merci de ne pas répondre directement à cet e-mail.
+    </p>
+  </div>
+
+</div>
+      </field>
+      <field name="auto_delete">True</field>
+    </record>
+
+
+    <!-- ════════════════════════════════════════════════════════════════════ -->
+    <!--  2. TEMPLATE — RELANCE QUITTANCE IMPAYÉE                            -->
+    <!-- ════════════════════════════════════════════════════════════════════ -->
+    <record id="email_template_receipt_overdue" model="mail.template">
+      <field name="name">AssurCore — Relance Quittance Impayée</field>
+      <field name="model_id" search="[('model', '=', 'insurance.receipt')]"/>
+      <field name="subject">⚠️ Rappel de paiement — Quittance {{object.name}} ({{object.amount_residual}} TND)</field>
+      <field name="email_from">Courtier Kamoun | AssurCore &lt;noreply@assurcore.io&gt;</field>
+      <field name="email_to">{{object.payer_id.email or object.partner_id.email}}</field>
+      <field name="partner_to">{{object.payer_id.id or object.partner_id.id}}</field>
+      <field name="body_html" type="html">
+<div style="font-family: 'Inter', Arial, sans-serif; max-width: 640px; margin: 0 auto; background-color: #ffffff;">
+
+  <!-- Header -->
+  <div style="background: linear-gradient(135deg, #B45309 0%, #92400E 100%); padding: 35px; border-radius: 8px 8px 0 0;">
+    <div style="color: #FEF3C7; font-size: 12px; font-weight: 600; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 6px;">COURTIER KAMOUN — Rappel de paiement</div>
+    <h1 style="color: #ffffff; font-size: 24px; font-weight: 800; margin: 0;">Votre quittance est en attente de règlement</h1>
+  </div>
+
+  <!-- Body -->
+  <div style="padding: 30px 35px;">
+    <p style="color: #374151; font-size: 15px; line-height: 1.7;">
+      Cher(e) <strong><t t-esc="object.payer_id.name or object.partner_id.name"/></strong>,
+    </p>
+    <p style="color: #4B5563; font-size: 14px; line-height: 1.7;">
+      Sauf erreur de votre part, nous n'avons pas encore reçu le règlement de la quittance ci-dessous. Nous vous remercions de bien vouloir régulariser votre situation dans les meilleurs délais.
+    </p>
+
+    <!-- Receipt Card -->
+    <div style="background: #FFF7ED; border: 1px solid #FED7AA; border-radius: 8px; padding: 20px; margin: 20px 0;">
+      <div style="font-size: 12px; font-weight: 700; color: #9A3412; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 12px;">Détails de la quittance</div>
+      <table width="100%" cellpadding="0" cellspacing="0" style="font-size: 14px;">
+        <tr>
+          <td style="color: #6B7280; padding: 5px 0; width: 50%;">N° Quittance</td>
+          <td style="color: #111827; font-weight: 700;"><t t-esc="object.name"/></td>
+        </tr>
+        <tr>
+          <td style="color: #6B7280; padding: 5px 0;">Police</td>
+          <td style="color: #111827;"><t t-esc="object.policy_id.num_police"/></td>
+        </tr>
+        <tr>
+          <td style="color: #6B7280; padding: 5px 0;">Compagnie</td>
+          <td style="color: #111827;"><t t-esc="object.company_ins_id.name"/></td>
+        </tr>
+        <tr>
+          <td style="color: #6B7280; padding: 5px 0;">Date d'échéance</td>
+          <td style="color: #DC2626; font-weight: 600;"><t t-esc="object.date_echeance" t-options="{'widget': 'date'}"/></td>
+        </tr>
+        <tr>
+          <td style="color: #6B7280; padding: 5px 0;">Montant total TTC</td>
+          <td style="color: #111827;"><t t-esc="object.amount_total"/> TND</td>
+        </tr>
+        <tr style="background: #FEE2E2; border-radius: 4px;">
+          <td style="color: #B91C1C; font-weight: 700; padding: 8px 0;">⚠️ Solde restant à régler</td>
+          <td style="color: #B91C1C; font-weight: 800; font-size: 17px;"><t t-esc="'%.3f' % object.amount_residual"/> TND</td>
+        </tr>
+      </table>
+    </div>
+
+    <p style="color: #6B7280; font-size: 13px; line-height: 1.7;">
+      Pour effectuer votre règlement ou pour toute question, contactez-nous à <a href="mailto:contact@courtier-kamoun.tn" style="color: #B45309;">contact@courtier-kamoun.tn</a>.
+    </p>
+  </div>
+
+  <!-- Footer -->
+  <div style="background: #F1F5F9; padding: 16px 35px; border-radius: 0 0 8px 8px; border-top: 1px solid #E2E8F0;">
+    <p style="margin: 0; color: #94A3B8; font-size: 12px; text-align: center;">
+      <strong>COURTIER KAMOUN</strong> — Intermédiaire Agréé d'Assurances | Tunisie<br/>
+      Message automatique généré par AssurCore. Référence : <t t-esc="object.name"/>
+    </p>
+  </div>
+
+</div>
+      </field>
+      <field name="auto_delete">True</field>
+    </record>
+
+
+    <!-- ════════════════════════════════════════════════════════════════════ -->
+    <!--  3. CRON — RELANCE RENOUVELLEMENT E-MAIL J-30 (DÉDIÉ)               -->
+    <!-- ════════════════════════════════════════════════════════════════════ -->
+    <record id="cron_send_renewal_reminders" model="ir.cron">
+      <field name="name">AssurCore - Envoi e-mails relance renouvellement (J-30)</field>
+      <field name="model_id" search="[('model', '=', 'insurance.policy')]"/>
+      <field name="state">code</field>
+      <field name="code">model._cron_send_renewal_emails()</field>
+      <field name="interval_number">1</field>
+      <field name="interval_type">days</field>
+      <field name="numbercall">-1</field>
+      <field name="active">True</field>
+      <field name="user_id" ref="base.user_root"/>
+    </record>
+
+
+    <!-- ════════════════════════════════════════════════════════════════════ -->
+    <!--  4. CRON — RELANCE QUITTANCES IMPAYÉES E-MAIL (J+15, J+45)         -->
+    <!-- ════════════════════════════════════════════════════════════════════ -->
+    <record id="cron_send_overdue_receipt_reminders" model="ir.cron">
+      <field name="name">AssurCore - Envoi e-mails relance quittances impayées</field>
+      <field name="model_id" search="[('model', '=', 'insurance.receipt')]"/>
+      <field name="state">code</field>
+      <field name="code">model._cron_send_overdue_emails()</field>
+      <field name="interval_number">1</field>
+      <field name="interval_type">days</field>
+      <field name="numbercall">-1</field>
+      <field name="active">True</field>
+      <field name="user_id" ref="base.user_root"/>
+    </record>
+
+  </data>
+</odoo>

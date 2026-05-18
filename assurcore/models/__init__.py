@@ -2,6 +2,7 @@
 # Ordre strict : _name = 'X' doit etre importe AVANT _inherit = 'X'
 
 from . import insurance_company
+from . import insurance_branch
 from . import insurance_bank
 from . import insurance_journal_enc
 from . import insurance_risk          # Phase 2 : insurance.risk + operation.code + is_expert

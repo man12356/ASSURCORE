@@ -16,6 +16,11 @@
           <button name="action_activate" string="Activer"
                   type="object" class="btn-primary"
                   invisible="state != 'draft'"/>
+          <button name="action_send_renewal_email"
+                  string="📧 Envoyer Relance E-mail"
+                  type="object" class="btn-secondary"
+                  invisible="state not in ('active','unpaid','expired')"
+                  help="Envoie immédiatement l'e-mail de relance renouvellement à l'assuré."/>
           <button name="action_cancel" string="Résilier"
                   type="object" class="btn-secondary"
                   invisible="state not in ('active','unpaid')"/>

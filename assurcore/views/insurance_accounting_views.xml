@@ -1,0 +1,171 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+
+  <!-- ══════════════════════════════════════════════════════════════════════ -->
+  <!--  1. RÉFÉRENTIEL DES BANQUES (insurance.bank)                          -->
+  <!-- ══════════════════════════════════════════════════════════════════════ -->
+
+  <!-- VUE LISTE Banques -->
+  <record id="view_insurance_bank_tree" model="ir.ui.view">
+    <field name="name">insurance.bank.tree</field>
+    <field name="model">insurance.bank</field>
+    <field name="arch" type="xml">
+      <tree string="Banques tunisiennes" editable="bottom">
+        <field name="name"/>
+        <field name="code_swift"/>
+        <field name="active"/>
+      </tree>
+    </field>
+  </record>
+
+  <!-- Action Banques -->
+  <record id="action_insurance_banks" model="ir.actions.act_window">
+    <field name="name">Banques</field>
+    <field name="res_model">insurance.bank</field>
+    <field name="view_mode">tree</field>
+    <field name="help" type="html">
+      <p class="o_view_nocontent_smiling_face">
+        Configurez les banques tunisiennes émettrices de chèques.
+      </p>
+      <p>
+        Ce référentiel permet d'identifier la banque émettrice lors de l'enregistrement des chèques de règlements.
+      </p>
+    </field>
+  </record>
+
+
+  <!-- ══════════════════════════════════════════════════════════════════════ -->
+  <!--  2. JOURNÉES D'ENCAISSEMENT COMPAGNIE (insurance.journal.enc)         -->
+  <!-- ══════════════════════════════════════════════════════════════════════ -->
+
+  <!-- VUE LISTE Journées d'encaissement -->
+  <record id="view_insurance_journal_enc_tree" model="ir.ui.view">
+    <field name="name">insurance.journal.enc.tree</field>
+    <field name="model">insurance.journal.enc</field>
+    <field name="arch" type="xml">
+      <tree string="Journées d'Encaissement" decoration-info="state == 'ouvert'" decoration-warning="state == 'envoye'" decoration-success="state == 'regle'" decoration-muted="state == 'cloture'">
+        <field name="name"/>
+        <field name="company_ins_id"/>
+        <field name="date_creation"/>
+        <field name="total_montant_enc" sum="Total Encaissé"/>
+        <field name="total_jour_commission" sum="Total Commission"/>
+        <field name="total_montant_enc_net" sum="Total Net à reverser"/>
+        <field name="state" widget="badge" decoration-info="state == 'ouvert'" decoration-warning="state == 'envoye'" decoration-success="state == 'regle'" decoration-muted="state == 'cloture'"/>
+      </tree>
+    </field>
+  </record>
+
+  <!-- VUE FORM Journées d'encaissement -->
+  <record id="view_insurance_journal_enc_form" model="ir.ui.view">
+    <field name="name">insurance.journal.enc.form</field>
+    <field name="model">insurance.journal.enc</field>
+    <field name="arch" type="xml">
+      <form string="Journée d'Encaissement">
+        <header>
+          <button name="action_envoyer" string="Envoyer à la compagnie" type="object" class="oe_highlight" invisible="state != 'ouvert'"/>
+          <button name="action_regler" string="Marquer comme réglée" type="object" class="oe_highlight" invisible="state != 'envoye'"/>
+          <button name="action_cloturer" string="Clôturer" type="object" invisible="state != 'regle'"/>
+          <field name="state" widget="statusbar" statusbar_visible="ouvert,envoye,regle,cloture"/>
+        </header>
+        <sheet>
+          <div class="oe_title">
+            <label for="name" string="N° Journée d'Encaissement"/>
+            <h1>
+              <field name="name" readonly="1"/>
+            </h1>
+          </div>
+          <group>
+            <group string="Informations Générales">
+              <field name="company_ins_id" readonly="state != 'ouvert'"/>
+              <field name="date_creation" readonly="state != 'ouvert'"/>
+              <field name="currency_id" invisible="1"/>
+            </group>
+            <group string="Montants Synthétisés (TND)">
+              <field name="total_montant_enc" readonly="state != 'ouvert'"/>
+              <field name="total_jour_commission" readonly="state != 'ouvert'"/>
+              <field name="total_montant_enc_net"/>
+            </group>
+          </group>
+          <group string="Règlement Reversement Compagnie" invisible="state not in ('regle', 'cloture')">
+            <group>
+              <field name="montant_reg_enc" readonly="state == 'cloture'"/>
+              <field name="date_reg_enc" readonly="state == 'cloture'"/>
+              <field name="type_reg_enc" readonly="state == 'cloture'"/>
+            </group>
+            <group>
+              <field name="num_cheque_enc" readonly="state == 'cloture'" invisible="type_reg_enc != 'C'"/>
+              <field name="banque_enc" readonly="state == 'cloture'" invisible="type_reg_enc != 'C'"/>
+            </group>
+          </group>
+          <group string="Notes">
+            <field name="notes" placeholder="Observations..."/>
+          </group>
+        </sheet>
+      </form>
+    </field>
+  </record>
+
+  <!-- Action Journées d'encaissement -->
+  <record id="action_insurance_journal_encs" model="ir.actions.act_window">
+    <field name="name">Journées d'Encaissement Compagnie</field>
+    <field name="res_model">insurance.journal.enc</field>
+    <field name="view_mode">tree,form</field>
+    <field name="help" type="html">
+      <p class="o_view_nocontent_smiling_face">
+        Gérez vos journées d'encaissement et reversements aux compagnies d'assurance.
+      </p>
+      <p>
+        Les journées regroupent les encaissements quotidiens et servent de base de rapprochement.
+      </p>
+    </field>
+  </record>
+
+
+  <!-- ══════════════════════════════════════════════════════════════════════ -->
+  <!--  3. EXPERTS EN SINISTRES (res.partner filtré par is_expert = True)    -->
+  <!-- ══════════════════════════════════════════════════════════════════════ -->
+
+  <!-- Action Experts en sinistres -->
+  <record id="action_insurance_experts" model="ir.actions.act_window">
+    <field name="name">Experts en sinistres</field>
+    <field name="res_model">res.partner</field>
+    <field name="view_mode">tree,form</field>
+    <field name="domain">[('is_expert', '=', True)]</field>
+    <field name="context">{'default_is_expert': True, 'default_customer_rank': 0, 'default_supplier_rank': 0}</field>
+    <field name="help" type="html">
+      <p class="o_view_nocontent_smiling_face">
+        Ajoutez votre premier expert d'assurance partenaires.
+      </p>
+      <p>
+        Ce répertoire centralise les experts mandatés lors du traitement des sinistres.
+      </p>
+    </field>
+  </record>
+
+
+  <!-- ══════════════════════════════════════════════════════════════════════ -->
+  <!--  4. MENUS ASSOCIÉS                                                      -->
+  <!-- ══════════════════════════════════════════════════════════════════════ -->
+
+  <!-- MenuItem dans le menu Trésorerie pour les Journées d'encaissement -->
+  <menuitem id="menu_insurance_journal_enc"
+            name="Journées d'Encaissement"
+            parent="menu_tresorerie"
+            action="action_insurance_journal_encs"
+            sequence="25"/>
+
+  <!-- MenuItem dans le menu Paramétrage pour les Experts -->
+  <menuitem id="menu_assurcore_experts"
+            name="Experts"
+            parent="menu_assurcore_parametrage"
+            action="action_insurance_experts"
+            sequence="15"/>
+
+  <!-- MenuItem dans le menu Paramétrage pour les Banques -->
+  <menuitem id="menu_assurcore_banks"
+            name="Banques"
+            parent="menu_assurcore_parametrage"
+            action="action_insurance_banks"
+            sequence="20"/>
+
+</odoo>
