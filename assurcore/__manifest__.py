@@ -30,6 +30,7 @@
         'views/insurance_claim_views.xml',
         'views/insurance_risk_views.xml',
         'views/insurance_operation_views.xml',
+        'views/fleet_vehicle_views.xml',
     ],
     'assets': {
         'web._assets_primary_variables': [

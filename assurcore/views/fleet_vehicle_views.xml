@@ -1,0 +1,124 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+  <data>
+
+    <!-- ══════════════════════════════════════════════════════════════════════ -->
+    <!--  Surcharge Formulaire : fleet.vehicle                                  -->
+    <!-- ══════════════════════════════════════════════════════════════════════ -->
+    <record id="view_fleet_vehicle_form_inherit_assurcore" model="ir.ui.view">
+      <field name="name">fleet.vehicle.form.inherit.assurcore</field>
+      <field name="model">fleet.vehicle</field>
+      <field name="inherit_id" ref="fleet.fleet_vehicle_view_form"/>
+      <field name="arch" type="xml">
+        
+        <!-- Ajout des champs spécifiques à l'assurance tunisienne -->
+        <!-- Utilisation d'un selecteur valide sur le parent du champ category_id -->
+        <xpath expr="//field[@name='category_id']/.." position="after">
+          <group string="Assurance Tunisienne" name="tunisian_insurance">
+            <field name="usage_vehicule" required="1"/>
+            <field name="puissance_fiscale" required="1"/>
+            <field name="valeur_venale" widget="monetary" options="{'currency_field': 'currency_id'}"/>
+            <field name="valeur_a_neuf" widget="monetary" options="{'currency_field': 'currency_id'}"/>
+            <field name="currency_id" invisible="1"/>
+          </group>
+        </xpath>
+
+        <!-- Masquer les sections/onglets internes de transport pour les agents de saisie -->
+        <!-- On restreint les boutons statiques du header de la fiche véhicule aux managers -->
+        <xpath expr="//button[@name='open_assignation_logs']" position="attributes">
+          <attribute name="groups">assurcore.group_assurcore_manager</attribute>
+        </xpath>
+        <xpath expr="//button[@name='return_action_to_open' and contains(@context, 'fleet_vehicle_log_contract_action')]" position="attributes">
+          <attribute name="groups">assurcore.group_assurcore_manager</attribute>
+        </xpath>
+        <xpath expr="//button[@name='return_action_to_open' and contains(@context, 'fleet_vehicle_log_services_action')]" position="attributes">
+          <attribute name="groups">assurcore.group_assurcore_manager</attribute>
+        </xpath>
+        <xpath expr="//button[@name='return_action_to_open' and contains(@context, 'fleet_vehicle_odometer_action')]" position="attributes">
+          <attribute name="groups">assurcore.group_assurcore_manager</attribute>
+        </xpath>
+
+        <!-- On restreint l'onglet "Tax Info" (coûts et fiscalité par défaut) aux managers -->
+        <xpath expr="//page[@name='page_tax_info']" position="attributes">
+          <attribute name="groups">assurcore.group_assurcore_manager</attribute>
+        </xpath>
+
+      </field>
+    </record>
+
+    <!-- ══════════════════════════════════════════════════════════════════════ -->
+    <!--  Surcharge Liste : fleet.vehicle                                      -->
+    <!-- ══════════════════════════════════════════════════════════════════════ -->
+    <record id="view_fleet_vehicle_tree_inherit_assurcore" model="ir.ui.view">
+      <field name="name">fleet.vehicle.tree.inherit.assurcore</field>
+      <field name="model">fleet.vehicle</field>
+      <field name="inherit_id" ref="fleet.fleet_vehicle_view_tree"/>
+      <field name="arch" type="xml">
+        
+        <!-- Ajout des colonnes spécifiques à l'assurance tunisienne dans la liste -->
+        <xpath expr="//field[@name='driver_id']" position="after">
+          <field name="usage_vehicule" optional="show"/>
+          <field name="puissance_fiscale" optional="show"/>
+          <field name="valeur_venale" optional="show" widget="monetary" options="{'currency_field': 'currency_id'}"/>
+          <field name="currency_id" column_invisible="True"/>
+        </xpath>
+
+      </field>
+    </record>
+
+    <!-- ══════════════════════════════════════════════════════════════════════ -->
+    <!--  Restriction de menus natifs Fleet pour group_assurcore_agent          -->
+    <!-- ══════════════════════════════════════════════════════════════════════ -->
+    <record id="fleet.fleet_vehicle_log_contract_menu" model="ir.ui.menu">
+      <field name="groups_id" eval="[(6, 0, [ref('assurcore.group_assurcore_manager')])]"/>
+    </record>
+
+    <record id="fleet.fleet_vehicle_log_services_menu" model="ir.ui.menu">
+      <field name="groups_id" eval="[(6, 0, [ref('assurcore.group_assurcore_manager')])]"/>
+    </record>
+
+    <record id="fleet.fleet_vehicle_odometer_menu" model="ir.ui.menu">
+      <field name="groups_id" eval="[(6, 0, [ref('assurcore.group_assurcore_manager')])]"/>
+    </record>
+
+    <record id="fleet.menu_fleet_reporting" model="ir.ui.menu">
+      <field name="groups_id" eval="[(6, 0, [ref('assurcore.group_assurcore_manager')])]"/>
+    </record>
+
+    <record id="fleet.menu_fleet_reporting_costs" model="ir.ui.menu">
+      <field name="groups_id" eval="[(6, 0, [ref('assurcore.group_assurcore_manager')])]"/>
+    </record>
+
+    <!-- ══════════════════════════════════════════════════════════════════════ -->
+    <!--  Masquer le menu racine natif "Parc automobile"                         -->
+    <!-- ══════════════════════════════════════════════════════════════════════ -->
+    <record id="fleet.menu_root" model="ir.ui.menu">
+      <field name="groups_id" eval="[(6, 0, [ref('base.group_system')])]"/>
+    </record>
+
+    <!-- ══════════════════════════════════════════════════════════════════════ -->
+    <!--  Action et Menu pour l'AssurCore Application                           -->
+    <!-- ══════════════════════════════════════════════════════════════════════ -->
+    <record id="action_assurcore_fleet_vehicle" model="ir.actions.act_window">
+      <field name="name">Véhicules</field>
+      <field name="res_model">fleet.vehicle</field>
+      <field name="view_mode">tree,form</field>
+      <field name="help" type="html">
+        <p class="o_view_nocontent_smiling_face">
+          Enregistrez un nouveau véhicule
+        </p>
+        <p>
+          Gérez les caractéristiques des véhicules associés aux polices d'assurance.
+        </p>
+      </field>
+    </record>
+
+    <menuitem id="menu_assurcore_fleet_vehicle"
+              name="Véhicules"
+              parent="menu_assurcore_parametrage"
+              action="action_assurcore_fleet_vehicle"
+              sequence="30"
+              groups="assurcore.group_assurcore_manager"/>
+
+  </data>
+</odoo>

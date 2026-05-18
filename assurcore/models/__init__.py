@@ -12,4 +12,5 @@ from . import insurance_operation
 from . import insurance_receipt
 from . import insurance_claim
 from . import insurance_mouvement_report
-
+from . import insurance_mouvement_report_wizard
+from . import fleet_vehicle
