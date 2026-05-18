@@ -76,7 +76,7 @@ services:
 
     # ── Port Statique (Production & Compatibilité) ──────────────────────────
     ports:
-      - "8071:8069"
+      - "127.0.0.1:8071:8069"
 
     environment:
       # Connexion à la base de données

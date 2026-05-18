@@ -100,9 +100,9 @@ if ($LASTEXITCODE -eq 0) {
 Write-Host "→ 4/4 : Verifying deployment health on remote VPS..." -ForegroundColor Yellow
 Start-Sleep -Seconds 10
 try {
-    $Response = Invoke-WebRequest -Uri "http://${VPS_HOST}:8071/web/health" -UseBasicParsing -TimeoutSec 10
+    $Response = Invoke-WebRequest -Uri "https://assurcore.metadidomi.com/web/health" -UseBasicParsing -TimeoutSec 10
     if ($Response.StatusCode -eq 200) {
-        Write-Host "  ✓ Odoo is Healthy on port 8071!" -ForegroundColor Green
+        Write-Host "  ✓ Odoo is Healthy on secure domain!" -ForegroundColor Green
     } else {
         Write-Host "  ⚠ Odoo returned status $($Response.StatusCode)" -ForegroundColor Yellow
     }
@@ -112,5 +112,5 @@ try {
 
 Write-Host ""
 Write-Host "✅ DEPLOYMENT SUCCESSFUL!" -ForegroundColor Green
-Write-Host "🌍 Remote App URL : http://${VPS_HOST}:8071" -ForegroundColor Cyan
+Write-Host "🌍 Remote App URL : https://assurcore.metadidomi.com" -ForegroundColor Cyan
 Write-Host ""
