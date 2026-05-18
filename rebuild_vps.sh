@@ -16,6 +16,9 @@ docker-compose down || true
 echo "=== [3/6] Starting containers in background ==="
 docker-compose up -d --build
 
+echo "=== Installing python dependencies (openpyxl) ==="
+docker-compose exec -u 0 -T web pip install openpyxl
+
 echo "=== [4/6] Waiting for database container to be healthy ==="
 sleep 15
 
