@@ -42,20 +42,42 @@ if tnd:
     print("TND Currency activated and assigned to the company.")
 
 partner = company.partner_id
+tn_country = env.ref('base.tn')
+
+# Recherche ou création de l'État de Tunis pour la Tunisie
+state = env['res.country.state'].search([('country_id', '=', tn_country.id), ('name', '=ilike', 'Tunis')], limit=1)
+if not state:
+    state = env['res.country.state'].create({
+        'name': 'Tunis',
+        'code': 'TUN',
+        'country_id': tn_country.id
+    })
+    print(f"Created state: {state.name} ({state.code})")
+
 partner.write({
     'name': 'ASSURANCES KAMOUN',
-    'street': 'C01 Immeuble Carthage Palace - Centre Urbain Nord',
+    'street': 'C01 Immeuble Carthage Palace',
+    'street2': 'Centre Urbain Nord',
     'city': 'Tunis',
+    'state_id': state.id,
     'zip': '1082',
     'phone': '+216 71 822 747',
     'mobile': '+216 58 385 385',
     'email': 'contact@assuranceskamoun.com',
     'website': 'https://assuranceskamoun.com',
+    'country_id': tn_country.id,
 })
 company.write({'name': 'ASSURANCES KAMOUN'})
 print("Company properties successfully configured and persisted.")
 
-# 6. Création des utilisateurs importés (Zied est le chef, les autres font la saisie)
+# 6. Activation de la langue fr_FR et configuration par défaut de tous les utilisateurs en français
+print("=== Configuring French Language ===")
+env['res.lang']._activate_lang('fr_FR')
+env['res.users'].search([]).write({'lang': 'fr_FR'})
+env['res.partner'].search([]).write({'lang': 'fr_FR'})
+print("All users and partners successfully set to French (fr_FR).")
+
+# 7. Création des utilisateurs importés (Zied est le chef, les autres font la saisie)
 users_to_create = [
     {
         'name': 'ZIED KAMOUN',
