@@ -129,7 +129,7 @@ class InsurancePolicy(models.Model):
     partner_id = fields.Many2one(
         comodel_name='res.partner',
         string='Assuré / Client',
-        required=True,
+        required=False,
         ondelete='restrict',
         tracking=True,
         index=True,
@@ -234,6 +234,7 @@ class InsurancePolicy(models.Model):
     jours_avant_echeance = fields.Integer(
         string='Jours avant échéance',
         compute='_compute_jours_avant_echeance',
+        search='_search_jours_avant_echeance',
         help='Nombre de jours restants avant l\'échéance (négatif si expirée).',
     )
 
@@ -438,6 +439,25 @@ class InsurancePolicy(models.Model):
             else:
                 rec.jours_avant_echeance = 0
 
+    def _search_jours_avant_echeance(self, operator, value):
+        today = fields.Date.today()
+        if operator in ('>', '>=', '<', '<=', '=', '!='):
+            import datetime
+            target_date = today + datetime.timedelta(days=value)
+            if operator == '<=':
+                return [('date_echeance', '<=', target_date)]
+            elif operator == '<':
+                return [('date_echeance', '<', target_date)]
+            elif operator == '>=':
+                return [('date_echeance', '>=', target_date)]
+            elif operator == '>':
+                return [('date_echeance', '>', target_date)]
+            elif operator == '=':
+                return [('date_echeance', '=', target_date)]
+            elif operator == '!=':
+                return [('date_echeance', '!=', target_date)]
+        return []
+
     @api.depends('prime_nette', 'commission')
     def _compute_taux_commission(self):
         for rec in self:
@@ -544,6 +564,15 @@ class InsurancePolicy(models.Model):
                         'sur la police %(police)s.',
                         police=rec.num_police,
                     ))
+
+    @api.constrains('partner_id', 'state')
+    def _check_partner_required(self):
+        for rec in self:
+            if rec.state != 'draft_ocr' and not rec.partner_id:
+                raise ValidationError(_(
+                    "L'assuré / client est obligatoire pour la police %s.",
+                    rec.num_police
+                ))
 
     _sql_constraints = [
         (

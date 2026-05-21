@@ -8,3 +8,4 @@ from . import test_insurance_settlement
 from . import test_security
 from . import test_cron
 from . import test_etl
+from . import test_ocr

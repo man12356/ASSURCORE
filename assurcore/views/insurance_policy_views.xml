@@ -12,7 +12,27 @@
 
         <header>
           <field name="state" widget="statusbar"
-                 statusbar_visible="draft,active,unpaid"/>
+                 statusbar_visible="draft_ocr,draft,active,unpaid"/>
+
+          <!-- ── Bouton Wizard OCR (EVO01 Étape 3) ────────────────────── -->
+          <!-- Visible uniquement pour les brouillons générés par OCR       -->
+          <!-- Ouvre insurance.ocr.wizard en popup pour valider le client   -->
+          <button name="action_open_ocr_wizard"
+                  string="Valider les données OCR"
+                  type="object"
+                  class="oe_highlight btn-warning"
+                  invisible="state != 'draft_ocr'"
+                  help="Ouvre le wizard pour identifier ou créer le client assuré."/>
+
+          <!-- ── Bouton de test OCR (développement/recette) ────────────── -->
+          <!-- Simule la réception d'un email PDF sans alias mail            -->
+          <button name="action_test_ocr"
+                  string="Simuler Réception OCR"
+                  type="object"
+                  class="btn-secondary"
+                  invisible="state != 'draft_ocr'"
+                  help="Teste le workflow OCR directement depuis la fiche police (Phase 1 — mock)."/>
+
           <button name="action_activate" string="Activer"
                   type="object" class="btn-primary"
                   invisible="state != 'draft'"/>
@@ -28,6 +48,13 @@
                   type="object" class="btn-secondary"
                   invisible="state not in ('canceled','expired')"/>
         </header>
+
+        <!-- Ruban OCR — violet/info pour signaler une police non encore validée -->
+        <div class="oe_ribbon"
+             style="background-color: #7c3aed; color: white;"
+             invisible="state != 'draft_ocr'">
+          <span>Brouillon OCR</span>
+        </div>
 
         <div class="oe_ribbon oe_ribbon_warning"
              invisible="state != 'unpaid'">
@@ -156,6 +183,31 @@
                 </tree>
               </field>
             </page>
+            <!-- Onglet OCR — visible uniquement pour les brouillons OCR -->
+            <page string="Données OCR brutes" name="ocr_data"
+                  invisible="state != 'draft_ocr'">
+              <div class="alert alert-warning" role="alert">
+                <i class="fa fa-exclamation-triangle me-2"/>
+                Ce brouillon a été créé automatiquement par OCR.
+                Utilisez le bouton <strong>"Valider les données OCR"</strong>
+                pour associer le bon client et activer la police.
+              </div>
+              <group string="Informations extraites par l'IA">
+                <group>
+                  <field name="ocr_raw_company_type" readonly="1"/>
+                  <field name="ocr_raw_partner_name" readonly="1"/>
+                  <field name="ocr_raw_cin" readonly="1"
+                         invisible="ocr_raw_company_type == 'company'"/>
+                  <field name="ocr_raw_matricule_fiscal" readonly="1"
+                         invisible="ocr_raw_company_type != 'company'"/>
+                </group>
+                <group>
+                  <field name="document_parser_id" readonly="1"
+                         options="{'no_create': True}"/>
+                </group>
+              </group>
+            </page>
+
             <page string="Notes" name="notes">
               <field name="notes" placeholder="Notes sur la police..."/>
             </page>
@@ -255,7 +307,8 @@
 
   <!-- ══════════════════════════════════════════════════════════════════════ -->
   <!--  VUE RECHERCHE — Polices                                                -->
-  <!-- ══════════════════════════════════════════════════════════════════════ -->
+  <!-- ═══════════════════════════════
+══ -->
   <record id="view_insurance_policy_search" model="ir.ui.view">
     <field name="name">insurance.policy.search</field>
     <field name="model">insurance.policy</field>
@@ -266,45 +319,26 @@
         <field name="company_ins_id" string="Compagnie"/>
         <filter string="Actives" name="active_policies"
                 domain="[('state', '=', 'active')]"/>
+        <filter string="Brouillons OCR" name="draft_ocr"
+                domain="[('state', '=', 'draft_ocr')]"/>
         <filter string="Impayées" name="unpaid"
                 domain="[('state', '=', 'unpaid')]"/>
-
+        <filter string="Echéance 30j" name="renewal_30"
+                domain="[('jours_avant_echeance', '&lt;=', 30),
+                          ('jours_avant_echeance', '&gt;=', 0)]"/>
         <separator/>
         <filter string="Auto" name="auto" domain="[('branche','=','AUTO')]"/>
-        <filter string="Santé" name="sante" domain="[('branche','=','SANTE')]"/>
-        <filter string="MRH" name="mrh" domain="[('branche','=','MRH')]"/>
+        <filter string="Sante" name="sante" domain="[('branche','=','SANTE')]"/>
         <group expand="0" string="Regrouper par">
           <filter string="Compagnie" name="grp_company"
                   context="{'group_by': 'company_ins_id'}"/>
+          <filter string="Etat" name="grp_state"
+                  context="{'group_by': 'state'}"/>
           <filter string="Branche" name="grp_branche"
                   context="{'group_by': 'branche'}"/>
-          <filter string="État" name="grp_state"
-                  context="{'group_by': 'state'}"/>
         </group>
       </search>
     </field>
   </record>
-
-  <!-- ══════════════════════════════════════════════════════════════════════ -->
-  <!--  ACTION + MENUS — Polices                                               -->
-  <!-- ══════════════════════════════════════════════════════════════════════ -->
-  <record id="action_insurance_policies" model="ir.actions.act_window">
-    <field name="name">Polices d'Assurance</field>
-    <field name="res_model">insurance.policy</field>
-    <field name="view_mode">tree,form,kanban</field>
-    <field name="search_view_id" ref="view_insurance_policy_search"/>
-    <field name="context">{'search_default_active_policies': 1}</field>
-    <field name="help" type="html">
-      <p class="o_view_nocontent_smiling_face">
-        Créez votre première police d'assurance
-      </p>
-    </field>
-  </record>
-
-  <menuitem id="menu_assurcore_policies"
-            name="Polices"
-            parent="menu_assurcore_root"
-            action="action_insurance_policies"
-            sequence="25"/>
 
 </odoo>

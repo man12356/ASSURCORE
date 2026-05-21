@@ -1,0 +1,266 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+================================================================================
+  EVO01 — Étape 3 : Vues XML du Workflow OCR
+  insurance.ocr.wizard + insurance.document.parser
+================================================================================
+-->
+<odoo>
+
+  <!-- ══════════════════════════════════════════════════════════════════════ -->
+  <!--  1. VUE FORM — Wizard de Validation OCR                                -->
+  <!--     S'ouvre en Pop-up depuis une police en state='draft_ocr'           -->
+  <!-- ══════════════════════════════════════════════════════════════════════ -->
+  <record id="view_insurance_ocr_wizard_form" model="ir.ui.view">
+    <field name="name">insurance.ocr.wizard.form</field>
+    <field name="model">insurance.ocr.wizard</field>
+    <field name="arch" type="xml">
+      <form string="Validation du Brouillon OCR">
+
+        <!-- Résumé de la police concernée -->
+        <group string="Police à valider" col="4">
+          <field name="policy_num_police" readonly="1"/>
+          <field name="policy_company"    readonly="1"/>
+          <field name="policy_date_effect"   readonly="1"/>
+          <field name="policy_date_echeance" readonly="1"/>
+          <field name="policy_prime"         readonly="1" widget="monetary"/>
+          <field name="policy_id"            invisible="1"/>
+        </group>
+
+        <hr/>
+
+        <group col="2">
+
+          <!-- Sous-groupe gauche : Données lues par l'IA (toutes readonly) -->
+          <group string="Données lues par l'IA (OCR)">
+
+            <field name="ocr_raw_company_type"
+                   widget="badge"
+                   decoration-info="ocr_raw_company_type == 'person'"
+                   decoration-warning="ocr_raw_company_type == 'company'"/>
+
+            <field name="ocr_raw_partner_name" readonly="1"/>
+
+            <!-- CIN : affiché uniquement pour les personnes physiques -->
+            <field name="ocr_raw_cin" readonly="1"
+                   invisible="ocr_raw_company_type == 'company'"/>
+
+            <!-- Matricule Fiscal : affiché uniquement pour les entreprises -->
+            <field name="ocr_raw_matricule_fiscal" readonly="1"
+                   invisible="ocr_raw_company_type != 'company'"/>
+
+          </group>
+
+          <!-- Sous-groupe droit : Action — Liaison Client -->
+          <group string="Action (Liaison Client)">
+
+            <field name="partner_id"
+                   options="{'no_create': True}"
+                   placeholder="Rechercher un client existant..."/>
+
+            <field name="create_new_partner"/>
+
+          </group>
+        </group>
+
+        <!-- Zone de création — visible uniquement si create_new_partner coché -->
+        <group string="Informations du nouveau client"
+               invisible="not create_new_partner">
+
+          <group>
+            <field name="new_partner_name"
+                   placeholder="Raison sociale ou Nom Prénom"/>
+            <field name="new_partner_type"/>
+          </group>
+
+          <group>
+            <!-- CIN : visible si type = Particulier -->
+            <field name="new_partner_cin"
+                   placeholder="8 chiffres"
+                   invisible="new_partner_type == 'E'"/>
+            <!-- Matricule Fiscal : visible si type = Entreprise -->
+            <field name="new_partner_matricule_fiscal"
+                   placeholder="Ex: 1234567/A/B/M/000"
+                   invisible="new_partner_type != 'E'"/>
+          </group>
+
+        </group>
+
+        <!-- ── Footer ───────────────────────────────────────────────────── -->
+        <footer>
+          <button name="action_confirm"
+                  string="Confirmer et valider"
+                  type="object"
+                  class="oe_highlight btn-primary"/>
+          <button string="Annuler"
+                  class="btn-secondary"
+                  special="cancel"/>
+        </footer>
+
+      </form>
+    </field>
+  </record>
+
+  <!-- ══════════════════════════════════════════════════════════════════════ -->
+  <!--  2. ACTION — Wizard (Pop-up)                                           -->
+  <!-- ══════════════════════════════════════════════════════════════════════ -->
+  <record id="action_insurance_ocr_wizard" model="ir.actions.act_window">
+    <field name="name">Valider le Brouillon OCR</field>
+    <field name="res_model">insurance.ocr.wizard</field>
+    <field name="view_mode">form</field>
+    <field name="view_id" ref="view_insurance_ocr_wizard_form"/>
+    <field name="target">new</field>
+  </record>
+
+
+  <!-- ══════════════════════════════════════════════════════════════════════ -->
+  <!--  3. VUE FORM — Parseur OCR (insurance.document.parser)                 -->
+  <!-- ══════════════════════════════════════════════════════════════════════ -->
+  <record id="view_insurance_document_parser_form" model="ir.ui.view">
+    <field name="name">insurance.document.parser.form</field>
+    <field name="model">insurance.document.parser</field>
+    <field name="arch" type="xml">
+      <form string="Parseur de Documents Assurance (OCR)">
+
+        <header>
+          <field name="state" widget="statusbar"
+                 statusbar_visible="pending,processing,extracted,validated"/>
+          <button name="action_test_ocr"
+                  string="Simuler extraction OCR"
+                  type="object"
+                  class="btn-secondary"
+                  invisible="state not in ('pending','error')"
+                  help="Lance l'extraction OCR depuis le PDF joint (Phase 1 = bouchon fixe)."/>
+        </header>
+
+        <div class="alert alert-danger"
+             invisible="state != 'error'">
+          <strong>Erreur OCR : </strong>
+          <field name="error_message" readonly="1"/>
+        </div>
+
+        <sheet>
+          <div name="button_box" class="oe_button_box">
+            <button type="object"
+                    name="action_test_ocr"
+                    class="oe_stat_button"
+                    icon="fa-magic"
+                    invisible="state not in ('pending','error')">
+              <div class="o_field_widget o_stat_info">
+                <span class="o_stat_text">Lancer OCR</span>
+              </div>
+            </button>
+          </div>
+
+          <div class="oe_title">
+            <label for="name"/>
+            <h1><field name="name" placeholder="Document reçu..."/></h1>
+          </div>
+
+          <group>
+            <group string="Source">
+              <field name="source_email" readonly="1"/>
+              <field name="source_subject" readonly="1"/>
+              <field name="attachment_id" readonly="1"/>
+            </group>
+            <group string="Police générée">
+              <field name="policy_id" readonly="1"
+                     options="{'no_create': True}"/>
+            </group>
+          </group>
+
+          <notebook>
+            <page string="Données extraites" name="extracted">
+              <group>
+                <group string="Identification police">
+                  <field name="ocr_compagnie"/>
+                  <field name="ocr_num_police"/>
+                  <field name="ocr_immatriculation"/>
+                </group>
+                <group string="Assuré">
+                  <field name="ocr_nom_client"/>
+                  <field name="ocr_cin"/>
+                  <field name="ocr_prime_totale"/>
+                </group>
+              </group>
+              <group>
+                <field name="ocr_date_effet"/>
+                <field name="ocr_date_echeance"/>
+              </group>
+            </page>
+            <page string="JSON brut (Audit)" name="json_audit">
+              <field name="raw_ocr_json" readonly="1" widget="text"/>
+              <separator string="Données normalisées"/>
+              <field name="normalized_ocr_json" readonly="1" widget="text"/>
+            </page>
+          </notebook>
+        </sheet>
+
+        <div class="oe_chatter">
+          <field name="message_follower_ids"/>
+          <field name="activity_ids"/>
+          <field name="message_ids"/>
+        </div>
+
+      </form>
+    </field>
+  </record>
+
+  <!-- ══════════════════════════════════════════════════════════════════════ -->
+  <!--  4. VUE LISTE — Parseur OCR                                             -->
+  <!-- ══════════════════════════════════════════════════════════════════════ -->
+  <record id="view_insurance_document_parser_tree" model="ir.ui.view">
+    <field name="name">insurance.document.parser.tree</field>
+    <field name="model">insurance.document.parser</field>
+    <field name="arch" type="xml">
+      <tree decoration-danger="state == 'error'"
+            decoration-success="state == 'validated'"
+            decoration-warning="state in ('pending','processing')">
+        <field name="name"/>
+        <field name="source_email"/>
+        <field name="create_date" string="Reçu le"/>
+        <field name="ocr_compagnie"/>
+        <field name="ocr_num_police"/>
+        <field name="ocr_nom_client"/>
+        <field name="ocr_prime_totale" optional="show"/>
+        <field name="policy_id" optional="show"/>
+        <field name="state" widget="badge"
+               decoration-success="state == 'validated'"
+               decoration-danger="state == 'error'"
+               decoration-warning="state in ('pending','processing')"
+               decoration-info="state == 'extracted'"/>
+      </tree>
+    </field>
+  </record>
+
+  <!-- ══════════════════════════════════════════════════════════════════════ -->
+  <!--  5. ACTIONS + MENUS — Parseur OCR                                       -->
+  <!-- ══════════════════════════════════════════════════════════════════════ -->
+  <record id="action_insurance_document_parser" model="ir.actions.act_window">
+    <field name="name">Documents OCR</field>
+    <field name="res_model">insurance.document.parser</field>
+    <field name="view_mode">tree,form</field>
+    <field name="context">{'search_default_group_state': 0}</field>
+    <field name="help" type="html">
+      <p class="o_view_nocontent_smiling_face">
+        Aucun document OCR reçu
+      </p>
+      <p>
+        Envoyez un email avec un PDF en pièce jointe à l'alias OCR
+        pour déclencher l'extraction automatique.
+      </p>
+    </field>
+  </record>
+
+  <menuitem id="menu_assurcore_ocr"
+            name="Importation OCR"
+            parent="menu_assurcore_root"
+            sequence="50"/>
+
+  <menuitem id="menu_assurcore_document_parser"
+            name="Documents OCR"
+            parent="menu_assurcore_ocr"
+            action="action_insurance_document_parser"
+            sequence="10"/>
+
+</odoo>
