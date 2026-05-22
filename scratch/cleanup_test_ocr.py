@@ -1,6 +1,6 @@
 import xmlrpc.client
 
-url = 'http://localhost:8071'
+url = 'https://assurcore.metadidomi.com'
 db = 'assurcore_db'
 password = 'admin'
 
@@ -13,51 +13,49 @@ if not uid:
 
 models = xmlrpc.client.ServerProxy(f"{url}/xmlrpc/2/object")
 
-print("=== CLEANING UP TEST OCR RECORDS ===")
-
-# 1. Trouver et supprimer les document parsers de test
-parser_ids = models.execute_kw(
-    db, uid, password,
-    'insurance.document.parser', 'search',
-    [[('name', 'like', 'Test OCR —')]]
-)
-if parser_ids:
-    print(f"Deleting {len(parser_ids)} document parser records...")
-    models.execute_kw(db, uid, password, 'insurance.document.parser', 'unlink', [parser_ids])
-
-# 2. Trouver et supprimer les polices de test
-policy_ids = models.execute_kw(
-    db, uid, password,
-    'insurance.policy', 'search',
-    [[('num_police', 'in', ['POL-LLOYD-7788', 'POL-CARTE-5566', 'POL-STAR-B2B-9900', 'POL-MAGHREBIA-J54554'])]]
-)
-if policy_ids:
-    print(f"Deleting {len(policy_ids)} policy records...")
-    models.execute_kw(db, uid, password, 'insurance.policy', 'unlink', [policy_ids])
-
-# 3. Trouver et supprimer les clients de test créés
+# 1. Trouver le partenaire "BEN ALI SLIM"
+print("Finding test partner 'BEN ALI SLIM'...")
 partner_ids = models.execute_kw(
     db, uid, password,
     'res.partner', 'search',
-    [[('cin', 'in', ['09876543', '01234567', '08422621'])]]
+    [[('name', '=', 'BEN ALI SLIM')]]
 )
-if partner_ids:
-    print(f"Deleting {len(partner_ids)} B2C test partners...")
-    try:
-        models.execute_kw(db, uid, password, 'res.partner', 'unlink', [partner_ids])
-    except Exception as e:
-        print("Could not delete partners directly (perhaps linked elsewhere):", e)
 
-partner_b2b_ids = models.execute_kw(
+# 2. Trouver la police "POL-LLOYD-7788"
+print("Finding test policy 'POL-LLOYD-7788'...")
+policy_ids = models.execute_kw(
     db, uid, password,
-    'res.partner', 'search',
-    [[('matricule_fiscal', '=', '1234567/A/B/M/000')]]
+    'insurance.policy', 'search',
+    [[('num_police', '=', 'POL-LLOYD-7788')]]
 )
-if partner_b2b_ids:
-    print(f"Deleting {len(partner_b2b_ids)} B2B test partners...")
-    try:
-        models.execute_kw(db, uid, password, 'res.partner', 'unlink', [partner_b2b_ids])
-    except Exception as e:
-        print("Could not delete partners directly (perhaps linked elsewhere):", e)
 
-print("Cleanup completed successfully!")
+if policy_ids:
+    policy_id = policy_ids[0]
+    print(f"Policy ID: {policy_id}")
+    # Reset policy to draft_ocr and clear links
+    models.execute_kw(
+        db, uid, password,
+        'insurance.policy', 'write',
+        [[policy_id], {
+            'state': 'draft_ocr',
+            'partner_id': False,
+            'payer_id': False,
+            'ocr_raw_partner_name': 'BEN ALI SLIM',
+            'ocr_raw_cin': '09876543',
+            'ocr_raw_company_type': 'person',
+            'ocr_raw_matricule_fiscal': False,
+        }]
+    )
+    print("Policy successfully reset to draft_ocr and links cleared.")
+
+if partner_ids:
+    print(f"Deleting test partner IDs: {partner_ids}")
+    try:
+        models.execute_kw(
+            db, uid, password,
+            'res.partner', 'unlink',
+            [partner_ids]
+        )
+        print("Test partner successfully deleted.")
+    except Exception as e:
+        print("Could not delete test partner (probably linked, clearing references first):", e)
