@@ -28,3 +28,18 @@ DATA_ASS.txt
 .idea/
 .tempmediaStorage/
 ASSURPROD.code-workspace
+
+# Fichiers temporaires Linux (FUSE, NFS, etc.)
+.fuse_hidden*
+*~
+
+# Données brutes Oracle / migrations (ne pas versionner)
+DATA_REEL_22-05-2026/
+DATA_TEST/
+
+# Fichiers temporaires et divers
+*.tmp
+~WRL*.tmp
+labels_report.txt
+schema_analysis.json
+conversation_with_claude_*.md
