@@ -20,7 +20,6 @@
     'data': [
         'security/res_groups.xml',
         'security/ir.model.access.csv',
-        'security/menu_restrictions.xml',
         'data/insurance_data.xml',
         'data/smtp_config.xml',
         'data/email_templates.xml',
@@ -39,6 +38,7 @@
         'views/insurance_mouvement_report_wizard_views.xml',
         'views/insurance_accounting_views.xml',
         'views/insurance_receipt_report.xml',
+        'security/menu_restrictions.xml',
     ],
     'assets': {
         'web._assets_primary_variables': [

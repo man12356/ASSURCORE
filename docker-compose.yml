@@ -76,7 +76,7 @@ services:
 
     # ── Port Statique (Production & Compatibilité) ──────────────────────────
     ports:
-      - "127.0.0.1:8071:8069"
+      - "127.0.0.1:${ODOO_PORT:-8071}:8069"
 
     environment:
       # Connexion à la base de données
@@ -96,9 +96,9 @@ services:
       - odoo_filestore:/var/lib/odoo
 
     # Commande de démarrage Odoo.
-    # CORRECTION : supprimer le "--" parasitaire qui empêchait le chargement
-    # du fichier de configuration et forçait Odoo à chercher la base "odoo".
-    command: odoo --config=/etc/odoo/odoo.conf
+    # CORRECTION : installer la dépendance openpyxl au démarrage avant de lancer odoo.
+    command: >
+      sh -c "pip install --user openpyxl && exec odoo --config=/etc/odoo/odoo.conf"
 
     healthcheck:
       test: ["CMD-SHELL",

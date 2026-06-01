@@ -358,9 +358,9 @@
   </record>
 
   <menuitem id="menu_assurcore_policies"
-            name="Polices"
+            name="Contrats"
             parent="menu_assurcore_root"
             action="action_insurance_policies"
-            sequence="25"/>
+            sequence="30"/>
 
 </odoo>

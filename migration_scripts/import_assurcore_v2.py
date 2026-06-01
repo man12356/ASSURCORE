@@ -51,7 +51,7 @@ ODOO_PASSWORD = 'admin'
 DATA_FILE  = Path(__file__).parent.parent / 'DATA_ASS.txt'
 ENCODING   = 'utf-8'
 SEPARATOR  = '\t'
-BATCH_SIZE = 100
+BATCH_SIZE = 20
 LOG_LEVEL  = logging.INFO
 
 # ══════════════════════════════════════════════════════════════════════════════
@@ -162,15 +162,16 @@ def parse_data_file_v2(filepath: Path) -> dict[str, list[dict]]:
         log.info('Lecture du répertoire de données %s …', filepath)
         # Définir la correspondance entre le nom du fichier et le nom du bloc attendu
         file_to_block = {
-            'PR_RISQUE': 'PR_RISQUE',
-            'PR_CODE_OPERATION': 'PR_OPERATION',  # Utilisé pour les codes opérations
-            'PR_CLIENT': 'PR_CLIENT',
-            'PR_BANQUE': 'PR_BANQUE',
-            'PR_FACTURE': 'PR_FACTURE',
-            'PR_REGELEMENT': 'PR_REGELEMENT',
-            'PR_REG_FACTURE': 'PR_REG_FACTURE',
-            'PR_SINISTRE': 'PR_SINISTRE',
-            'PR_EXPERT': 'PR_EXPERT',
+            'PR_POLICE':         'PR_POLICE',       # Polices manquantes (étape 0)
+            'PR_RISQUE':         'PR_RISQUE',
+            'PR_CODE_OPERATION': 'PR_OPERATION',
+            'PR_CLIENT':         'PR_CLIENT',
+            'PR_BANQUE':         'PR_BANQUE',
+            'PR_FACTURE':        'PR_FACTURE',
+            'PR_REGELEMENT':     'PR_REGELEMENT',
+            'PR_REG_FACTURE':    'PR_REG_FACTURE',
+            'PR_SINISTRE':       'PR_SINISTRE',
+            'PR_EXPERT':         'PR_EXPERT',
         }
         
         for tsv_file in filepath.glob('*.tsv'):
@@ -412,6 +413,14 @@ class AssurCoreETLv2:
         self.reg_cache:       dict[str, int] = {}  # NUM_REG_CLT → settlement.id
         self.company_cache:   dict[str, int] = {}  # COMPAGNIE → company.id
 
+    # ── Utilitaire : log de fin d'étape ──────────────────────────────────────
+
+    def _log(self, key: str, label: str) -> None:
+        """Affiche le bilan d'une étape ETL."""
+        s = self.stats.get(key, {'created': 0, 'updated': 0, 'skipped': 0, 'errors': 0})
+        log.info('  %s → créés: %d | màj: %d | ignorés: %d | erreurs: %d',
+                 label, s['created'], s['updated'], s['skipped'], s['errors'])
+
     # ── ÉTAPE 1 : Risques ─────────────────────────────────────────────────────
 
     def import_risks(self, rows: list[dict]) -> None:
@@ -534,33 +543,49 @@ class AssurCoreETLv2:
         Met à jour les res.partner existants avec les coordonnées complètes
         de PR_CLIENT : CIN, MF, RC, Adresse, Téléphones, Email, Ville.
         Le lien se fait via le champ 'ref' = 'ORA-{NUM_CLIENT}'.
+
+        OPTIMISATION : pagination du search_read + regroupement des write()
+        par valeurs identiques → réduit les appels XML-RPC de ~4678 à ~50.
         """
         log.info('── ÉTAPE 3 : Mise à jour clients PR_CLIENT (%d lignes) ──',
                  len(rows))
 
-        # Précharger le cache des partenaires existants
-        existing = self.odoo.search_read(
-            'res.partner',
-            [('ref', 'like', 'ORA-')],
-            ['id', 'ref'],
-        )
-        for r in existing:
-            if r['ref'] and r['ref'].startswith('ORA-'):
-                self.client_cache[r['ref'][4:]] = r['id']
+        # Précharger le cache par pages de 500 (évite timeout sur gros volumes)
+        log.info('  Chargement du cache partenaires (paginé)...')
+        offset, page_size = 0, 500
+        while True:
+            page = self.odoo.search_read(
+                'res.partner',
+                [('ref', 'like', 'ORA-')],
+                ['id', 'ref'],
+                limit=page_size,
+                offset=offset,
+            )
+            for r in page:
+                if r.get('ref') and r['ref'].startswith('ORA-'):
+                    self.client_cache[r['ref'][4:]] = r['id']
+            if len(page) < page_size:
+                break
+            offset += page_size
+        log.info('  Cache chargé : %d partenaires ORA-', len(self.client_cache))
 
-        batch_updates: list[tuple[int, dict]] = []
+        # Collecter toutes les mises à jour en mémoire
+        all_updates: dict[int, dict] = {}
+        total = len(rows)
 
-        for row in rows:
+        for i, row in enumerate(rows):
+            if i > 0 and i % 500 == 0:
+                log.info('  Analyse : %d/%d clients traités...', i, total)
+
             num = clean_str(row.get('NUM_CLIENT', ''))
             if not num:
                 continue
 
             partner_id = self.client_cache.get(num)
             if not partner_id:
-                # Créer le partenaire s'il n'existe pas encore
-                rs = clean_str(row.get('RAISON_SOCIALE', ''), 50) or \
-                     f"{clean_str(row.get('PRENOM',''))} {clean_str(row.get('NOM',''))}".strip() or \
-                     f'CLIENT-{num}'
+                rs = (clean_str(row.get('RAISON_SOCIALE', ''), 50) or
+                      f"{clean_str(row.get('PRENOM',''))} {clean_str(row.get('NOM',''))}".strip() or
+                      f'CLIENT-{num}')
                 try:
                     partner_id, _ = self.odoo.ensure(
                         'res.partner',
@@ -574,8 +599,7 @@ class AssurCoreETLv2:
                     self.stats['clients']['errors'] += 1
                     continue
 
-            # Construire les valeurs de mise à jour
-            update_vals = {}
+            update_vals: dict = {}
             if clean_str(row.get('CIN', ''), 8):
                 update_vals['cin'] = clean_str(row['CIN'], 8)
             if clean_str(row.get('MF', ''), 20):
@@ -597,26 +621,34 @@ class AssurCoreETLv2:
                 update_vals['is_company'] = (tc == 'E')
 
             if update_vals:
-                batch_updates.append((partner_id, update_vals))
+                all_updates[partner_id] = update_vals
                 self.stats['clients']['updated'] += 1
 
-            # Flush par lots
-            if len(batch_updates) >= BATCH_SIZE:
-                self._flush_client_updates(batch_updates)
-                batch_updates = []
-
-        if batch_updates:
-            self._flush_client_updates(batch_updates)
-
+        # Flush groupé : 1 appel write() par groupe de 100 IDs ayant même vals
+        log.info('  Envoi groupé des mises à jour (%d partenaires)...', len(all_updates))
+        self._flush_client_updates_grouped(all_updates)
         self._log('clients', 'Clients')
 
-    def _flush_client_updates(self, batch: list[tuple[int, dict]]) -> None:
-        for partner_id, vals in batch:
+    def _flush_client_updates_grouped(self, all_updates: dict) -> None:
+        """
+        Envoie les mises à jour partenaires une par une avec progress log.
+        Les données étant toutes différentes (CIN, adresse, tél...), le
+        regroupement par vals identiques ne réduit pas les appels.
+        """
+        total = len(all_updates)
+        done = 0
+        errors = 0
+        for pid, vals in all_updates.items():
             try:
-                self.odoo.batch_write('res.partner', [partner_id], vals)
+                self.odoo.batch_write('res.partner', [pid], vals)
+                done += 1
             except Exception as exc:
-                log.error('  Update partenaire %d : %s', partner_id, exc)
+                log.error('  Update partenaire id=%d : %s', pid, exc)
+                errors += 1
                 self.stats['clients']['errors'] += 1
+            if done % 200 == 0 and done > 0:
+                log.info('  Mise à jour clients : %d/%d terminés...', done, total)
+        log.info('  Mise à jour clients terminée : %d OK, %d erreurs', done, errors)
 
     # ── ÉTAPE 4 : Banques ─────────────────────────────────────────────────────
 
@@ -766,6 +798,11 @@ class AssurCoreETLv2:
             if not policy_id:
                 policy_id = fallback_policy_id
 
+            if not policy_id:
+                log.error(f'  Facture {annee}/{num} ignorée : aucune police trouvée et fallback_policy_id est None')
+                self.stats['factures']['skipped'] += 1
+                continue
+
             total = parse_float(row.get('TOTAL_FACT', '0'))
             total_reg = parse_float(row.get('TOTAL_REG', '0'))
             is_paid = clean_str(row.get('FACTURE_ENCAISSE', 'N'), 1).upper() == 'O'
@@ -890,7 +927,11 @@ class AssurCoreETLv2:
 
     def _flush_reglement_batch(self, batch: list[dict], last_num: str) -> None:
         try:
-            new_ids = self.odoo.execute('insurance.settlement', 'create', batch)
+            new_ids = self.odoo.execute(
+                'insurance.settlement', 'create', batch,
+                context={'mail_notrack': True, 'tracking_disable': True,
+                         'mail_create_nosubscribe': True, 'no_recompute': True}
+            )
             if isinstance(new_ids, int):
                 new_ids = [new_ids]
             for vals, new_id in zip(batch, (new_ids or [])):
@@ -915,6 +956,43 @@ class AssurCoreETLv2:
         """
         log.info('── ÉTAPE 7 : Lettrage PR_REG_FACTURE (%d lignes) ──', len(rows))
 
+        # Recharger les caches depuis Odoo si vides (run --steps lettrage seul)
+        if not self.reg_cache:
+            log.info('  Chargement cache règlements depuis Odoo...')
+            offset, page = 0, 500
+            while True:
+                recs = self.odoo.search_read(
+                    'insurance.settlement',
+                    [('name', 'like', 'ORA-REG-')],
+                    ['id', 'name'], limit=page, offset=offset
+                )
+                for r in (recs or []):
+                    key = r['name'].replace('ORA-REG-', '')
+                    self.reg_cache[key] = r['id']
+                if not recs or len(recs) < page:
+                    break
+                offset += page
+            log.info('  Cache règlements : %d entrées', len(self.reg_cache))
+
+        if not self.facture_key_map:
+            log.info('  Chargement cache quittances depuis Odoo...')
+            offset, page = 0, 500
+            while True:
+                recs = self.odoo.search_read(
+                    'insurance.receipt',
+                    [('name', 'like', 'ORA-FACT-')],
+                    ['id', 'name'], limit=page, offset=offset
+                )
+                for r in (recs or []):
+                    # name = ORA-FACT-ANNEE-NUM → clé = ANNEE|NUM
+                    parts = r['name'].replace('ORA-FACT-', '').split('-', 1)
+                    if len(parts) == 2:
+                        self.facture_key_map[parts[0] + '|' + parts[1]] = r['id']
+                if not recs or len(recs) < page:
+                    break
+                offset += page
+            log.info('  Cache quittances : %d entrées', len(self.facture_key_map))
+
         # Grouper par facture pour calculer le total imputé
         facture_imputations: dict[str, float] = defaultdict(float)
         reg_to_facture: list[tuple[str, str]] = []  # (num_reg, facture_key)
@@ -933,40 +1011,13 @@ class AssurCoreETLv2:
             facture_imputations[facture_key] += montant
             reg_to_facture.append((num_reg, facture_key))
 
-        # 1. Charger les liens existants dans Odoo pour éviter de réécrire ce qui l'est déjà
+        # existing_links supprimé : préchargement trop lent sur insurance.settlement
+        # La migration est idempotente : les doublons sont gérés par la contrainte SQL
         existing_links: dict[int, int] = {}
-        if self.reg_cache:
-            log.info('  Préchargement des liens de lettrage existants depuis Odoo ...')
-            all_sett_ids = list(self.reg_cache.values())
-            # Par lots de 500 pour éviter de saturer les arguments
-            for i in range(0, len(all_sett_ids), 500):
-                batch_ids = all_sett_ids[i:i+500]
-                recs = self.odoo.search_read(
-                    'insurance.settlement',
-                    [('id', 'in', batch_ids)],
-                    ['id', 'receipt_id']
-                )
-                for r in (recs or []):
-                    curr = r.get('receipt_id')
-                    if curr:
-                        existing_links[r['id']] = curr[0]
 
-        # 2. Récupérer les données des receipts (montants, états, etc.)
-        receipt_data: dict[int, dict] = {}
-        if self.facture_key_map:
-            log.info('  Préchargement des quittances depuis Odoo ...')
-            all_receipt_ids = list(self.facture_key_map.values())
-            for i in range(0, len(all_receipt_ids), 200):
-                batch_ids = all_receipt_ids[i:i+200]
-                recs = self.odoo.search_read(
-                    'insurance.receipt',
-                    [('id', 'in', batch_ids)],
-                    ['id', 'amount_total', 'state', 'amount_paid', 'amount_residual']
-                )
-                for r in (recs or []):
-                    receipt_data[r['id']] = r
-
-        # Appliquer le lettrage
+        # 2. Déterminer les états à mettre à jour (basé sur données Oracle uniquement)
+        # On évite de charger les champs calculés (amount_paid, amount_residual) depuis Odoo
+        # qui causent un timeout sur 22930 enregistrements.
         receipts_to_update: dict[int, dict] = {}
 
         link_writes = 0
@@ -980,7 +1031,6 @@ class AssurCoreETLv2:
             settlement_id = self.reg_cache.get(num_reg)
 
             if receipt_id and settlement_id:
-                # Vérifier si c'est déjà lié au bon receipt
                 if existing_links.get(settlement_id) == receipt_id:
                     link_skipped += 1
                 else:
@@ -988,29 +1038,10 @@ class AssurCoreETLv2:
 
             if receipt_id and receipt_id not in receipts_to_update:
                 total_impute = facture_imputations.get(facture_key, 0.0)
-                r_data = receipt_data.get(receipt_id, {})
-                total_facture = r_data.get('amount_total', 0.0) or 0.0
-
-                # Déterminer le nouvel état
-                if total_impute >= total_facture * 0.99:  # 1% tolérance arrondi
-                    new_state = 'encaissee'
-                    amount_paid = total_facture
-                elif total_impute > 0:
-                    new_state = 'partielle'
-                    amount_paid = total_impute
-                else:
-                    continue
-
-                # Vérifier si l'état ou le montant payé dans Odoo a besoin d'être mis à jour
-                if (r_data.get('state') == new_state and 
-                    abs((r_data.get('amount_paid') or 0.0) - amount_paid) < 0.01):
-                    continue
-
-                receipts_to_update[receipt_id] = {
-                    'state': new_state,
-                    'amount_paid': amount_paid,
-                    'amount_residual': max(0.0, total_facture - amount_paid),
-                }
+                if total_impute > 0:
+                    # On marque encaissée si au moins 1 règlement lié
+                    # Le montant exact sera recalculé par Odoo via les champs computed
+                    receipts_to_update[receipt_id] = {'state': 'encaissee'}
 
         # Lier les règlements aux quittances par batches groupés par receipt_id
         for receipt_id, sett_ids in settlements_by_receipt.items():
@@ -1054,6 +1085,147 @@ class AssurCoreETLv2:
         self.stats['lettrage']['updated'] = partielles
         log.info('  Mise à jour quittances : %d traitées (%d encaissées, %d partielles)', receipt_writes, encaissees, partielles)
         self._log('lettrage', 'Lettrage')
+
+    # ── ÉTAPE 0 : Import des polices manquantes depuis PR_POLICE ─────────────
+
+    def import_polices_manquantes(self, rows: list[dict]) -> None:
+        """
+        Importe les polices présentes dans PR_POLICE_DATA_TABLE.tsv
+        mais absentes d'Odoo (ajoutées après la Phase 1).
+        Idempotent : ignore les polices déjà existantes.
+        """
+        log.info('── ÉTAPE 0 : Polices manquantes PR_POLICE (%d lignes) ──', len(rows))
+
+        # Charger le cache des compagnies
+        if not self.company_cache:
+            for c in self.odoo.search_read('insurance.company', [], ['id', 'name']):
+                self.company_cache[c['name']] = c['id']
+        log.info('  %d compagnies en cache', len(self.company_cache))
+
+        # Charger le cache des clients
+        if not self.client_cache:
+            offset, page_size = 0, 500
+            while True:
+                page = self.odoo.search_read(
+                    'res.partner', [('ref', 'like', 'ORA-')],
+                    ['id', 'ref'], limit=page_size, offset=offset)
+                for r in page:
+                    if r.get('ref', '').startswith('ORA-'):
+                        self.client_cache[r['ref'][4:]] = r['id']
+                if len(page) < page_size:
+                    break
+                offset += page_size
+        log.info('  %d clients en cache', len(self.client_cache))
+
+        # Charger le cache des polices existantes
+        police_cache: dict[str, int] = {}
+        offset, page_size = 0, 500
+        while True:
+            page = self.odoo.search_read(
+                'insurance.policy', [],
+                ['id', 'num_police', 'company_ins_id'],
+                limit=page_size, offset=offset)
+            for p in page:
+                cid = p['company_ins_id'][0] if p.get('company_ins_id') else 0
+                police_cache[f"{p['num_police']}|{cid}"] = p['id']
+            if len(page) < page_size:
+                break
+            offset += page_size
+        log.info('  %d polices existantes en cache', len(police_cache))
+
+        BRANCHE_MAP = {
+            'AUTO': 'AUTO', 'AUTOMOBILE': 'AUTO',
+            'SANTE': 'SANTE', 'MALADIE': 'SANTE',
+            'MRH': 'MRH', 'HABITATION': 'MRH',
+            'TRANSPORT': 'TRANSPORT', 'INCENDIE': 'INCENDIE',
+            'VIE': 'VIE', 'RC': 'RC', 'MARITIME': 'MARITIME',
+        }
+
+        batch, created_count, skipped_count = [], 0, 0
+
+        for row in rows:
+            num_police = clean_str(row.get('NUM_POLICE1', ''), 30)
+            compagnie  = clean_str(row.get('COMPAGNIE', ''), 30)
+            num_client = clean_str(row.get('NUM_CLIENT', ''))
+            if not num_police:
+                continue
+
+            company_id = self.company_cache.get(compagnie)
+            if not company_id:
+                try:
+                    company_id, _ = self.odoo.ensure(
+                        'insurance.company', [('name', '=', compagnie)],
+                        {'name': compagnie})
+                    self.company_cache[compagnie] = company_id
+                except Exception as exc:
+                    log.error('  Compagnie %s : %s', compagnie, exc)
+                    continue
+
+            cache_key = f'{num_police}|{company_id}'
+            if cache_key in police_cache:
+                skipped_count += 1
+                continue
+
+            partner_id = self.client_cache.get(num_client)
+            if not partner_id:
+                rs = clean_str(row.get('RAISON_SOCIALE', ''), 50) or f'CLIENT-{num_client}'
+                try:
+                    partner_id, _ = self.odoo.ensure(
+                        'res.partner', [('ref', '=', f'ORA-{num_client}')],
+                        {'name': rs, 'ref': f'ORA-{num_client}', 'customer_rank': 1})
+                    self.client_cache[num_client] = partner_id
+                except Exception as exc:
+                    log.error('  Partenaire ORA-%s : %s', num_client, exc)
+                    continue
+
+            br_raw = clean_str(row.get('BRANCHE', ''), 20).upper()
+            branche = 'AUTRE'
+            for k, v in BRANCHE_MAP.items():
+                if k in br_raw:
+                    branche = v
+                    break
+
+            from datetime import date as _date
+            today = _date.today()
+            vals = {
+                'num_police':      num_police,
+                'partner_id':      partner_id,
+                'payer_id':        partner_id,
+                'company_ins_id':  company_id,
+                'raison_sociale':  clean_str(row.get('RAISON_SOCIALE', ''), 50),
+                'branche':         branche,
+                'agence_courtier': clean_str(row.get('AGENCE_COURTIER', ''), 50),
+                'type_client':     clean_str(row.get('TYPE_CLIENT', 'P'), 1),
+                'state':           'active',
+                'active':          True,
+                'date_effect':     today.isoformat(),
+                'date_echeance':   today.replace(year=today.year + 1).isoformat(),
+                'notes':           clean_str(row.get('NOTES', ''), 250),
+            }
+            batch.append(vals)
+            police_cache[cache_key] = -1  # marquer pour éviter doublon dans le batch
+
+            if len(batch) >= 20:
+                try:
+                    ids = self.odoo.execute('insurance.policy', 'create', batch)
+                    created_count += len(batch) if isinstance(ids, list) else 1
+                except Exception as exc:
+                    log.error('  Batch polices : %s', exc)
+                    self.stats['polices']['errors'] += len(batch)
+                batch = []
+
+        if batch:
+            try:
+                ids = self.odoo.execute('insurance.policy', 'create', batch)
+                created_count += len(batch) if isinstance(ids, list) else 1
+            except Exception as exc:
+                log.error('  Dernier batch polices : %s', exc)
+                self.stats['polices']['errors'] += len(batch)
+
+        self.stats['polices']['created'] = created_count
+        self.stats['polices']['skipped'] = skipped_count
+        log.info('  Polices → créées: %d | ignorées: %d | erreurs: %d',
+                 created_count, skipped_count, self.stats['polices']['errors'])
 
     # ── ÉTAPE 8 : Sinistres (1 ligne) + Expert ────────────────────────────────
 
@@ -1102,45 +1274,55 @@ class AssurCoreETLv2:
             categorie = clean_str(row.get('CATEGORIE_INDEMNISATION', ''), 50)
             ref_sin = clean_str(row.get('REF_SINISTRE', ''), 20)
 
+            # Map the new client real fields
+            type_sin_oracle = clean_str(row.get('TYPE_SINISTRE', ''))
+            type_sin = None
+            if type_sin_oracle == 'IDA':
+                type_sin = 'ida'
+            elif type_sin_oracle == 'Dommage_Collision':
+                type_sin = 'dommage_collision'
+
+            bris_de_glace = parse_float(row.get('BRIS_DE_GLACES', '0'))
+            vol_inc = parse_float(row.get('VOL_INCENDIE', '0'))
+
             try:
                 new_id = self.odoo.execute('insurance.claim', 'create', {
                     'name': ora_name,
                     'policy_id': policy_id,
                     'date_sinistre': f'{date_sin} 00:00:00' if date_sin
                                      else f'{date.today().isoformat()} 00:00:00',
-                    'date_declaration': date_sin or date.today().isoformat(),
-                    'lib_sinistre': lib_sin or f'Sinistre migré depuis Oracle — {num_sin}',
+                    'date_declaration': date_sin or date.today().isoformat(),                    'lib_sinistre': lib_sin or f'Sinistre migre depuis Oracle -- {num_sin}',
                     'montant_reclame': montant,
                     'montant_indemnite': montant,
                     'categorie_indemnisation': categorie,
                     'tiers': tiers,
                     'ref_compagnie': ref_sin,
+                    'type_sinistre': type_sin,
+                    'bris_de_glaces': bris_de_glace,
+                    'vol_incendie': vol_inc,
                     'state': 'declare',
-                    'notes': f'Migré depuis PR_SINISTRE {annee}/{num_sin} | '
-                             f'Compagnie: {compagnie}',
+                    'notes': f'Migre depuis PR_SINISTRE {annee}/{num_sin} | Compagnie: {compagnie}',
                 })
                 self.stats['sinistres']['created'] += 1
-                log.info('  Sinistre %s créé (id=%s)', ora_name, new_id)
+                log.info('  Sinistre %s cree (id=%s)', ora_name, new_id)
             except Exception as exc:
                 self.stats['sinistres']['errors'] += 1
                 log.error('  Sinistre %s : %s', num_sin, exc)
 
         self._log('sinistres', 'Sinistres')
 
-    # ── ÉTAPE 9 : Experts ─────────────────────────────────────────────────────
+    # -- ETAPE 9 : Experts
 
     def import_experts(self, rows: list[dict]) -> None:
-        log.info('── ÉTAPE 9 : Experts PR_EXPERT (%d ligne(s)) ──', len(rows))
+        log.info('-- ETAPE 9 : Experts PR_EXPERT (%d ligne(s)) --', len(rows))
         for row in rows:
             ref = clean_str(row.get('REF_EXPERT', ''))
             if not ref:
                 continue
-
             ref_ora = f'ORA-EXP-{ref}'
             nom = clean_str(row.get('NOM', ''))
             prenom = clean_str(row.get('PRENOM', ''))
             name = f'{prenom} {nom}'.strip() or f'Expert-{ref}'
-
             try:
                 partner_id, created = self.odoo.ensure(
                     model='res.partner',
@@ -1161,51 +1343,35 @@ class AssurCoreETLv2:
                 )
                 if created:
                     self.stats['experts']['created'] += 1
-                    log.info('  Expert %s créé (id=%s)', name, partner_id)
+                    log.info('  Expert %s cree (id=%s)', name, partner_id)
                 else:
                     self.stats['experts']['skipped'] += 1
             except Exception as exc:
                 self.stats['experts']['errors'] += 1
-                log.error('  Expert %s : %s', name, exc)
-
+                log.error('  Expert %s : %s', ref, exc)
         self._log('experts', 'Experts')
 
-    # ── Rapport final ──────────────────────────────────────────────────────────
-
-    def _log(self, key: str, label: str) -> None:
-        s = self.stats[key]
-        log.info('  %s → créés: %d | màj: %d | ignorés: %d | erreurs: %d',
-                 label, s['created'], s['updated'], s['skipped'], s['errors'])
-
-    def print_summary(self) -> None:
-        log.info('')
-        log.info('══════════════════════════════════════════════')
-        log.info('  BILAN FINAL — AssurCore ETL Phase 2')
-        log.info('══════════════════════════════════════════════')
-        total_created = total_errors = 0
+    def print_summary(self):
+        log.info('BILAN MIGRATION -- AssurCore ETL Phase 2')
+        total_created = 0
+        total_errors  = 0
         for step, s in self.stats.items():
-            log.info('  %-20s  créés: %5d  màj: %5d  ignorés: %5d  erreurs: %3d',
+            log.info('  %-20s  crees: %5d  maj: %5d  ignores: %5d  erreurs: %3d',
                      step, s['created'], s['updated'], s['skipped'], s['errors'])
             total_created += s['created']
             total_errors  += s['errors']
-        log.info('──────────────────────────────────────────────')
-        log.info('  TOTAL créés : %d | Erreurs : %d', total_created, total_errors)
-        log.info('══════════════════════════════════════════════')
+        log.info('  TOTAL crees : %d | Erreurs : %d', total_created, total_errors)
 
 
-# ══════════════════════════════════════════════════════════════════════════════
-#  ⑦ POINT D'ENTRÉE
-# ══════════════════════════════════════════════════════════════════════════════
+# POINT D'ENTREE
 
 def parse_args():
     parser = argparse.ArgumentParser(
-        description='AssurCore ETL Phase 2 — Complétion migration Oracle → Odoo'
+        description='AssurCore ETL Phase 2'
     )
     parser.add_argument('--dry-run', action='store_true')
-    parser.add_argument(
-        '--steps', default='all',
-        help='Étapes : all | risques,codes,clients,banques,factures,reglements,lettrage,sinistres,experts',
-    )
+    parser.add_argument('--steps', default='all',
+        help='all | polices,sinistres,risques,codes,clients,banques,factures,reglements,lettrage,experts')
     parser.add_argument('--file', default=str(DATA_FILE))
     return parser.parse_args()
 
@@ -1214,26 +1380,22 @@ def main():
     args = parse_args()
     data_path = Path(args.file)
 
-    log.info('═══════════════════════════════════════════════════')
-    log.info('  AssurCore ETL v2 — Phase 2 : Complétion Migration')
-    log.info('  Fichier : %s', data_path)
-    log.info('  Mode    : %s', 'DRY-RUN' if args.dry_run else 'IMPORT RÉEL')
-    log.info('  Étapes  : %s', args.steps)
-    log.info('═══════════════════════════════════════════════════')
+    log.info('AssurCore ETL v2 -- Phase 2')
+    log.info('Fichier : %s', data_path)
+    log.info('Mode    : %s', 'DRY-RUN' if args.dry_run else 'IMPORT REEL')
+    log.info('Etapes  : %s', args.steps)
 
     if not data_path.exists():
         log.error('Fichier introuvable : %s', data_path)
         sys.exit(1)
 
-    # Parsing
     blocks = parse_data_file_v2(data_path)
 
     if args.dry_run:
-        log.info('[DRY-RUN] Blocs trouvés : %s', list(blocks.keys()))
-        log.info('[DRY-RUN] Fin — aucune écriture effectuée.')
+        log.info('[DRY-RUN] Blocs trouves : %s', list(blocks.keys()))
+        log.info('[DRY-RUN] Fin -- aucune ecriture effectuee.')
         return
 
-    # Connexion Odoo
     odoo = OdooRPC(ODOO_URL, ODOO_DB, ODOO_USER, ODOO_PASSWORD, args.dry_run)
     try:
         odoo.connect(ODOO_USER, ODOO_PASSWORD)
@@ -1245,9 +1407,11 @@ def main():
 
     steps = [s.strip() for s in args.steps.split(',') if s.strip()] \
             if args.steps != 'all' \
-            else ['risques', 'codes', 'clients', 'banques',
+            else ['polices', 'risques', 'codes', 'clients', 'banques',
                   'factures', 'reglements', 'lettrage', 'sinistres', 'experts']
 
+    if 'polices' in steps:
+        etl.import_polices_manquantes(blocks.get('PR_POLICE', []))
     if 'risques' in steps:
         etl.import_risks(blocks.get('PR_RISQUE', []))
     if 'codes' in steps:

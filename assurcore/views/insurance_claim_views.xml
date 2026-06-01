@@ -190,6 +190,9 @@
               <field name="categorie_indemnisation"/>
               <field name="tiers"/>
               <field name="ref_compagnie"/>
+              <field name="type_sinistre"/>
+              <field name="bris_de_glaces" invisible="bris_de_glaces == 0"/>
+              <field name="vol_incendie" invisible="vol_incendie == 0"/>
             </group>
           </group>
 
@@ -323,6 +326,8 @@
         <field name="branche" string="Branche"/>
         <field name="date_sinistre" string="Date sinistre" widget="date"/>
         <field name="date_declaration" string="Déclaration" optional="show"/>
+        <field name="type_sinistre" optional="hide"/>
+        <field name="bris_de_glaces" optional="hide"/>
         <field name="categorie_indemnisation" string="Catégorie" optional="show"/>
         <field name="montant_reclame"
                string="Réclamé (TND)"
@@ -522,7 +527,7 @@
   <menuitem id="menu_sinistres"
             name="Sinistres"
             parent="menu_assurcore_root"
-            sequence="40"/>
+            sequence="70"/>
 
   <menuitem id="menu_sinistres_all"
             name="Tous les sinistres"

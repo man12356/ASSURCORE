@@ -28,7 +28,7 @@
   <menuitem id="menu_tresorerie"
             name="Trésorerie"
             parent="menu_assurcore_root"
-            sequence="20"/>
+            sequence="60"/>
 
   <!-- ══════════════════════════════════════════════════════════════════════ -->
   <!--  1. HÉRITAGE VUE FORM — res.partner                                   -->

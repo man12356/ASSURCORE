@@ -209,12 +209,117 @@
     <field name="context">{'search_default_group_compagnie': 1}</field>
   </record>
 
-  <!-- Le menu Quittances est géré dans dashboard_views.xml (menu_tresorerie) -->
-  <!-- Action disponible pour référence depuis d'autres menus -->
+  <!-- Menu Quittances déplacé sous la racine (sequence 40) -->
   <menuitem id="menu_assurcore_receipts_all"
-            name="Quittances (Liste)"
-            parent="menu_tresorerie"
+            name="Quittances"
+            parent="menu_assurcore_root"
             action="action_insurance_receipts_detail"
-            sequence="26"/>
+            sequence="40"/>
+
+  <!-- ══════════════════════════════════════════════════════════════════════ -->
+  <!--  VUE TREE — Règlements (insurance.settlement)                          -->
+  <!-- ══════════════════════════════════════════════════════════════════════ -->
+  <record id="view_insurance_settlement_tree" model="ir.ui.view">
+    <field name="name">insurance.settlement.tree</field>
+    <field name="model">insurance.settlement</field>
+    <field name="arch" type="xml">
+      <tree string="Règlements" decoration-success="state in ('regle','encaisse')" decoration-danger="state == 'impaye'" decoration-info="state == 'remis'" decoration-muted="state == 'remplace'">
+        <field name="name"/>
+        <field name="partner_id"/>
+        <field name="receipt_id"/>
+        <field name="date_reg"/>
+        <field name="type_reg"/>
+        <field name="montant_reg" sum="Total Règlements"/>
+        <field name="num_cheque" optional="show"/>
+        <field name="banque_tireur" optional="show"/>
+        <field name="state" widget="badge" decoration-success="state in ('regle','encaisse')" decoration-danger="state == 'impaye'" decoration-info="state == 'remis'" decoration-muted="state == 'remplace'"/>
+        <field name="currency_id" column_invisible="1"/>
+      </tree>
+    </field>
+  </record>
+
+  <!-- ══════════════════════════════════════════════════════════════════════ -->
+  <!--  VUE FORM — Règlement (insurance.settlement)                           -->
+  <!-- ══════════════════════════════════════════════════════════════════════ -->
+  <record id="view_insurance_settlement_form" model="ir.ui.view">
+    <field name="name">insurance.settlement.form</field>
+    <field name="model">insurance.settlement</field>
+    <field name="arch" type="xml">
+      <form string="Règlement">
+        <header>
+          <button name="action_remettre_banque" string="Remettre en banque" type="object" class="oe_highlight" invisible="state != 'brouillon'"/>
+          <button name="action_confirmer" string="Confirmer encaissement" type="object" class="oe_highlight" invisible="state not in ('brouillon','remis')"/>
+          <button name="action_encaisser" string="Marquer comme encaissé" type="object" invisible="state != 'regle'"/>
+          <button name="action_rejeter" string="Signaler Impayé" type="object" class="btn-danger" invisible="state not in ('remis','regle','encaisse')"/>
+          <field name="state" widget="statusbar" statusbar_visible="brouillon,remis,regle,encaisse"/>
+        </header>
+        <sheet>
+          <div class="oe_title">
+            <label for="name" string="Référence Règlement"/>
+            <h1>
+              <field name="name" readonly="1"/>
+            </h1>
+          </div>
+          <group>
+            <group string="Informations Payeur &amp; Quittance">
+              <field name="partner_id" readonly="state != 'brouillon'"/>
+              <field name="receipt_id" options="{'no_create': True}" readonly="state != 'brouillon'"/>
+              <field name="date_reg" readonly="state != 'brouillon'"/>
+              <field name="currency_id" invisible="1"/>
+            </group>
+            <group string="Montant &amp; Mode de Règlement">
+              <field name="type_reg" readonly="state != 'brouillon'"/>
+              <field name="montant_reg" readonly="state != 'brouillon'"/>
+              <field name="montant_restant" readonly="1"/>
+              <field name="imputer" readonly="1"/>
+            </group>
+          </group>
+          <group string="Détails Chèque / Virement" invisible="type_reg != 'C'">
+            <group>
+              <field name="num_cheque" readonly="state != 'brouillon'"/>
+              <field name="banque_tireur" options="{'no_create': True}" readonly="state != 'brouillon'"/>
+            </group>
+            <group>
+              <field name="cin_tireur" readonly="state != 'brouillon'"/>
+              <field name="date_echeance_cheque" readonly="state != 'brouillon'"/>
+              <field name="remis_chez" readonly="state != 'brouillon'"/>
+            </group>
+          </group>
+          <group string="Comptabilité &amp; Notes">
+            <group>
+              <field name="payment_id" readonly="1"/>
+            </group>
+            <group>
+              <field name="notes" placeholder="Notes complémentaires..."/>
+            </group>
+          </group>
+        </sheet>
+      </form>
+    </field>
+  </record>
+
+  <!-- ══════════════════════════════════════════════════════════════════════ -->
+  <!--  ACTION — Règlements (insurance.settlement)                            -->
+  <!-- ══════════════════════════════════════════════════════════════════════ -->
+  <record id="action_insurance_settlements" model="ir.actions.act_window">
+    <field name="name">Règlements</field>
+    <field name="res_model">insurance.settlement</field>
+    <field name="view_mode">tree,form</field>
+    <field name="help" type="html">
+      <p class="o_view_nocontent_smiling_face">
+        Enregistrez un nouveau règlement client.
+      </p>
+      <p>
+        Les règlements (chèques, espèces, virements) sont imputés sur les quittances pour mettre à jour les soldes.
+      </p>
+    </field>
+  </record>
+
+  <!-- Menu Règlements créé sous la racine (sequence 50) -->
+  <menuitem id="menu_assurcore_settlements"
+            name="Règlements"
+            parent="menu_assurcore_root"
+            action="action_insurance_settlements"
+            sequence="50"/>
 
 </odoo>

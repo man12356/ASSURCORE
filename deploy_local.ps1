@@ -18,7 +18,7 @@
     Affiche les logs Odoo en temps réel après le démarrage.
 
 .PARAMETER PortStart
-    Premier port à tester (défaut : 8069).
+    Premier port à tester (défaut : 8071).
 
 .EXAMPLE
     .\deploy_local.ps1
@@ -36,7 +36,7 @@ param(
     [switch] $Reset,
     [switch] $Stop,
     [switch] $Logs,
-    [int]    $PortStart = 8069
+    [int]    $PortStart = 8071
 )
 
 # ── Encodage UTF-8 pour les emojis et accents ────────────────────────────────

@@ -197,6 +197,27 @@ class InsuranceClaim(models.Model):
         help='Matricule ou désignation du bien sinistré.',
     )
 
+    type_sinistre = fields.Selection(
+        selection=[
+            ('ida', 'IDA'),
+            ('dommage_collision', 'Dommage et collision'),
+        ],
+        string='Type de sinistre',
+        help='Ex-champ Oracle : TYPE_SINISTRE dans PR_SINISTRE.',
+    )
+
+    bris_de_glaces = fields.Monetary(
+        string='Bris de Glaces (TND)',
+        currency_field='currency_id',
+        help='Ex-champ Oracle : BRIS_DE_GLACES dans PR_SINISTRE.',
+    )
+
+    vol_incendie = fields.Monetary(
+        string='Vol & Incendie (TND)',
+        currency_field='currency_id',
+        help='Ex-champ Oracle : VOL_INCENDIE dans PR_SINISTRE.',
+    )
+
     # ── Montants (3 cartes financières — maquette page 05) ────────────────────
     # Progression : Réclamé → Expertise → Indemnité finale (- franchise)
 

@@ -685,6 +685,7 @@
             name="Clients"
             parent="menu_assurcore_root"
             action="action_assurcore_clients"
-            sequence="30"/>
+            sequence="20"/>
 
 </odoo>
+

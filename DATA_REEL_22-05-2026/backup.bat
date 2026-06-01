@@ -1,0 +1,1 @@
+D:\ORACLE\product\11.2.0\dbhome_1\BIN\exp.exe ASSKAREKAMOUN/kare@ORACLEDB buffer=4096 file=c:\ARCHIVES\ASSKAREKAMOUN_%date:~6,4%_%date:~3,2%_%date:~0,2%.dmp grants=Y rows=Y COMPRESS=Y

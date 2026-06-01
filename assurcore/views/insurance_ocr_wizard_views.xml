@@ -255,7 +255,7 @@
   <menuitem id="menu_assurcore_ocr"
             name="Importation OCR"
             parent="menu_assurcore_root"
-            sequence="50"/>
+            sequence="100"/>
 
   <menuitem id="menu_assurcore_document_parser"
             name="Documents OCR"

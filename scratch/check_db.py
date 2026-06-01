@@ -10,7 +10,7 @@ uid = common.authenticate(db, username, password, {})
 models = xmlrpc.client.ServerProxy(f'{url}/xmlrpc/2/object')
 
 print(f"UID: {uid}")
-for model in ['res.partner', 'insurance.company', 'insurance.policy', 'insurance.risk', 'insurance.receipt', 'insurance.settlement']:
+for model in ['res.partner', 'insurance.company', 'insurance.policy', 'insurance.risk', 'insurance.receipt', 'insurance.settlement', 'insurance.claim']:
     try:
         cnt = models.execute_kw(db, uid, password, model, 'search_count', [[]])
         print(f"{model}: {cnt} records")
