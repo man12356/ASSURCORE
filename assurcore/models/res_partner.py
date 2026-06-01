@@ -21,6 +21,8 @@ from odoo import api, fields, models, _
 from odoo.exceptions import ValidationError
 from dateutil.relativedelta import relativedelta
 import logging
+import unicodedata
+import re
 
 _logger = logging.getLogger(__name__)
 
@@ -441,7 +443,188 @@ class ResPartner(models.Model):
                 len(prospects_avec_police),
             )
 
-    # ── 10. Contraintes ────────────────────────────────────────────────────────
+    # ── 10. Recherche intelligente anti-doublon (OCR) ────────────────────────
+
+    @api.model
+    def _normalize_name_for_match(self, name: str) -> str:
+        """
+        Normalise un nom/prénom pour comparaison floue :
+        majuscules + suppression accents + suppression ponctuation + espaces normalisés.
+        Ex : 'Ben Saïd  Hédi' → 'BEN SAID HEDI'
+        """
+        if not name:
+            return ''
+        nfkd = unicodedata.normalize('NFKD', name.upper())
+        ascii_str = ''.join(c for c in nfkd if not unicodedata.combining(c))
+        clean = re.sub(r'[^\w\s]', ' ', ascii_str)
+        return re.sub(r'\s+', ' ', clean).strip()
+
+    @api.model
+    def _find_partner_smart(self, vals: dict):
+        """
+        Recherche intelligente d'un partenaire existant pour éviter les doublons.
+
+        Stratégie par ordre de priorité décroissante :
+          1. CIN exact              → confiance HAUTE   (identifiant unique TN)
+          2. Matricule Fiscal exact → confiance HAUTE
+          3. Nom normalisé exact    → confiance HAUTE si un seul résultat
+          4. Nom + Adresse          → confiance HAUTE   (combinaison identifiante)
+          5. Similarité nom (>85%)  → confiance MOYENNE (pg_trgm si disponible)
+          6. Similarité nom (>60%)  → confiance FAIBLE  (suggestion uniquement)
+
+        Args:
+            vals (dict) : Données issues de l'OCR.
+                          Clés utilisées : cin, matricule_fiscal, name,
+                                           street, city, is_company
+
+        Returns:
+            tuple (partner|False, confidence)
+            confidence ∈ {'high', 'medium', 'low', None}
+              - 'high'   → correspondance automatique acceptée
+              - 'medium' → correspondance probable, nécessite confirmation
+              - 'low'    → suggestion, validation manuelle obligatoire
+              - None     → aucune correspondance trouvée
+        """
+        cin        = (vals.get('cin') or '').strip()
+        mf         = (vals.get('matricule_fiscal') or '').strip()
+        nom        = (vals.get('name') or '').strip()
+        street     = (vals.get('street') or '').strip()
+        city       = (vals.get('city') or '').strip()
+        is_company = vals.get('is_company', False)
+
+        # ── 1. CIN exact ──────────────────────────────────────────────────────
+        if cin and not is_company:
+            partner = self.search([('cin', '=', cin)], limit=1)
+            if partner:
+                _logger.info(
+                    'AssurCore SmartMatch: CIN "%s" → "%s" (id=%d) [HIGH]',
+                    cin, partner.name, partner.id,
+                )
+                return partner, 'high'
+
+        # ── 2. Matricule Fiscal exact ─────────────────────────────────────────
+        if mf:
+            partner = self.search([('matricule_fiscal', '=', mf)], limit=1)
+            if partner:
+                _logger.info(
+                    'AssurCore SmartMatch: MF "%s" → "%s" (id=%d) [HIGH]',
+                    mf, partner.name, partner.id,
+                )
+                return partner, 'high'
+
+        if not nom:
+            return False, None
+
+        nom_norm = self._normalize_name_for_match(nom)
+
+        # ── 3. Nom normalisé exact (via SQL unaccent) ─────────────────────────
+        try:
+            self.env.cr.execute("""
+                SELECT id, name, street, city
+                FROM res_partner
+                WHERE customer_rank > 0
+                  AND active = true
+                  AND upper(translate(name,
+                        'àáâãäåæçèéêëìíîïðñòóôõöùúûüýþÿ'
+                        'AAAAAAACEEEEIIIIDNOOOOOOUUUUYPY',
+                        'AAAAAAACEEEEIIIIDNOOOOOOUUUUYPY'
+                      )) = %s
+                ORDER BY id
+            """, [nom_norm])
+            rows = self.env.cr.fetchall()
+        except Exception:
+            rows = []
+
+        if rows:
+            if len(rows) == 1:
+                partner = self.browse(rows[0][0])
+                _logger.info(
+                    'AssurCore SmartMatch: Nom exact "%s" → "%s" (id=%d) [HIGH]',
+                    nom, partner.name, partner.id,
+                )
+                return partner, 'high'
+
+            # Plusieurs homonymes → affiner par ville puis par adresse
+            if city:
+                city_norm = self._normalize_name_for_match(city)
+                for row in rows:
+                    if row[3] and self._normalize_name_for_match(row[3]) == city_norm:
+                        partner = self.browse(row[0])
+                        _logger.info(
+                            'AssurCore SmartMatch: Nom+Ville "%s/%s" → "%s" (id=%d) [HIGH]',
+                            nom, city, partner.name, partner.id,
+                        )
+                        return partner, 'high'
+
+            if street:
+                street_norm = self._normalize_name_for_match(street)
+                for row in rows:
+                    if row[2] and self._normalize_name_for_match(row[2]) == street_norm:
+                        partner = self.browse(row[0])
+                        _logger.info(
+                            'AssurCore SmartMatch: Nom+Adresse "%s" → "%s" (id=%d) [HIGH]',
+                            nom, partner.name, partner.id,
+                        )
+                        return partner, 'high'
+
+            # Homonymes sans discriminant → retourner le premier avec confiance moyenne
+            partner = self.browse(rows[0][0])
+            _logger.info(
+                'AssurCore SmartMatch: Homonyme "%s" (%d résultats) → "%s" (id=%d) [MEDIUM]',
+                nom, len(rows), partner.name, partner.id,
+            )
+            return partner, 'medium'
+
+        # ── 4. Similarité floue via pg_trgm ──────────────────────────────────
+        try:
+            self.env.cr.execute("SELECT 1 FROM pg_extension WHERE extname='pg_trgm'")
+            trgm_ok = bool(self.env.cr.fetchone())
+        except Exception:
+            trgm_ok = False
+
+        if trgm_ok:
+            try:
+                self.env.cr.execute("""
+                    SELECT id, name,
+                           similarity(
+                               unaccent(upper(name)),
+                               unaccent(upper(%s))
+                           ) AS sim
+                    FROM res_partner
+                    WHERE customer_rank > 0
+                      AND active = true
+                      AND similarity(
+                              unaccent(upper(name)),
+                              unaccent(upper(%s))
+                          ) > 0.55
+                    ORDER BY sim DESC
+                    LIMIT 5
+                """, [nom, nom])
+                trgm_rows = self.env.cr.fetchall()
+
+                if trgm_rows:
+                    best_id, best_name, best_sim = trgm_rows[0]
+                    partner = self.browse(best_id)
+
+                    if best_sim >= 0.85:
+                        _logger.info(
+                            'AssurCore SmartMatch: Similarité %.0f%% "%s" → "%s" (id=%d) [MEDIUM]',
+                            best_sim * 100, nom, best_name, best_id,
+                        )
+                        return partner, 'medium'
+                    else:
+                        _logger.info(
+                            'AssurCore SmartMatch: Similarité %.0f%% "%s" → "%s" (id=%d) [LOW]',
+                            best_sim * 100, nom, best_name, best_id,
+                        )
+                        return partner, 'low'
+            except Exception as exc:
+                _logger.debug('AssurCore SmartMatch pg_trgm error: %s', exc)
+
+        _logger.info('AssurCore SmartMatch: aucune correspondance pour "%s"', nom)
+        return False, None
+
+    # ── 11. Contraintes ────────────────────────────────────────────────────────
 
     @api.constrains('payer_partner_id', 'is_payer')
     def _check_payer_consistency(self):
@@ -472,7 +655,7 @@ class ResPartner(models.Model):
         # ),
     ]
 
-    # ── 11. Onchange ───────────────────────────────────────────────────────────
+    # ── 12. Onchange ───────────────────────────────────────────────────────────
 
     @api.onchange('family_member_ids')
     def _onchange_family_members(self):

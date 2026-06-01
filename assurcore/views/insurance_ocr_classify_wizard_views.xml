@@ -1,0 +1,388 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+================================================================================
+  EVO01 — Assistant Classification OCR (2 etapes)
+  insurance.ocr.classify.wizard
+================================================================================
+-->
+<odoo>
+
+  <!-- ════════════════════════════════════════════════════════════════════════ -->
+  <!--  VUE FORM — Wizard 2 etapes                                              -->
+  <!-- ════════════════════════════════════════════════════════════════════════ -->
+  <record id="view_insurance_ocr_classify_wizard_form" model="ir.ui.view">
+    <field name="name">insurance.ocr.classify.wizard.form</field>
+    <field name="model">insurance.ocr.classify.wizard</field>
+    <field name="arch" type="xml">
+      <form string="Classification du document OCR">
+
+        <!-- Barre de progression -->
+        <div class="o_statusbar_status text-center mb-3">
+          <span class="badge rounded-pill"
+                style="background-color: #875A7B; color: white; font-size: 14px; padding: 8px 20px;"
+                invisible="wizard_step != 'identify'">
+            Etape 1 / 2 — Identification du type
+          </span>
+          <span class="badge rounded-pill"
+                style="background-color: #00A09D; color: white; font-size: 14px; padding: 8px 20px;"
+                invisible="wizard_step != 'params'">
+            Etape 2 / 2 — Parametres et validation
+          </span>
+        </div>
+
+        <field name="parser_id"    invisible="1"/>
+        <field name="wizard_step"  invisible="1"/>
+
+        <!-- ══════════════════════════════════════════════════════════════════ -->
+        <!--  ETAPE 1 : IDENTIFICATION                                          -->
+        <!-- ══════════════════════════════════════════════════════════════════ -->
+        <div invisible="wizard_step != 'identify'">
+
+          <!-- Apercu du document recu -->
+          <group string="Document recu" col="2">
+            <field name="parser_subject" readonly="1" string="Sujet email"/>
+            <field name="parser_email"   readonly="1" string="Expediteur"/>
+            <field name="parser_file"    readonly="1" string="Fichier PDF"/>
+          </group>
+
+          <div class="alert alert-warning mt-2 mb-3">
+            <i class="fa fa-question-circle"/> Ce document n'a pas ete reconnu automatiquement.
+            Selectionnez son type ci-dessous — le systeme OCR apprendra de votre choix.
+          </div>
+
+          <!-- Suggestion OCR si presente -->
+          <div class="alert alert-info"
+               invisible="ocr_suggestion == 'Non reconnu' or not ocr_suggestion">
+            <i class="fa fa-lightbulb-o"/>
+            Suggestion OCR : <strong><field name="ocr_suggestion" readonly="1" nolabel="1"/></strong>
+            — Confirmez ou corrigez ci-dessous.
+          </div>
+
+          <!-- Selection du type : boutons radio grands formats -->
+          <div class="row mt-3 mx-1">
+
+            <div class="col-12">
+              <label for="doc_type" class="fw-bold mb-2">
+                Quel est le type de ce document ?
+              </label>
+            </div>
+
+            <!-- Cards de selection : 3 par ligne -->
+            <div class="col-md-4 mb-3">
+              <div class="card h-100 border-primary"
+                   style="cursor:pointer; border-width: 2px;"
+                   invisible="doc_type == 'contrat'">
+                <div class="card-body text-center p-3">
+                  <i class="fa fa-file-text-o fa-2x text-primary mb-2"/>
+                  <h6 class="card-title text-primary">Contrat / Police</h6>
+                  <p class="card-text small text-muted">Nouvelle souscription, renouvellement</p>
+                </div>
+              </div>
+              <div class="card h-100 border-primary bg-primary"
+                   style="cursor:pointer; border-width: 2px;"
+                   invisible="doc_type != 'contrat'">
+                <div class="card-body text-center p-3">
+                  <i class="fa fa-file-text-o fa-2x text-white mb-2"/>
+                  <h6 class="card-title text-white">Contrat / Police</h6>
+                  <p class="card-text small text-white-50">Nouvelle souscription, renouvellement</p>
+                </div>
+              </div>
+            </div>
+
+            <div class="col-md-4 mb-3">
+              <div class="card h-100 border-success"
+                   style="cursor:pointer; border-width: 2px;"
+                   invisible="doc_type == 'quittance'">
+                <div class="card-body text-center p-3">
+                  <i class="fa fa-money fa-2x text-success mb-2"/>
+                  <h6 class="card-title text-success">Quittance / Prime</h6>
+                  <p class="card-text small text-muted">Avis d'echeance, appel de cotisation</p>
+                </div>
+              </div>
+              <div class="card h-100 border-success bg-success"
+                   style="cursor:pointer; border-width: 2px;"
+                   invisible="doc_type != 'quittance'">
+                <div class="card-body text-center p-3">
+                  <i class="fa fa-money fa-2x text-white mb-2"/>
+                  <h6 class="card-title text-white">Quittance / Prime</h6>
+                  <p class="card-text small text-white-50">Avis d'echeance, appel de cotisation</p>
+                </div>
+              </div>
+            </div>
+
+            <div class="col-md-4 mb-3">
+              <div class="card h-100 border-info"
+                   style="cursor:pointer; border-width: 2px;"
+                   invisible="doc_type == 'reglement'">
+                <div class="card-body text-center p-3">
+                  <i class="fa fa-credit-card fa-2x text-info mb-2"/>
+                  <h6 class="card-title text-info">Reglement / Cheque</h6>
+                  <p class="card-text small text-muted">Cheque, virement, especes</p>
+                </div>
+              </div>
+              <div class="card h-100 border-info bg-info"
+                   style="cursor:pointer; border-width: 2px;"
+                   invisible="doc_type != 'reglement'">
+                <div class="card-body text-center p-3">
+                  <i class="fa fa-credit-card fa-2x text-white mb-2"/>
+                  <h6 class="card-title text-white">Reglement / Cheque</h6>
+                  <p class="card-text small text-white-50">Cheque, virement, especes</p>
+                </div>
+              </div>
+            </div>
+
+            <div class="col-md-4 mb-3">
+              <div class="card h-100 border-warning"
+                   style="cursor:pointer; border-width: 2px;"
+                   invisible="doc_type == 'avenant'">
+                <div class="card-body text-center p-3">
+                  <i class="fa fa-pencil-square-o fa-2x text-warning mb-2"/>
+                  <h6 class="card-title text-warning">Avenant / Operation</h6>
+                  <p class="card-text small text-muted">Modification, resiliation, suspension</p>
+                </div>
+              </div>
+              <div class="card h-100 border-warning bg-warning"
+                   style="cursor:pointer; border-width: 2px;"
+                   invisible="doc_type != 'avenant'">
+                <div class="card-body text-center p-3">
+                  <i class="fa fa-pencil-square-o fa-2x text-white mb-2"/>
+                  <h6 class="card-title text-white">Avenant / Operation</h6>
+                  <p class="card-text small text-white-50">Modification, resiliation, suspension</p>
+                </div>
+              </div>
+            </div>
+
+            <div class="col-md-4 mb-3">
+              <div class="card h-100 border-danger"
+                   style="cursor:pointer; border-width: 2px;"
+                   invisible="doc_type == 'sinistre'">
+                <div class="card-body text-center p-3">
+                  <i class="fa fa-exclamation-triangle fa-2x text-danger mb-2"/>
+                  <h6 class="card-title text-danger">Sinistre / Declaration</h6>
+                  <p class="card-text small text-muted">Accident, incendie, vol, bris</p>
+                </div>
+              </div>
+              <div class="card h-100 border-danger bg-danger"
+                   style="cursor:pointer; border-width: 2px;"
+                   invisible="doc_type != 'sinistre'">
+                <div class="card-body text-center p-3">
+                  <i class="fa fa-exclamation-triangle fa-2x text-white mb-2"/>
+                  <h6 class="card-title text-white">Sinistre / Declaration</h6>
+                  <p class="card-text small text-white-50">Accident, incendie, vol, bris</p>
+                </div>
+              </div>
+            </div>
+
+            <div class="col-md-4 mb-3">
+              <div class="card h-100"
+                   style="cursor:pointer; border-width: 2px; border-color: #6c757d;"
+                   invisible="doc_type == 'piece_identite'">
+                <div class="card-body text-center p-3">
+                  <i class="fa fa-id-card fa-2x text-secondary mb-2"/>
+                  <h6 class="card-title text-secondary">Piece d'identite</h6>
+                  <p class="card-text small text-muted">CIN, Matricule Fiscal, Passeport</p>
+                </div>
+              </div>
+              <div class="card h-100"
+                   style="cursor:pointer; border-width: 2px; background-color:#6c757d; border-color:#6c757d;"
+                   invisible="doc_type != 'piece_identite'">
+                <div class="card-body text-center p-3">
+                  <i class="fa fa-id-card fa-2x text-white mb-2"/>
+                  <h6 class="card-title text-white">Piece d'identite</h6>
+                  <p class="card-text small text-white-50">CIN, Matricule Fiscal, Passeport</p>
+                </div>
+              </div>
+            </div>
+
+          </div>
+
+          <!-- Champ radio cache (lie au vrai champ) -->
+          <div class="mt-2 px-2">
+            <field name="doc_type" widget="radio" options="{'horizontal': true}"/>
+          </div>
+
+        </div>
+        <!-- FIN ETAPE 1 -->
+
+        <!-- ══════════════════════════════════════════════════════════════════ -->
+        <!--  ETAPE 2 : PARAMETRES                                              -->
+        <!-- ══════════════════════════════════════════════════════════════════ -->
+        <div invisible="wizard_step != 'params'">
+
+          <div class="alert alert-success mb-3">
+            <i class="fa fa-check-circle"/>
+            Type selectionne : <strong><field name="doc_type" readonly="1" nolabel="1"/></strong>.
+            Verifiez et completez les informations ci-dessous.
+            Les champs pre-remplis proviennent de l'analyse OCR.
+          </div>
+
+          <!-- ── Parametres communs ─────────────────────────────────────────── -->
+          <group string="Informations generales" col="2">
+            <group>
+              <field name="company_ins_id"
+                     options="{'no_create': True}"
+                     placeholder="Compagnie d'assurance..."/>
+              <field name="num_police"
+                     invisible="doc_type == 'piece_identite'"
+                     placeholder="Numero de police..."/>
+              <field name="policy_id"
+                     options="{'no_create': True}"
+                     invisible="doc_type == 'piece_identite'"
+                     domain="[('num_police', '=', num_police)]"
+                     placeholder="Ou rechercher police existante..."/>
+            </group>
+            <group>
+              <field name="partner_id"
+                     options="{'no_create': True}"
+                     invisible="create_new_partner or doc_type == 'piece_identite'"
+                     placeholder="Rechercher client existant..."/>
+              <field name="create_new_partner"
+                     invisible="doc_type == 'piece_identite'"/>
+            </group>
+          </group>
+
+          <!-- Bloc creation nouveau client -->
+          <group string="Nouveau client"
+                 invisible="not create_new_partner or doc_type == 'piece_identite'">
+            <group>
+              <field name="new_partner_name" placeholder="Nom complet..."/>
+              <field name="new_partner_type"/>
+            </group>
+            <group>
+              <field name="new_partner_cin"
+                     invisible="new_partner_type == 'company'"
+                     placeholder="8 chiffres..."/>
+              <field name="new_partner_mf"
+                     invisible="new_partner_type != 'company'"
+                     placeholder="Ex: 1234567/A/B/M/000..."/>
+            </group>
+          </group>
+
+          <!-- ── Contrat ────────────────────────────────────────────────────── -->
+          <group string="Details du contrat"
+                 invisible="doc_type != 'contrat'">
+            <group>
+              <field name="date_effet"    placeholder="Date d'effet..."/>
+              <field name="date_echeance" placeholder="Date d'echeance..."/>
+            </group>
+            <group>
+              <field name="montant" string="Prime TTC (TND)"
+                     placeholder="0.000"/>
+            </group>
+          </group>
+
+          <!-- ── Quittance ──────────────────────────────────────────────────── -->
+          <group string="Details de la quittance"
+                 invisible="doc_type != 'quittance'">
+            <group>
+              <field name="montant"      string="Montant prime (TND)" placeholder="0.000"/>
+              <field name="date_doc"     string="Date quittance"/>
+              <field name="date_echeance" string="Date echeance"/>
+            </group>
+          </group>
+
+          <!-- ── Reglement ──────────────────────────────────────────────────── -->
+          <group string="Details du reglement"
+                 invisible="doc_type != 'reglement'">
+            <group>
+              <field name="montant"   string="Montant reglement (TND)" placeholder="0.000"/>
+              <field name="type_reg"  string="Mode de paiement"/>
+              <field name="date_doc"  string="Date du reglement"/>
+            </group>
+            <group>
+              <field name="bank_id"   string="Banque tireur"
+                     options="{'no_create': True}"
+                     placeholder="STB, BNA, BIAT..."/>
+              <field name="num_cheque" string="N° Cheque / Reference"
+                     placeholder="Numero du cheque..."/>
+            </group>
+          </group>
+
+          <!-- ── Avenant ────────────────────────────────────────────────────── -->
+          <group string="Details de l'avenant"
+                 invisible="doc_type != 'avenant'">
+            <group>
+              <field name="type_avenant" string="Type d'avenant"/>
+              <field name="date_doc"     string="Date d'effet avenant"/>
+            </group>
+          </group>
+
+          <!-- ── Sinistre ───────────────────────────────────────────────────── -->
+          <group string="Details du sinistre"
+                 invisible="doc_type != 'sinistre'">
+            <group>
+              <field name="type_sinistre"  string="Type de sinistre"/>
+              <field name="date_sinistre"  string="Date et heure du sinistre"/>
+            </group>
+            <group>
+              <field name="montant" string="Montant estimatif (TND)" placeholder="0.000"/>
+            </group>
+          </group>
+
+          <!-- ── Piece identite ─────────────────────────────────────────────── -->
+          <group string="Informations d'identite"
+                 invisible="doc_type != 'piece_identite'">
+            <group>
+              <field name="identity_type"  string="Type de piece"/>
+              <field name="identity_nom"   string="Nom complet"    placeholder="Nom Prenom..."/>
+            </group>
+            <group>
+              <field name="identity_cin"
+                     invisible="identity_type != 'cin'"
+                     string="Numero CIN" placeholder="8 chiffres..."/>
+              <field name="identity_mf"
+                     invisible="identity_type == 'cin'"
+                     string="Matricule Fiscal" placeholder="Ex: 1234567/A/B/M/000..."/>
+            </group>
+          </group>
+
+        </div>
+        <!-- FIN ETAPE 2 -->
+
+        <!-- ── Footer ─────────────────────────────────────────────────────── -->
+        <footer>
+
+          <!-- Etape 1 : bouton Suivant -->
+          <button name="action_next_step"
+                  string="Suivant →"
+                  type="object"
+                  class="btn btn-primary"
+                  invisible="wizard_step != 'identify'"/>
+
+          <!-- Etape 2 : bouton Retour + Valider -->
+          <button name="action_back"
+                  string="← Retour"
+                  type="object"
+                  class="btn btn-secondary"
+                  invisible="wizard_step != 'params'"/>
+
+          <button name="action_confirm"
+                  string="Valider et creer la piece"
+                  type="object"
+                  class="btn btn-success"
+                  invisible="wizard_step != 'params'"
+                  confirm="Confirmer la creation de la piece et l'apprentissage OCR ?"/>
+
+          <button string="Annuler"
+                  class="btn btn-light"
+                  special="cancel"/>
+
+        </footer>
+
+      </form>
+    </field>
+  </record>
+
+  <!-- ════════════════════════════════════════════════════════════════════════ -->
+  <!--  ACTION — ouverture du wizard depuis le parser                           -->
+  <!-- ════════════════════════════════════════════════════════════════════════ -->
+  <record id="action_insurance_ocr_classify_wizard" model="ir.actions.act_window">
+    <field name="name">Classifier ce document</field>
+    <field name="res_model">insurance.ocr.classify.wizard</field>
+    <field name="view_mode">form</field>
+    <field name="view_id" ref="view_insurance_ocr_classify_wizard_form"/>
+    <field name="target">new</field>
+    <field name="context">{'default_parser_id': active_id}</field>
+  </record>
+
+</odoo>

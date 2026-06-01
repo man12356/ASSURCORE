@@ -1,24 +1,28 @@
 # -*- coding: utf-8 -*-
 # ==============================================================================
-#  EVO01 — Étape 1 : Réception Email & Mock OCR
-#  insurance.document.parser + extension insurance.policy (état draft_ocr)
+#  EVO01 — OCR Multi-documents AssurCore
+#  insurance.document.parser — Orchestrateur OCR 5 types de documents
 #
 #  Flux complet :
 #    Email PDF → alias Odoo → message_new()
-#      → _mock_ocr_extract(attachment_id)
-#        → _normalize_ocr_data(raw_data, company_code)
-#          → _create_policy_from_ocr(normalized, attachment_id)
-#            → insurance.policy(state='draft_ocr') + PDF dans le Chatter
+#      → _detect_document_type()         ← détecte : contrat/quittance/règlement/avenant/sinistre
+#        → _mock_ocr_extract()
+#          → _normalize_ocr_data()
+#            ├── _create_policy_from_ocr()      → insurance.policy (draft_ocr)
+#            ├── _create_receipt_from_ocr()     → insurance.receipt (draft_ocr)
+#            ├── _create_settlement_from_ocr()  → insurance.settlement (brouillon)
+#            │     └── _generate_bordereau_by_bank()  → insurance.journal.enc (auto)
+#            ├── _create_operation_from_ocr()   → insurance.operation (draft)
+#            └── _create_claim_from_ocr()       → insurance.claim (declare)
 #
-#  Phase 1 (ce fichier) : bouchon fixe — données ABIDI ANOUAR / MAGHREBIA
-#  Phase 2 (future)     : appel à un vrai moteur OCR (Google Document AI,
-#                         Azure Form Recognizer, PaddleOCR…) dans
-#                         _mock_ocr_extract() qui deviendra _ocr_extract()
+#  Phase 1 : bouchon fixe (mock OCR)
+#  Phase 2 : appel moteur réel (Google Document AI / Azure Form Recognizer)
 # ==============================================================================
 
 import base64
 import json
 import logging
+import re
 
 from odoo import api, fields, models, _
 
@@ -194,16 +198,90 @@ class InsuranceDocumentParser(models.Model):
     _order       = 'create_date desc'
     _rec_name    = 'name'
 
+    # ── Types de documents ────────────────────────────────────────────────────
+    DOC_TYPE = [
+        ('contrat',         'Contrat / Police'),
+        ('quittance',       'Quittance / Prime'),
+        ('reglement',       'Règlement / Chèque'),
+        ('avenant',         'Avenant / Opération'),
+        ('sinistre',        'Sinistre / Déclaration'),
+        ('piece_identite',  "Pièce d'identité (CIN / MF)"),
+        ('autre',           'Autre / Non classifié'),
+    ]
+
+    # ── Mots-clés pour la détection automatique du type ──────────────────────
+    _DOC_TYPE_KEYWORDS = {
+        'sinistre':  ['sinistre', 'accident', 'declaration', 'expertise', 'constat', 'bris', 'incendie'],
+        'reglement': ['reglement', 'cheque', 'cheque', 'paiement', 'virement', 'encaissement', 'bordereau'],
+        'quittance': ['quittance', 'echeance', 'prime', 'avis', 'appel', 'cotisation'],
+        'avenant':   ['avenant', 'modification', 'resiliation', 'suspension', 'remise', 'endossement'],
+        'contrat':   ['contrat', 'police', 'souscription', 'attestation'],
+    }
+
     # ── États du parser ───────────────────────────────────────────────────────
     PARSER_STATE = [
         ('pending',    'En attente'),
         ('processing', 'Traitement OCR'),
         ('extracted',  'Données extraites'),
-        ('validated',  'Police créée'),
+        ('validated',  'Document créé'),
         ('error',      'Erreur'),
     ]
 
     # ── Champs principaux ─────────────────────────────────────────────────────
+
+    doc_type = fields.Selection(
+        selection=DOC_TYPE,
+        string='Type de document',
+        default='autre',
+        required=True,
+        tracking=True,
+        help='Type détecté automatiquement à partir du sujet/nom du fichier. '
+             'Si non reconnu → "autre". L\'utilisateur corrige manuellement, '
+             'et le système apprend pour les prochains documents similaires.',
+    )
+
+    # ── Liens vers les objets créés (selon doc_type) ──────────────────────────
+    receipt_id = fields.Many2one(
+        comodel_name='insurance.receipt',
+        string='Quittance créée',
+        readonly=True, copy=False,
+    )
+    settlement_id = fields.Many2one(
+        comodel_name='insurance.settlement',
+        string='Règlement créé',
+        readonly=True, copy=False,
+    )
+    operation_id = fields.Many2one(
+        comodel_name='insurance.operation',
+        string='Avenant/Opération créé',
+        readonly=True, copy=False,
+    )
+    claim_id = fields.Many2one(
+        comodel_name='insurance.claim',
+        string='Sinistre créé',
+        readonly=True, copy=False,
+    )
+    bordereau_id = fields.Many2one(
+        comodel_name='insurance.journal.enc',
+        string='Bordereau généré',
+        readonly=True, copy=False,
+        help='Bordereau de remise en banque généré automatiquement '
+             'si plusieurs règlements en attente pour la même banque.',
+    )
+
+    # ── Champs OCR communs (règlement / quittance) ────────────────────────────
+    ocr_num_quittance  = fields.Char(string='N° Quittance (OCR)',  readonly=True)
+    ocr_montant        = fields.Float(string='Montant TND (OCR)',  digits=(11, 3), readonly=True)
+    ocr_date_reg       = fields.Date(string='Date règlement (OCR)', readonly=True)
+    ocr_num_cheque     = fields.Char(string='N° Chèque (OCR)',     readonly=True)
+    ocr_banque         = fields.Char(string='Banque (OCR)',         readonly=True)
+    ocr_type_reg       = fields.Selection(
+        selection=[('C', 'Chèque'), ('E', 'Espèces'), ('V', 'Virement')],
+        string='Mode règlement (OCR)', readonly=True,
+    )
+    ocr_type_avenant   = fields.Char(string='Type avenant (OCR)',  readonly=True)
+    ocr_type_sinistre  = fields.Char(string='Type sinistre (OCR)', readonly=True)
+    ocr_date_sinistre  = fields.Datetime(string='Date sinistre (OCR)', readonly=True)
 
     name = fields.Char(
         string='Référence',
@@ -306,11 +384,26 @@ class InsuranceDocumentParser(models.Model):
         custom_values = custom_values or {}
         subject = (msg_dict.get('subject') or 'Document sans sujet')[:128]
 
+        # Détecter le type de document avant création
+        first_filename = ''
+        for att in msg_dict.get('attachments', []):
+            if isinstance(att, (list, tuple)) and len(att) > 0:
+                first_filename = att[0] or ''
+            elif isinstance(att, dict):
+                first_filename = att.get('name', '')
+            if first_filename:
+                break
+
+        detected_type = self.with_context()._detect_document_type_static(
+            subject, first_filename
+        )
+
         custom_values.update({
             'name':           subject,
             'source_email':   msg_dict.get('email_from', ''),
             'source_subject': subject,
             'state':          'pending',
+            'doc_type':       detected_type,
         })
 
         # Créer le record (mail.thread gère le message initial)
@@ -500,8 +593,28 @@ class InsuranceDocumentParser(models.Model):
         company_code = raw_data['raw_fields'].get('COMPAGNIE', 'INCONNU')
         normalized   = self._normalize_ocr_data(raw_data, company_code)
 
-        # Génération du brouillon de police
-        self._create_policy_from_ocr(normalized, attachment_id)
+        # ── Router vers la méthode de création selon le type de document ──────
+        doc_type = self.doc_type or 'autre'
+
+        if doc_type == 'quittance':
+            self._create_receipt_from_ocr(normalized, attachment_id)
+        elif doc_type == 'reglement':
+            self._create_settlement_from_ocr(normalized, attachment_id)
+        elif doc_type == 'avenant':
+            self._create_operation_from_ocr(normalized, attachment_id)
+        elif doc_type == 'sinistre':
+            self._create_claim_from_ocr(normalized, attachment_id)
+        elif doc_type == 'piece_identite':
+            self._create_identity_from_ocr(normalized, attachment_id)
+        elif doc_type == 'contrat':
+            self._create_policy_from_ocr(normalized, attachment_id)
+        else:
+            # 'autre' — en attente de classification manuelle
+            _logger.info(
+                'AssurCore OCR [%s]: doc_type="autre" → en attente classification manuelle',
+                self.name,
+            )
+            self.write({'state': 'pending'})
 
         return normalized
 
@@ -665,34 +778,26 @@ class InsuranceDocumentParser(models.Model):
         company_type     = ocr_data.get('company_type', 'person')   # 'person' | 'company'
         matricule_fiscal = ocr_data.get('matricule_fiscal', '').strip()
 
-        partner = False
+        # ── Recherche intelligente anti-doublon ───────────────────────────────
+        # Utilise res.partner._find_partner_smart() qui combine :
+        #   CIN exact → MF exact → Nom normalisé → Nom+Ville/Adresse → pg_trgm
+        # Retourne (partner, confidence) où confidence ∈ {high, medium, low, None}
+        search_vals = {
+            'cin':              cin,
+            'matricule_fiscal': matricule_fiscal,
+            'name':             nom_client,
+            'is_company':       company_type == 'company',
+        }
+        partner, match_confidence = self.env['res.partner']._find_partner_smart(search_vals)
 
-        if company_type == 'company':
-            # ── B2B : Entreprise ─────────────────────────────────────────────
-            # 1. Recherche par Matricule Fiscal (identifiant unique entreprise TN)
-            if matricule_fiscal:
-                partner = self.env['res.partner'].search([
-                    ('matricule_fiscal', '=', matricule_fiscal),
-                    ('is_company', '=', True),
-                ], limit=1)
-            # 2. Repli par Raison Sociale exacte (parmi les sociétés seulement)
-            if not partner and nom_client:
-                partner = self.env['res.partner'].search([
-                    ('name', '=', nom_client),
-                    ('is_company', '=', True),
-                ], limit=1)
-        else:
-            # ── B2C : Personne physique ───────────────────────────────────────
-            # 1. Recherche prioritaire par CIN (identifiant unique en Tunisie)
-            if cin:
-                partner = self.env['res.partner'].search([
-                    ('cin', '=', cin),
-                ], limit=1)
-            # 2. Repli par nom exact (ilike trop permissif pour la production)
-            if not partner and nom_client:
-                partner = self.env['res.partner'].search([
-                    ('name', '=', nom_client),
-                ], limit=1)
+        # Confiance FAIBLE → ne pas accepter automatiquement (laisser au Wizard)
+        if match_confidence == 'low':
+            _logger.info(
+                'AssurCore OCR [%s]: correspondance faible (%.0f%%) pour "%s" '
+                '→ validation manuelle requise.',
+                self.name, 0, nom_client or 'N/A',
+            )
+            partner = False
 
         # Client NON trouvé → stocker les données brutes pour le Wizard
         if not partner:
@@ -704,6 +809,11 @@ class InsuranceDocumentParser(models.Model):
                 nom_client or 'N/A',
                 'MF' if company_type == 'company' else 'CIN',
                 matricule_fiscal or cin or 'N/A',
+            )
+        else:
+            _logger.info(
+                'AssurCore OCR [%s]: client identifié "%s" (id=%d, confiance=%s)',
+                self.name, partner.name, partner.id, match_confidence,
             )
 
         # ── 3. Idempotence : police déjà importée ? ───────────────────────────
@@ -810,6 +920,769 @@ class InsuranceDocumentParser(models.Model):
         })
 
         return policy
+
+    # ─────────────────────────────────────────────────────────────────────────
+    #  _detect_document_type — Détection automatique par mots-clés
+    # ─────────────────────────────────────────────────────────────────────────
+
+    @api.model
+    def _detect_document_type_static(self, subject: str = '', filename: str = '') -> str:
+        """
+        Détecte le type de document (appelable avant création du record).
+
+        Stratégie :
+          1. Consulte insurance.ocr.training (apprentissage pondéré)
+          2. Fallback sur mots-clés statiques
+          3. Si aucune détection → 'autre' (l'utilisateur corrigera manuellement)
+        """
+        try:
+            doc_type, score = self.env['insurance.ocr.training'].detect_type(
+                subject or '', filename or '', ocr_data={}
+            )
+            if doc_type and doc_type != 'autre' and score >= 2:
+                _logger.info(
+                    'AssurCore OCR detect_static: "%s" → %s (score=%d) [LEARNED]',
+                    (subject or '')[:60], doc_type, score,
+                )
+                return doc_type
+        except Exception as exc:
+            _logger.warning('AssurCore OCR: erreur detect_type training — %s', exc)
+
+        # Fallback : mots-clés statiques intégrés
+        import unicodedata
+
+        def normalize(s):
+            if not s:
+                return ''
+            nfkd = unicodedata.normalize('NFKD', s.lower())
+            return ''.join(c for c in nfkd if not unicodedata.combining(c))
+
+        text = normalize(subject) + ' ' + normalize(filename)
+        static_kw = {
+            'piece_identite': ['cin', 'cni', 'passeport', 'identite', 'matricule', 'fiscal', 'kbis'],
+            'sinistre':  ['sinistre', 'accident', 'declaration', 'expertise', 'constat', 'bris'],
+            'reglement': ['reglement', 'cheque', 'paiement', 'virement', 'encaissement'],
+            'quittance': ['quittance', 'echeance', 'prime', 'avis', 'appel', 'cotisation'],
+            'avenant':   ['avenant', 'modification', 'resiliation', 'suspension'],
+            'contrat':   ['contrat', 'police', 'souscription', 'attestation'],
+        }
+        for doc_type in ['piece_identite', 'sinistre', 'reglement', 'quittance', 'avenant', 'contrat']:
+            for kw in static_kw.get(doc_type, []):
+                if kw in text:
+                    return doc_type
+
+        # Non reconnu → 'autre' pour classification manuelle
+        _logger.info(
+            'AssurCore OCR detect_static: "%s" → autre (non reconnu)',
+            (subject or '')[:60],
+        )
+        return 'autre'
+
+    def _detect_document_type(self, subject: str = '', filename: str = '') -> str:
+        """
+        Détecte le type de document à partir du sujet de l'email et/ou du nom
+        du fichier PDF en utilisant des mots-clés normalisés (sans accents).
+
+        Priorité de détection : sinistre > règlement > quittance > avenant > contrat
+
+        Returns:
+            str : Une valeur parmi DOC_TYPE ('contrat', 'quittance', 'reglement',
+                  'avenant', 'sinistre')
+        """
+        def normalize(s):
+            import unicodedata
+            if not s:
+                return ''
+            nfkd = unicodedata.normalize('NFKD', s.lower())
+            return ''.join(c for c in nfkd if not unicodedata.combining(c))
+
+        text = normalize(subject) + ' ' + normalize(filename)
+
+        for doc_type in ['sinistre', 'reglement', 'quittance', 'avenant', 'contrat']:
+            for kw in self._DOC_TYPE_KEYWORDS.get(doc_type, []):
+                if kw in text:
+                    _logger.info(
+                        'AssurCore OCR [%s]: type détecté = %s (mot-clé: "%s")',
+                        self.name, doc_type, kw,
+                    )
+                    return doc_type
+
+        _logger.info('AssurCore OCR [%s]: type non détecté → défaut "autre"', self.name)
+        return 'autre'
+
+    # ─────────────────────────────────────────────────────────────────────────
+    #  write — Apprentissage OCR lors de correction manuelle du type
+    # ─────────────────────────────────────────────────────────────────────────
+
+    def write(self, vals):
+        """
+        Surcharge write() pour déclencher l'apprentissage OCR automatique
+        quand un utilisateur corrige manuellement le doc_type.
+
+        Règle :
+          - Si doc_type change ET que l'ancien type était 'autre'
+          - ET que le nouveau type est un type concret (pas 'autre')
+          → Extraire les mots-clés du sujet + nom fichier
+          → Appeler insurance.ocr.training.learn() avec source='user'
+          → Relancer l'extraction OCR avec le bon type
+        """
+        old_types = {}
+        if 'doc_type' in vals:
+            for rec in self:
+                old_types[rec.id] = rec.doc_type
+
+        result = super().write(vals)
+
+        if 'doc_type' in vals:
+            new_type = vals['doc_type']
+            if new_type and new_type != 'autre':
+                for rec in self:
+                    old_type = old_types.get(rec.id)
+                    if old_type == 'autre':
+                        # Extraire les mots-clés et le contexte métier
+                        subject  = rec.source_subject or rec.name or ''
+                        filename = rec.attachment_id.name if rec.attachment_id else ''
+                        full_text = subject + ' ' + filename
+
+                        # Récupérer les données OCR déjà extraites pour enrichir le contexte
+                        ocr_data = {}
+                        if rec.normalized_ocr_json:
+                            try:
+                                import json as _json
+                                ocr_data = _json.loads(rec.normalized_ocr_json) or {}
+                            except Exception:
+                                pass
+
+                        training = self.env['insurance.ocr.training']
+                        keywords = training.extract_keywords(full_text)
+                        ctx      = training.extract_context(full_text, ocr_data)
+
+                        if keywords:
+                            training.learn(
+                                keywords, new_type,
+                                source='user',
+                                parser_id=rec.id,
+                                context=ctx,
+                            )
+                            _logger.info(
+                                'AssurCore OCR Learning [%s]: correction "%s" → "%s" '
+                                '(%d mots-clés appris)',
+                                rec.name, old_type, new_type, len(keywords),
+                            )
+                        # Relancer l'extraction OCR si un PDF est disponible
+                        if rec.attachment_id and rec.state in ('pending', 'error'):
+                            try:
+                                rec.write({'state': 'processing'})
+                                rec._mock_ocr_extract(rec.attachment_id.id)
+                            except Exception as exc:
+                                rec.write({
+                                    'state': 'error',
+                                    'error_message': str(exc),
+                                })
+
+        return result
+
+    # ─────────────────────────────────────────────────────────────────────────
+    #  _create_identity_from_ocr — Pièce d'identité (CIN / MF)
+    # ─────────────────────────────────────────────────────────────────────────
+
+    def _create_identity_from_ocr(self, ocr_data: dict, attachment_id: int):
+        """
+        Traite une pièce d'identité reçue par email (copie CIN ou MF).
+
+        Comportement :
+          - Cherche le partenaire correspondant (par nom / CIN / MF)
+          - Si trouvé : met à jour son CIN ou son Matricule Fiscal
+          - Si non trouvé : crée un partenaire avec les données extraites
+
+        Le PDF source est joint au chatter du partenaire pour traçabilité.
+        """
+        self.ensure_one()
+
+        nom_client = (ocr_data.get('nom_client') or '').strip()
+        cin        = (ocr_data.get('cin') or '').strip()
+        mf         = (ocr_data.get('matricule_fiscal') or '').strip()
+        is_company = ocr_data.get('company_type') == 'company'
+
+        # ── Recherche du partenaire ───────────────────────────────────────────
+        partner, confidence = self.env['res.partner']._find_partner_smart({
+            'cin':              cin,
+            'matricule_fiscal': mf,
+            'name':             nom_client,
+            'is_company':       is_company,
+        })
+
+        if partner and confidence in ('high', 'medium'):
+            update_vals = {}
+            # Mise à jour CIN si absent
+            if cin and not partner.cin:
+                update_vals['cin'] = cin
+            # Mise à jour MF si absent
+            if mf and not partner.matricule_fiscal:
+                update_vals['matricule_fiscal'] = mf
+            if update_vals:
+                partner.write(update_vals)
+                _logger.info(
+                    'AssurCore OCR Identity [%s]: partenaire %s mis à jour (%s)',
+                    self.name, partner.name, list(update_vals.keys()),
+                )
+            # Joindre le PDF au chatter du partenaire
+            if attachment_id:
+                att = self.env['ir.attachment'].browse(attachment_id)
+                if att.exists():
+                    att.copy({
+                        'res_model': 'res.partner',
+                        'res_id':    partner.id,
+                        'name':      att.name,
+                    })
+            self.write({
+                'state': 'validated',
+                'policy_id': False,
+            })
+            self.message_post(
+                body=_(
+                    'Pièce d\'identité traitée — Partenaire : <b>%s</b><br/>'
+                    'CIN mis à jour : %s | MF mis à jour : %s'
+                ) % (partner.name, bool(update_vals.get('cin')), bool(update_vals.get('matricule_fiscal'))),
+                subtype_id=self.env.ref('mail.mt_note').id,
+            )
+        else:
+            # Partenaire non trouvé ou faible confiance → créer si données suffisantes
+            if nom_client:
+                create_vals = {
+                    'name':       nom_client,
+                    'is_company': is_company,
+                }
+                if cin:
+                    create_vals['cin'] = cin
+                if mf:
+                    create_vals['matricule_fiscal'] = mf
+                new_partner = self.env['res.partner'].create(create_vals)
+                if attachment_id:
+                    att = self.env['ir.attachment'].browse(attachment_id)
+                    if att.exists():
+                        att.copy({
+                            'res_model': 'res.partner',
+                            'res_id':    new_partner.id,
+                        })
+                self.write({'state': 'validated'})
+                _logger.info(
+                    'AssurCore OCR Identity [%s]: nouveau partenaire créé "%s"',
+                    self.name, nom_client,
+                )
+            else:
+                self.write({
+                    'state': 'error',
+                    'error_message': 'Pièce identité : aucun nom client extrait par l\'OCR.',
+                })
+
+    # ─────────────────────────────────────────────────────────────────────────
+    #  _create_receipt_from_ocr — Quittance (insurance.receipt)
+    # ─────────────────────────────────────────────────────────────────────────
+
+    def _create_receipt_from_ocr(self, ocr_data: dict, attachment_id: int):
+        """
+        Crée ou retrouve une quittance (insurance.receipt) en état 'draft_ocr'
+        depuis les données OCR normalisées.
+
+        Recherche d'abord par N° quittance + compagnie pour idempotence.
+        Utilise _find_partner_smart() pour la résolution du client.
+        """
+        self.ensure_one()
+
+        # ── Résoudre compagnie ────────────────────────────────────────────────
+        company_name = (ocr_data.get('compagnie') or '').strip()
+        company = self.env['insurance.company'].search(
+            [('name', 'ilike', company_name)], limit=1
+        ) if company_name else False
+        if not company and company_name:
+            company = self.env['insurance.company'].create({'name': company_name})
+
+        # ── Résoudre client (smart match) ─────────────────────────────────────
+        partner, confidence = self.env['res.partner']._find_partner_smart({
+            'cin':             ocr_data.get('cin', ''),
+            'matricule_fiscal': ocr_data.get('matricule_fiscal', ''),
+            'name':            ocr_data.get('nom_client', ''),
+            'is_company':      ocr_data.get('company_type') == 'company',
+        })
+        if confidence == 'low':
+            partner = False
+
+        # ── Résoudre police ───────────────────────────────────────────────────
+        num_police = (ocr_data.get('num_police') or '').strip()
+        policy = False
+        if num_police and company:
+            policy = self.env['insurance.policy'].search([
+                ('num_police', '=', num_police),
+                ('company_ins_id', '=', company.id),
+            ], limit=1)
+
+        # ── Idempotence ───────────────────────────────────────────────────────
+        num_quittance = (ocr_data.get('num_quittance') or '').strip()
+        existing = False
+        if num_quittance and company:
+            existing = self.env['insurance.receipt'].search([
+                ('name', '=', num_quittance),
+            ], limit=1)
+
+        receipt_vals = {
+            'partner_id':     partner.id if partner else False,
+            'policy_id':      policy.id if policy else False,
+            'company_ins_id': company.id if company else False,
+            'amount_total':   ocr_data.get('montant', 0.0),
+            'date_emission':  ocr_data.get('date_effet') or fields.Date.today().isoformat(),
+            'date_echeance':  ocr_data.get('date_echeance') or fields.Date.today().isoformat(),
+            'state':          'emise',
+            'notes': (
+                f'Créée par OCR — {self.source_email or "N/A"}\n'
+                f'Confiance client : {confidence or "non trouvé"}'
+                + ('' if partner else '\n⚠ Client non identifié — validation manuelle requise.')
+            ),
+        }
+
+        if existing:
+            existing.write(receipt_vals)
+            receipt = existing
+        else:
+            if num_quittance:
+                receipt_vals['name'] = num_quittance
+            receipt = self.env['insurance.receipt'].create(receipt_vals)
+
+        # ── Lier PDF + màj parser ──────────────────────────────────────────────
+        if attachment_id:
+            self.env['ir.attachment'].browse(attachment_id).write({
+                'res_model': 'insurance.receipt', 'res_id': receipt.id,
+            })
+            receipt.message_post(
+                body=_('Quittance créée par <b>OCR</b> — Source : %s', self.source_email or 'N/A'),
+                attachment_ids=[attachment_id],
+                subtype_id=self.env.ref('mail.mt_note').id,
+            )
+
+        self.write({
+            'receipt_id':         receipt.id,
+            'state':              'validated',
+            'ocr_num_quittance':  num_quittance,
+            'ocr_montant':        ocr_data.get('montant', 0.0),
+            'ocr_date_effet':     ocr_data.get('date_effet') or False,
+        })
+
+        _logger.info('AssurCore OCR [%s]: quittance créée/màj id=%d', self.name, receipt.id)
+        return receipt
+
+    # ─────────────────────────────────────────────────────────────────────────
+    #  _create_settlement_from_ocr — Règlement + Bordereau automatique
+    # ─────────────────────────────────────────────────────────────────────────
+
+    def _create_settlement_from_ocr(self, ocr_data: dict, attachment_id: int):
+        """
+        Crée un règlement (insurance.settlement) en état 'brouillon' depuis
+        les données OCR normalisées.
+
+        Après création, déclenche _generate_bordereau_by_bank() pour regrouper
+        automatiquement les règlements OCR en attente par banque.
+        """
+        self.ensure_one()
+
+        # ── Résoudre client (smart match) ─────────────────────────────────────
+        partner, confidence = self.env['res.partner']._find_partner_smart({
+            'cin':             ocr_data.get('cin', ''),
+            'matricule_fiscal': ocr_data.get('matricule_fiscal', ''),
+            'name':            ocr_data.get('nom_client', ''),
+            'is_company':      ocr_data.get('company_type') == 'company',
+        })
+        if confidence == 'low':
+            partner = False
+
+        if not partner:
+            _logger.warning(
+                'AssurCore OCR [%s]: règlement — client "%s" non identifié',
+                self.name, ocr_data.get('nom_client', 'N/A'),
+            )
+
+        # ── Résoudre banque ───────────────────────────────────────────────────
+        banque_nom = (ocr_data.get('banque') or '').strip()
+        banque = False
+        if banque_nom:
+            banque = self.env['insurance.bank'].search(
+                ['|', ('name', 'ilike', banque_nom), ('code', 'ilike', banque_nom)], limit=1
+            )
+            if not banque:
+                banque = self.env['insurance.bank'].create({'name': banque_nom})
+                _logger.info('AssurCore OCR: banque créée — "%s"', banque_nom)
+
+        # ── Idempotence par N° chèque + banque ───────────────────────────────
+        num_cheque = (ocr_data.get('num_cheque') or '').strip()
+        existing = False
+        if num_cheque and banque:
+            existing = self.env['insurance.settlement'].search([
+                ('num_cheque', '=', num_cheque),
+                ('banque_tireur', '=', banque.id),
+            ], limit=1)
+
+        # ── Résoudre quittance liée (si N° fourni) ────────────────────────────
+        num_quittance = (ocr_data.get('num_quittance') or '').strip()
+        receipt = False
+        if num_quittance:
+            receipt = self.env['insurance.receipt'].search(
+                [('name', '=', num_quittance)], limit=1
+            )
+
+        settlement_vals = {
+            'partner_id':    partner.id if partner else self.env.ref('base.public_partner').id,
+            'receipt_id':    receipt.id if receipt else False,
+            'banque_tireur': banque.id if banque else False,
+            'num_cheque':    num_cheque,
+            'montant_reg':   ocr_data.get('montant', 0.0),
+            'type_reg':      ocr_data.get('type_reg', 'C'),
+            'date_reg':      ocr_data.get('date_reg') or fields.Date.today().isoformat(),
+            'state':         'brouillon',
+            'notes': (
+                f'Créé par OCR — {self.source_email or "N/A"}\n'
+                f'Confiance client : {confidence or "non trouvé"}'
+                + ('' if partner else '\n⚠ Client non identifié — validation requise.')
+            ),
+        }
+
+        if existing:
+            existing.write(settlement_vals)
+            settlement = existing
+        else:
+            settlement = self.env['insurance.settlement'].create(settlement_vals)
+
+        # ── Lier PDF + màj parser ──────────────────────────────────────────────
+        if attachment_id:
+            self.env['ir.attachment'].browse(attachment_id).write({
+                'res_model': 'insurance.settlement', 'res_id': settlement.id,
+            })
+            settlement.message_post(
+                body=_('Règlement créé par <b>OCR</b> — Source : %s', self.source_email or 'N/A'),
+                attachment_ids=[attachment_id],
+                subtype_id=self.env.ref('mail.mt_note').id,
+            )
+
+        self.write({
+            'settlement_id': settlement.id,
+            'state':         'validated',
+            'ocr_montant':   ocr_data.get('montant', 0.0),
+            'ocr_num_cheque': num_cheque,
+            'ocr_banque':    banque_nom,
+            'ocr_type_reg':  ocr_data.get('type_reg', 'C'),
+            'ocr_date_reg':  ocr_data.get('date_reg') or False,
+        })
+
+        # ── Générer bordereau automatique ─────────────────────────────────────
+        bordereau = self._generate_bordereau_by_bank(banque, settlement)
+        if bordereau:
+            self.write({'bordereau_id': bordereau.id})
+
+        _logger.info(
+            'AssurCore OCR [%s]: règlement créé id=%d%s',
+            self.name, settlement.id,
+            f' | bordereau id={bordereau.id}' if bordereau else '',
+        )
+        return settlement
+
+    # ─────────────────────────────────────────────────────────────────────────
+    #  _generate_bordereau_by_bank — Bordereau automatique par banque
+    # ─────────────────────────────────────────────────────────────────────────
+
+    def _generate_bordereau_by_bank(self, banque, current_settlement):
+        """
+        Génère ou met à jour automatiquement un bordereau de remise en banque
+        (insurance.journal.enc) en regroupant tous les règlements OCR en attente
+        pour la même banque.
+
+        Règle de déclenchement :
+          - Au moins 2 règlements en état 'brouillon' pour la même banque tireur
+          - OU 1 règlement si un bordereau ouvert existe déjà pour cette banque
+
+        Le bordereau est créé en état 'ouvert' et peut être validé manuellement.
+
+        Args:
+            banque             : insurance.bank (peut être False)
+            current_settlement : insurance.settlement venant d'être créé
+
+        Returns:
+            insurance.journal.enc | False
+        """
+        self.ensure_one()
+
+        if not banque:
+            return False
+
+        # Tous les règlements en brouillon pour cette banque (incluant l'actuel)
+        pending = self.env['insurance.settlement'].search([
+            ('banque_tireur', '=', banque.id),
+            ('state', '=', 'brouillon'),
+        ])
+
+        if len(pending) < 2:
+            return False  # Pas assez de règlements pour justifier un bordereau
+
+        # Vérifier si un bordereau ouvert existe déjà pour cette banque
+        today = fields.Date.today()
+        existing_bordereau = self.env['insurance.journal.enc'].search([
+            ('banque_enc', 'ilike', banque.name),
+            ('state', '=', 'ouvert'),
+            ('date_creation', '=', today),
+        ], limit=1)
+
+        total = sum(pending.mapped('montant_reg'))
+        bordereau_notes = (
+            f'Bordereau généré automatiquement par OCR\n'
+            f'Banque : {banque.name}\n'
+            f'Règlements inclus : {len(pending)}\n'
+            f'Total : {total:.3f} TND\n'
+            f'Règlements : {", ".join(pending.mapped("name"))}'
+        )
+
+        if existing_bordereau:
+            existing_bordereau.write({
+                'total_montant_enc': total,
+                'notes': bordereau_notes,
+            })
+            _logger.info(
+                'AssurCore OCR: bordereau màj id=%d — %d règlements — %.3f TND',
+                existing_bordereau.id, len(pending), total,
+            )
+            # Notifier dans le chatter du bordereau
+            existing_bordereau.message_post(
+                body=_(
+                    'Bordereau mis à jour par OCR — %d règlements ajoutés — Total : %.3f TND',
+                    len(pending), total,
+                ),
+                subtype_id=self.env.ref('mail.mt_note').id,
+            )
+            return existing_bordereau
+
+        # Créer un nouveau bordereau
+        # Déterminer la compagnie depuis le règlement actuel si possible
+        company_ins = False
+        if current_settlement.receipt_id and current_settlement.receipt_id.company_ins_id:
+            company_ins = current_settlement.receipt_id.company_ins_id
+        else:
+            # Chercher la compagnie la plus fréquente parmi les règlements en attente
+            companies = pending.mapped('receipt_id.company_ins_id').filtered(bool)
+            if companies:
+                company_ins = companies[0]
+
+        if not company_ins:
+            # Compagnie inconnue → prendre la première compagnie disponible
+            company_ins = self.env['insurance.company'].search([], limit=1)
+
+        if not company_ins:
+            _logger.warning('AssurCore OCR: impossible de créer le bordereau — aucune compagnie')
+            return False
+
+        bordereau = self.env['insurance.journal.enc'].create({
+            'company_ins_id':   company_ins.id,
+            'date_creation':    today,
+            'banque_enc':       banque.name,
+            'type_reg_enc':     'C',
+            'total_montant_enc': total,
+            'state':            'ouvert',
+            'notes':            bordereau_notes,
+            'agence_courtier':  self.env.company.name,
+        })
+
+        _logger.info(
+            'AssurCore OCR: bordereau créé id=%d — banque=%s — %d règlements — %.3f TND',
+            bordereau.id, banque.name, len(pending), total,
+        )
+
+        bordereau.message_post(
+            body=_(
+                'Bordereau créé automatiquement par OCR.<br/>'
+                '<b>Banque :</b> %s<br/>'
+                '<b>Règlements :</b> %d<br/>'
+                '<b>Total :</b> %.3f TND',
+                banque.name, len(pending), total,
+            ),
+            subtype_id=self.env.ref('mail.mt_note').id,
+        )
+        return bordereau
+
+    # ─────────────────────────────────────────────────────────────────────────
+    #  _create_operation_from_ocr — Avenant / Opération
+    # ─────────────────────────────────────────────────────────────────────────
+
+    def _create_operation_from_ocr(self, ocr_data: dict, attachment_id: int):
+        """
+        Crée un avenant / opération (insurance.operation) en état 'draft'
+        depuis les données OCR.
+        """
+        self.ensure_one()
+
+        # ── Résoudre police ───────────────────────────────────────────────────
+        num_police = (ocr_data.get('num_police') or '').strip()
+        company_name = (ocr_data.get('compagnie') or '').strip()
+        company = self.env['insurance.company'].search(
+            [('name', 'ilike', company_name)], limit=1
+        ) if company_name else False
+
+        policy = False
+        if num_police:
+            domain = [('num_police', '=', num_police)]
+            if company:
+                domain.append(('company_ins_id', '=', company.id))
+            policy = self.env['insurance.policy'].search(domain, limit=1)
+
+        if not policy:
+            _logger.warning(
+                'AssurCore OCR [%s]: avenant — police "%s" introuvable',
+                self.name, num_police or 'N/A',
+            )
+
+        # ── Mapper type avenant ───────────────────────────────────────────────
+        type_avenant_ocr = (ocr_data.get('type_avenant') or '').upper()
+        type_avenant_map = {
+            'RESILIATION': 'resiliation',
+            'SUSPENSION':  'suspension',
+            'MODIF':       'modification',
+            'MODIFICATION': 'modification',
+            'REMISE':      'remise_en_vigueur',
+        }
+        type_avenant = 'modification'
+        for k, v in type_avenant_map.items():
+            if k in type_avenant_ocr:
+                type_avenant = v
+                break
+
+        operation_vals = {
+            'policy_id':    policy.id if policy else False,
+            'type_avenant': type_avenant,
+            'date_avenant': ocr_data.get('date_effet') or fields.Date.today().isoformat(),
+            'state':        'draft',
+            'notes': (
+                f'Créé par OCR — {self.source_email or "N/A"}\n'
+                f'Type OCR : {type_avenant_ocr or "N/A"}'
+                + ('' if policy else '\n⚠ Police non identifiée — validation manuelle requise.')
+            ),
+        }
+
+        operation = self.env['insurance.operation'].create(operation_vals)
+
+        if attachment_id:
+            self.env['ir.attachment'].browse(attachment_id).write({
+                'res_model': 'insurance.operation', 'res_id': operation.id,
+            })
+            operation.message_post(
+                body=_('Avenant créé par <b>OCR</b> — Source : %s', self.source_email or 'N/A'),
+                attachment_ids=[attachment_id],
+                subtype_id=self.env.ref('mail.mt_note').id,
+            )
+
+        self.write({
+            'operation_id':   operation.id,
+            'state':          'validated',
+            'ocr_type_avenant': type_avenant_ocr,
+        })
+
+        _logger.info('AssurCore OCR [%s]: avenant créé id=%d', self.name, operation.id)
+        return operation
+
+    # ─────────────────────────────────────────────────────────────────────────
+    #  _create_claim_from_ocr — Sinistre (insurance.claim)
+    # ─────────────────────────────────────────────────────────────────────────
+
+    def _create_claim_from_ocr(self, ocr_data: dict, attachment_id: int):
+        """
+        Crée un sinistre (insurance.claim) en état 'declare' depuis les données OCR.
+        Utilise _find_partner_smart() pour la résolution du client.
+        """
+        self.ensure_one()
+
+        # ── Résoudre police ───────────────────────────────────────────────────
+        num_police = (ocr_data.get('num_police') or '').strip()
+        company_name = (ocr_data.get('compagnie') or '').strip()
+        company = self.env['insurance.company'].search(
+            [('name', 'ilike', company_name)], limit=1
+        ) if company_name else False
+
+        policy = False
+        if num_police:
+            domain = [('num_police', '=', num_police)]
+            if company:
+                domain.append(('company_ins_id', '=', company.id))
+            policy = self.env['insurance.policy'].search(domain, limit=1)
+
+        # ── Résoudre client (smart match) ─────────────────────────────────────
+        partner, confidence = self.env['res.partner']._find_partner_smart({
+            'cin':             ocr_data.get('cin', ''),
+            'matricule_fiscal': ocr_data.get('matricule_fiscal', ''),
+            'name':            ocr_data.get('nom_client', ''),
+            'is_company':      ocr_data.get('company_type') == 'company',
+        })
+        if confidence == 'low':
+            partner = False
+
+        # Préférer le client de la police si trouvé
+        if not partner and policy and policy.partner_id:
+            partner = policy.partner_id
+
+        # ── Mapper type sinistre ──────────────────────────────────────────────
+        type_sin_ocr = (ocr_data.get('type_sinistre') or '').upper()
+        type_sin_map = {
+            'AUTO': 'AUTO', 'ACCIDENT': 'AUTO', 'COLLISION': 'AUTO',
+            'INCENDIE': 'INCENDIE', 'FIRE': 'INCENDIE',
+            'VOL': 'VOL', 'THEFT': 'VOL',
+            'BRIS': 'BRIS_GLACE', 'GLACE': 'BRIS_GLACE',
+            'MEDICAL': 'MEDICAL', 'SANTE': 'MEDICAL',
+            'RC': 'RC',
+        }
+        type_sinistre = 'AUTRE'
+        for k, v in type_sin_map.items():
+            if k in type_sin_ocr:
+                type_sinistre = v
+                break
+
+        from datetime import datetime
+        date_sin_str = ocr_data.get('date_sinistre')
+        date_sinistre = False
+        if date_sin_str:
+            try:
+                date_sinistre = datetime.fromisoformat(date_sin_str)
+            except Exception:
+                date_sinistre = datetime.now()
+        else:
+            date_sinistre = datetime.now()
+
+        claim_vals = {
+            'policy_id':     policy.id if policy else False,
+            'date_sinistre': date_sinistre,
+            'type_sinistre': type_sinistre,
+            'state':         'declare',
+            'description': (
+                f'Sinistre déclaré via OCR — {self.source_email or "N/A"}\n'
+                f'Type OCR : {type_sin_ocr or "N/A"}\n'
+                f'Confiance client : {confidence or "non trouvé"}'
+                + ('' if partner else '\n⚠ Client non identifié — validation requise.')
+                + ('' if policy else '\n⚠ Police non identifiée — validation requise.')
+            ),
+        }
+
+        claim = self.env['insurance.claim'].create(claim_vals)
+
+        if attachment_id:
+            self.env['ir.attachment'].browse(attachment_id).write({
+                'res_model': 'insurance.claim', 'res_id': claim.id,
+            })
+            claim.message_post(
+                body=_('Sinistre déclaré par <b>OCR</b> — Source : %s', self.source_email or 'N/A'),
+                attachment_ids=[attachment_id],
+                subtype_id=self.env.ref('mail.mt_note').id,
+            )
+
+        self.write({
+            'claim_id':         claim.id,
+            'state':            'validated',
+            'ocr_type_sinistre': type_sin_ocr,
+            'ocr_date_sinistre': date_sinistre,
+        })
+
+        _logger.info('AssurCore OCR [%s]: sinistre créé id=%d', self.name, claim.id)
+        return claim
 
     # ─────────────────────────────────────────────────────────────────────────
     #  Action manuelle (test hors email)

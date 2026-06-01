@@ -1,0 +1,269 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+================================================================================
+  EVO01 — Vues XML : Apprentissage OCR
+  insurance.ocr.training — Table des mots-cles appris + contexte metier
+================================================================================
+-->
+<odoo>
+
+  <!-- ════════════════════════════════════════════════════════════════════════ -->
+  <!--  1. VUE LISTE — Regles d'apprentissage OCR                               -->
+  <!-- ════════════════════════════════════════════════════════════════════════ -->
+  <record id="view_insurance_ocr_training_tree" model="ir.ui.view">
+    <field name="name">insurance.ocr.training.tree</field>
+    <field name="model">insurance.ocr.training</field>
+    <field name="arch" type="xml">
+      <tree string="Regles d'apprentissage OCR"
+            decoration-success="source == 'user'"
+            decoration-info="source == 'auto'"
+            decoration-muted="source == 'system'"
+            default_order="hit_count desc">
+
+        <field name="keyword"          string="Mot-cle"/>
+        <field name="doc_type"         widget="badge"
+               decoration-primary="doc_type == 'contrat'"
+               decoration-success="doc_type == 'quittance'"
+               decoration-info="doc_type == 'reglement'"
+               decoration-warning="doc_type == 'avenant'"
+               decoration-danger="doc_type == 'sinistre'"
+               decoration-muted="doc_type in ('piece_identite','autre')"/>
+        <field name="hit_count"        string="Confirmations" optional="show"/>
+        <field name="source"           widget="badge"
+               decoration-success="source == 'user'"
+               decoration-info="source == 'auto'"
+               decoration-muted="source == 'system'"/>
+        <!-- Contexte metier -->
+        <field name="company_ins_id"   string="Compagnie"     optional="show"/>
+        <field name="bank_id"          string="Banque"         optional="show"/>
+        <field name="vehicle_brand"    string="Marque"         optional="show"/>
+        <field name="insurance_branch" string="Branche"        optional="show"/>
+        <field name="operation_type"   string="Operation"      optional="hide"/>
+        <field name="context_summary"  string="Contexte"       optional="show"/>
+        <field name="last_used"        string="Derniere util." optional="show"/>
+      </tree>
+    </field>
+  </record>
+
+  <!-- ════════════════════════════════════════════════════════════════════════ -->
+  <!--  2. VUE FORM — Fiche d'une regle d'apprentissage                         -->
+  <!-- ════════════════════════════════════════════════════════════════════════ -->
+  <record id="view_insurance_ocr_training_form" model="ir.ui.view">
+    <field name="name">insurance.ocr.training.form</field>
+    <field name="model">insurance.ocr.training</field>
+    <field name="arch" type="xml">
+      <form string="Regle d'apprentissage OCR">
+        <sheet>
+
+          <!-- Titre : mot-cle + type -->
+          <div class="oe_title">
+            <label for="keyword" string="Mot-cle"/>
+            <h1>
+              <field name="keyword"
+                     placeholder="Ex: quittance, maghrebia, stb..."
+                     style="text-transform:lowercase;"/>
+            </h1>
+            <field name="doc_type" widget="badge"
+                   decoration-primary="doc_type == 'contrat'"
+                   decoration-success="doc_type == 'quittance'"
+                   decoration-info="doc_type == 'reglement'"
+                   decoration-warning="doc_type == 'avenant'"
+                   decoration-danger="doc_type == 'sinistre'"
+                   decoration-muted="doc_type in ('piece_identite','autre')"/>
+          </div>
+
+          <!-- Bandeau de confiance -->
+          <div class="alert alert-success"
+               invisible="hit_count &lt; 5 or source != 'user'">
+            <i class="fa fa-graduation-cap"/> Regle bien etablie —
+            confirmee <field name="hit_count" readonly="1"/> fois par un utilisateur.
+          </div>
+          <div class="alert alert-info"
+               invisible="hit_count &gt;= 5 or source == 'system'">
+            <i class="fa fa-info-circle"/> Regle en apprentissage —
+            <field name="hit_count" readonly="1"/> confirmation(s).
+            Elle sera prioritaire apres 5 confirmations utilisateur.
+          </div>
+
+          <!-- Corps principal -->
+          <group>
+
+            <!-- Colonne gauche : classification -->
+            <group string="Classification">
+              <field name="doc_type"/>
+              <field name="hit_count" readonly="1"/>
+              <field name="source" widget="badge"
+                     decoration-success="source == 'user'"
+                     decoration-info="source == 'auto'"
+                     decoration-muted="source == 'system'"/>
+              <field name="last_used" readonly="1"/>
+              <field name="parser_id" readonly="1"
+                     options="{'no_open': False}"
+                     invisible="not parser_id"/>
+            </group>
+
+            <!-- Colonne droite : contexte metier -->
+            <group string="Contexte metier (optionnel)">
+              <field name="company_ins_id"
+                     options="{'no_create': True}"
+                     placeholder="Toutes compagnies si vide"/>
+              <field name="bank_id"
+                     options="{'no_create': True}"
+                     placeholder="Toutes banques si vide"/>
+              <field name="vehicle_brand"
+                     placeholder="Ex: PEUGEOT, RENAULT..."
+                     style="text-transform:uppercase;"/>
+              <field name="insurance_branch"
+                     placeholder="Toutes branches si vide"/>
+              <field name="operation_type"
+                     placeholder="Tous types si vide"/>
+              <field name="context_summary" readonly="1"
+                     string="Resume contexte"/>
+            </group>
+
+          </group>
+
+        </sheet>
+      </form>
+    </field>
+  </record>
+
+  <!-- ════════════════════════════════════════════════════════════════════════ -->
+  <!--  3. VUE RECHERCHE — Filtres et regroupements                              -->
+  <!-- ════════════════════════════════════════════════════════════════════════ -->
+  <record id="view_insurance_ocr_training_search" model="ir.ui.view">
+    <field name="name">insurance.ocr.training.search</field>
+    <field name="model">insurance.ocr.training</field>
+    <field name="arch" type="xml">
+      <search string="Recherche regles OCR">
+
+        <!-- Recherche texte libre -->
+        <field name="keyword"       string="Mot-cle"/>
+        <field name="company_ins_id" string="Compagnie"/>
+        <field name="bank_id"        string="Banque"/>
+        <field name="vehicle_brand"  string="Marque"/>
+
+        <separator/>
+
+        <!-- Filtres par source -->
+        <filter name="filter_user"
+                string="Corrections utilisateur"
+                domain="[('source','=','user')]"
+                help="Uniquement les regles apprises manuellement (les plus fiables)"/>
+        <filter name="filter_auto"
+                string="Detection automatique"
+                domain="[('source','=','auto')]"/>
+        <filter name="filter_system"
+                string="Regles systeme"
+                domain="[('source','=','system')]"/>
+
+        <separator/>
+
+        <!-- Filtres par type de document -->
+        <filter name="filter_contrat"
+                string="Contrats"
+                domain="[('doc_type','=','contrat')]"/>
+        <filter name="filter_quittance"
+                string="Quittances"
+                domain="[('doc_type','=','quittance')]"/>
+        <filter name="filter_reglement"
+                string="Reglements"
+                domain="[('doc_type','=','reglement')]"/>
+        <filter name="filter_avenant"
+                string="Avenants"
+                domain="[('doc_type','=','avenant')]"/>
+        <filter name="filter_sinistre"
+                string="Sinistres"
+                domain="[('doc_type','=','sinistre')]"/>
+        <filter name="filter_identite"
+                string="Pieces identite"
+                domain="[('doc_type','=','piece_identite')]"/>
+
+        <separator/>
+
+        <!-- Filtres par confiance -->
+        <filter name="filter_confirmed"
+                string="Bien etablies (5+ confirmations)"
+                domain="[('hit_count','>=',5)]"/>
+        <filter name="filter_with_context"
+                string="Avec contexte metier"
+                domain="['|','|','|',
+                          ('company_ins_id','!=',False),
+                          ('bank_id','!=',False),
+                          ('vehicle_brand','!=',False),
+                          ('insurance_branch','!=',False)]"/>
+
+        <separator/>
+
+        <!-- Regroupements -->
+        <group expand="0" string="Regrouper par">
+          <filter name="group_doc_type"
+                  string="Type de document"
+                  context="{'group_by': 'doc_type'}"/>
+          <filter name="group_source"
+                  string="Source"
+                  context="{'group_by': 'source'}"/>
+          <filter name="group_company"
+                  string="Compagnie"
+                  context="{'group_by': 'company_ins_id'}"/>
+          <filter name="group_bank"
+                  string="Banque"
+                  context="{'group_by': 'bank_id'}"/>
+          <filter name="group_branch"
+                  string="Branche"
+                  context="{'group_by': 'insurance_branch'}"/>
+        </group>
+
+      </search>
+    </field>
+  </record>
+
+  <!-- ════════════════════════════════════════════════════════════════════════ -->
+  <!--  4. VUE PIVOT — Statistiques d'apprentissage                              -->
+  <!-- ════════════════════════════════════════════════════════════════════════ -->
+  <record id="view_insurance_ocr_training_pivot" model="ir.ui.view">
+    <field name="name">insurance.ocr.training.pivot</field>
+    <field name="model">insurance.ocr.training</field>
+    <field name="arch" type="xml">
+      <pivot string="Statistiques apprentissage OCR"
+             display_quantity="true">
+        <field name="doc_type"    type="row"/>
+        <field name="source"      type="col"/>
+        <field name="hit_count"   type="measure"/>
+      </pivot>
+    </field>
+  </record>
+
+  <!-- ════════════════════════════════════════════════════════════════════════ -->
+  <!--  5. ACTION + MENUS                                                        -->
+  <!-- ════════════════════════════════════════════════════════════════════════ -->
+  <record id="action_insurance_ocr_training" model="ir.actions.act_window">
+    <field name="name">Apprentissage OCR</field>
+    <field name="res_model">insurance.ocr.training</field>
+    <field name="view_mode">tree,form,pivot</field>
+    <field name="search_view_id" ref="view_insurance_ocr_training_search"/>
+    <field name="context">{
+      'search_default_filter_user': 0,
+      'search_default_group_doc_type': 0
+    }</field>
+    <field name="help" type="html">
+      <p class="o_view_nocontent_smiling_face">
+        Aucune regle d'apprentissage OCR enregistree
+      </p>
+      <p>
+        Les regles sont creees automatiquement quand vous corrigez
+        le type d'un document classe "Autre" par l'OCR.
+        Plus vous corrigez, plus l'OCR devient precis.
+      </p>
+    </field>
+  </record>
+
+  <!-- Sous-menu sous "Importation OCR" -->
+  <menuitem id="menu_assurcore_ocr_training"
+            name="Apprentissage OCR"
+            parent="menu_assurcore_ocr"
+            action="action_insurance_ocr_training"
+            sequence="20"
+            groups="assurcore.group_assurcore_manager"/>
+
+</odoo>

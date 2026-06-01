@@ -16,6 +16,9 @@ from . import insurance_mouvement_report
 from . import insurance_mouvement_report_wizard
 from . import fleet_vehicle
 # EVO01 Etape 1 : Parseur OCR + etat draft_ocr sur insurance.policy
+from . import insurance_ocr_training         # Apprentissage OCR — doit preceder document_parser
 from . import insurance_document_parser
 # EVO01 Etape 2 : Wizard de validation manuelle du client
 from . import insurance_ocr_wizard
+# EVO01 Etape 3 : Assistant de classification OCR 2 etapes
+from . import insurance_ocr_classify_wizard
