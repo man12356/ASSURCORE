@@ -10,6 +10,7 @@ from . import res_partner
 from . import insurance_policy
 from . import insurance_commission_rule
 from . import insurance_operation
+from . import insurance_settlement_imputation  # Lettrage multi-quittances — avant receipt
 from . import insurance_receipt
 from . import insurance_claim
 from . import insurance_mouvement_report

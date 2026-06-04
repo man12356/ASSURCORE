@@ -47,7 +47,7 @@
 
         <sheet>
           <div name="button_box" class="oe_button_box">
-            <button name="action_view_settlements" type="object"
+            <button name="action_view_settlements" invisible="1" type="object"
                     class="oe_stat_button" icon="fa-money">
               <field name="settlement_count" widget="statinfo" string="Règlements"/>
             </button>
@@ -111,31 +111,25 @@
               </group>
             </page>
 
-            <page string="Règlements" name="reglements">
-              <field name="settlement_ids">
-                <tree editable="bottom"
-                      decoration-danger="state == 'impaye'"
-                      decoration-success="state in ('regle','encaisse')">
-                  <field name="date_reg"/>
-                  <field name="type_reg"/>
-                  <field name="partner_id"/>
-                  <field name="num_cheque"
-                         column_invisible="type_reg != 'C'"/>
-                  <field name="date_echeance_cheque"
-                         column_invisible="type_reg != 'C'"/>
-                  <field name="montant_reg" widget="monetary"
+            <page string="Paiements" name="reglements">
+              <!-- Architecture Oracle fidèle : tout passe par insurance.settlement.imputation -->
+              <!-- Voir onglet "Imputations" dans insurance_imputation_views.xml             -->
+              <field name="imputation_ids" readonly="1">
+                <tree string="Règlements imputés"
+                      decoration-success="settlement_state in ('regle','encaisse')"
+                      decoration-warning="settlement_state == 'remis'"
+                      decoration-danger="settlement_state == 'impaye'">
+                  <field name="date_imputation" string="Date"/>
+                  <field name="settlement_id" string="Règlement"/>
+                  <field name="partner_id" string="Payeur"/>
+                  <field name="montant_impute" widget="monetary"
                          options="{'currency_field': 'currency_id'}"
-                         sum="Total règlements"/>
-                  <field name="state" widget="badge"
-                         decoration-success="state in ('regle','encaisse')"
-                         decoration-danger="state == 'impaye'"/>
+                         sum="Total imputé"/>
+                  <field name="settlement_montant_reg" widget="monetary"
+                         options="{'currency_field': 'currency_id'}"
+                         string="Montant règlement" optional="show"/>
+                  <field name="settlement_state" widget="badge" string="État"/>
                   <field name="currency_id" column_invisible="1"/>
-                  <button name="action_confirmer" string="Confirmer"
-                          type="object" icon="fa-check"
-                          invisible="state not in ('brouillon','remis')"/>
-                  <button name="action_rejeter" string="Rejeter"
-                          type="object" icon="fa-times"
-                          invisible="state in ('impaye','encaisse')"/>
                 </tree>
               </field>
             </page>

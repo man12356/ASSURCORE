@@ -419,9 +419,17 @@ class InsuranceReceipt(models.Model):
     settlement_ids = fields.One2many(
         comodel_name='insurance.settlement',
         inverse_name='receipt_id',
-        string='Règlements',
-        help='Chèques, espèces ou virements reçus sur cette quittance. '
+        string='Règlements directs',
+        help='Chèques, espèces ou virements reçus directement sur cette quittance. '
              'Équivalent Oracle : PR_REGELEMENT.',
+    )
+
+    imputation_ids = fields.One2many(
+        comodel_name='insurance.settlement.imputation',
+        inverse_name='receipt_id',
+        string='Imputations',
+        help='Fractions de règlements externes imputées sur cette quittance '
+             '(lettrage multi-quittances). Équivalent Oracle : PR_COMPENSATION_REGLEMENT.',
     )
 
     settlement_count = fields.Integer(
@@ -495,8 +503,8 @@ class InsuranceReceipt(models.Model):
     @api.depends(
         'montant_prime', 'commission', 'montant_honoraire_ht',
         'taux_tva', 'timbre_fiscal',
-        'settlement_ids', 'settlement_ids.montant_reg',
-        'settlement_ids.state',
+        'imputation_ids', 'imputation_ids.montant_impute',
+        'imputation_ids.settlement_id', 'imputation_ids.settlement_id.state',
     )
     def _compute_amounts(self):
         """
@@ -504,6 +512,10 @@ class InsuranceReceipt(models.Model):
 
         Formule TTC tunisienne :
           TTC = Prime nette + Honoraires HT + TVA (% sur honoraires) + Timbre Fiscal
+
+        Encaissé = UNIQUEMENT via insurance.settlement.imputation
+        (architecture fidèle à Oracle : PR_COMPENSATION_REGLEMENT est le seul lien
+         entre PR_REGELEMENT et PR_OPERATION — pas de lien direct)
         """
         for rec in self:
             # TVA uniquement sur les honoraires HT (pas sur la prime pure)
@@ -516,11 +528,12 @@ class InsuranceReceipt(models.Model):
                 + rec.timbre_fiscal
             )
 
-            # Encaissé = somme des règlements confirmés (état 'regle' ou 'encaisse')
-            confirmed_settlements = rec.settlement_ids.filtered(
-                lambda s: s.state in ('regle', 'encaisse')
+            # Encaissé = somme des imputations confirmées (état 'regle' ou 'encaisse')
+            # Toute liaison quittance-règlement passe par insurance.settlement.imputation
+            confirmed_imputations = rec.imputation_ids.filtered(
+                lambda i: i.settlement_id.state in ('regle', 'encaisse')
             )
-            rec.amount_paid = sum(confirmed_settlements.mapped('montant_reg'))
+            rec.amount_paid     = sum(confirmed_imputations.mapped('montant_impute'))
             rec.amount_residual = rec.amount_total - rec.amount_paid
 
     @api.depends('date_echeance', 'state')
@@ -786,6 +799,19 @@ class InsuranceReceipt(models.Model):
     # ─────────────────────────────────────────────────────────────────────────
     #  Actions Smart Buttons
     # ─────────────────────────────────────────────────────────────────────────
+
+
+    def action_view_imputations(self):
+        """Ouvre les imputations filtrées sur cette quittance."""
+        self.ensure_one()
+        return {
+            'type': 'ir.actions.act_window',
+            'name': 'Imputations',
+            'res_model': 'insurance.settlement.imputation',
+            'view_mode': 'tree,form',
+            'domain': [('receipt_id', '=', self.id)],
+            'context': {'default_receipt_id': self.id},
+        }
 
     def action_view_settlements(self):
         """Smart Button → liste des règlements (chèques/virements)."""
@@ -1070,14 +1096,28 @@ class InsuranceSettlement(models.Model):
         help='Ex-champ Oracle : MONTANT_REG NUMBER(11,3) dans PR_REGELEMENT.',
     )
 
+    imputation_ids = fields.One2many(
+        comodel_name='insurance.settlement.imputation',
+        inverse_name='settlement_id',
+        string='Imputations sur quittances',
+        help='Ventilation de ce règlement sur plusieurs quittances (lettrage multi-quittances).',
+    )
+
     montant_restant = fields.Monetary(
-        string='Montant restant non imputé (TND)',
+        string='Solde disponible (TND)',
         currency_field='currency_id',
-        default=0.0,
-        help='Si le chèque dépasse le montant dû, le surplus peut être '
-             'reporté sur d\'autres quittances de la même famille. '
+        compute='_compute_montant_restant',
+        store=True,
+        help='Montant restant disponible pour imputation sur d\'autres quittances. '
+             '= Montant règlement − somme des imputations existantes. '
              'Ex-champ Oracle : MONTANT_RESTANT NUMBER(11,3) dans PR_REGELEMENT.',
     )
+
+    @api.depends('montant_reg', 'imputation_ids', 'imputation_ids.montant_impute')
+    def _compute_montant_restant(self):
+        for rec in self:
+            total_impute = sum(rec.imputation_ids.mapped('montant_impute'))
+            rec.montant_restant = max(0.0, rec.montant_reg - total_impute)
 
     currency_id = fields.Many2one(
         comodel_name='res.currency',
@@ -1112,6 +1152,29 @@ class InsuranceSettlement(models.Model):
         tracking=True,
         required=True,
     )
+
+    imputation_ids = fields.One2many(
+        comodel_name='insurance.settlement.imputation',
+        inverse_name='settlement_id',
+        string='Imputations sur quittances',
+        help='Ventilation de ce règlement sur plusieurs quittances (lettrage multi-quittances).',
+    )
+
+    montant_restant = fields.Monetary(
+        string='Solde disponible (TND)',
+        currency_field='currency_id',
+        compute='_compute_montant_restant',
+        store=True,
+        help='Montant restant disponible pour imputation sur d\'autres quittances. '
+             '= Montant règlement - somme des imputations existantes. '
+             'Ex-champ Oracle : MONTANT_RESTANT NUMBER(11,3) dans PR_REGELEMENT.',
+    )
+
+    @api.depends('montant_reg', 'imputation_ids', 'imputation_ids.montant_impute')
+    def _compute_montant_restant(self):
+        for rec in self:
+            total_impute = sum(rec.imputation_ids.mapped('montant_impute'))
+            rec.montant_restant = max(0.0, rec.montant_reg - total_impute)
 
     imputer = fields.Boolean(
         string='Imputé',

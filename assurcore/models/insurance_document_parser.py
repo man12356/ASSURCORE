@@ -1350,6 +1350,25 @@ class InsuranceDocumentParser(models.Model):
         else:
             settlement = self.env['insurance.settlement'].create(settlement_vals)
 
+        # ── Créer l'imputation (architecture fidèle Oracle) ────────────────────
+        # Tout lien règlement-quittance passe par insurance.settlement.imputation
+        receipt_id_val = settlement_vals.get('receipt_id')
+        if receipt_id_val:
+            receipt_obj = self.env['insurance.receipt'].browse(receipt_id_val)
+            if receipt_obj.exists():
+                existing_imp = self.env['insurance.settlement.imputation'].search([
+                    ('settlement_id', '=', settlement.id),
+                    ('receipt_id',    '=', receipt_id_val),
+                ], limit=1)
+                if not existing_imp:
+                    self.env['insurance.settlement.imputation'].create({
+                        'settlement_id':  settlement.id,
+                        'receipt_id':     receipt_id_val,
+                        'montant_impute': settlement_vals.get('montant_reg', 0.0),
+                        'date_imputation': settlement_vals.get('date_reg') or fields.Date.today(),
+                        'notes':          'Cree automatiquement par OCR',
+                    })
+
         # ── Lier PDF + màj parser ──────────────────────────────────────────────
         if attachment_id:
             self.env['ir.attachment'].browse(attachment_id).write({

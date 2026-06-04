@@ -1,0 +1,249 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+================================================================================
+  Vues XML — Lettrage / Imputation de Règlement (insurance.settlement.imputation)
+  + Wizard d'imputation (insurance.imputation.wizard)
+================================================================================
+-->
+<odoo>
+
+  <!-- 1. VUE LISTE — Imputations -->
+  <record id="view_insurance_imputation_tree" model="ir.ui.view">
+    <field name="name">insurance.settlement.imputation.tree</field>
+    <field name="model">insurance.settlement.imputation</field>
+    <field name="arch" type="xml">
+      <tree string="Imputations de règlements"
+            decoration-success="settlement_state in ('regle','encaisse')"
+            decoration-warning="settlement_state == 'remis'"
+            decoration-danger="settlement_state == 'impaye'">
+        <field name="date_imputation"/>
+        <field name="settlement_id" string="Règlement"/>
+        <field name="partner_id" string="Payeur"/>
+        <field name="receipt_id" string="Quittance"/>
+        <field name="montant_impute" widget="monetary"
+               options="{'currency_field': 'currency_id'}"
+               sum="Total imputé"/>
+        <field name="settlement_montant_reg" widget="monetary"
+               options="{'currency_field': 'currency_id'}"
+               optional="show" string="Montant règlement"/>
+        <field name="settlement_state" widget="badge"
+               decoration-success="settlement_state in ('regle','encaisse')"
+               decoration-warning="settlement_state == 'remis'"
+               decoration-danger="settlement_state == 'impaye'"
+               string="État règlement"/>
+        <field name="currency_id" column_invisible="1"/>
+      </tree>
+    </field>
+  </record>
+
+  <!-- 2. VUE FORM — Imputation -->
+  <record id="view_insurance_imputation_form" model="ir.ui.view">
+    <field name="name">insurance.settlement.imputation.form</field>
+    <field name="model">insurance.settlement.imputation</field>
+    <field name="arch" type="xml">
+      <form string="Imputation de Règlement">
+        <sheet>
+          <div class="oe_title">
+            <label for="name"/>
+            <h1><field name="name" readonly="1"/></h1>
+          </div>
+          <group>
+            <group string="Règlement source">
+              <field name="settlement_id"
+                     domain="[('state','in',('regle','encaisse')),('montant_restant','>',0)]"
+                     options="{'no_create': True}"/>
+              <field name="settlement_montant_reg" readonly="1"/>
+              <field name="partner_id" readonly="1"/>
+              <field name="settlement_state" widget="badge" readonly="1"/>
+            </group>
+            <group string="Imputation">
+              <field name="receipt_id" options="{'no_create': True}"/>
+              <field name="montant_impute" widget="monetary"
+                     options="{'currency_field': 'currency_id'}"/>
+              <field name="date_imputation"/>
+              <field name="receipt_amount_total" readonly="1"/>
+              <field name="currency_id" invisible="1"/>
+            </group>
+          </group>
+          <group string="Notes">
+            <field name="notes" nolabel="1"/>
+          </group>
+        </sheet>
+      </form>
+    </field>
+  </record>
+
+  <!-- 3. ACTION — Imputations -->
+  <record id="action_insurance_imputation" model="ir.actions.act_window">
+    <field name="name">Imputations de Règlements</field>
+    <field name="res_model">insurance.settlement.imputation</field>
+    <field name="view_mode">tree,form</field>
+    <field name="help" type="html">
+      <p class="o_view_nocontent_smiling_face">
+        Aucune imputation enregistrée
+      </p>
+      <p>
+        Utilisez le bouton "Imputer règlement existant" sur une quittance
+        pour ventiler un règlement sur plusieurs quittances.
+      </p>
+    </field>
+  </record>
+
+  <!-- 4. WIZARD — Imputer un règlement existant -->
+  <record id="view_insurance_imputation_wizard_form" model="ir.ui.view">
+    <field name="name">insurance.imputation.wizard.form</field>
+    <field name="model">insurance.imputation.wizard</field>
+    <field name="arch" type="xml">
+      <form string="Imputer un règlement existant">
+
+        <div class="alert alert-info" role="status">
+          <i class="fa fa-info-circle"/>
+          Sélectionnez un règlement existant ayant un solde disponible
+          et indiquez le montant à imputer sur cette quittance.
+        </div>
+
+        <group string="Quittance à régler" col="2">
+          <field name="receipt_id" readonly="1"/>
+          <field name="receipt_amount_total" readonly="1" widget="monetary"
+                 options="{'currency_field': 'currency_id'}"/>
+          <field name="receipt_amount_paid" readonly="1" widget="monetary"
+                 options="{'currency_field': 'currency_id'}"/>
+          <field name="receipt_amount_residual" readonly="1" widget="monetary"
+                 options="{'currency_field': 'currency_id'}"
+                 decoration-danger="receipt_amount_residual > 0"/>
+        </group>
+
+        <separator/>
+
+        <group string="Règlement à imputer" col="2">
+          <field name="settlement_id"
+                 domain="[('state','in',('regle','encaisse')),('montant_restant','>',0)]"
+                 options="{'no_create': True}"
+                 help="Seuls les règlements confirmés avec un solde disponible sont affichés."/>
+          <field name="settlement_partner_id" readonly="1"/>
+          <field name="settlement_montant_reg" readonly="1" widget="monetary"
+                 options="{'currency_field': 'currency_id'}"/>
+          <field name="settlement_montant_restant" readonly="1" widget="monetary"
+                 options="{'currency_field': 'currency_id'}"
+                 decoration-warning="settlement_montant_restant > 0"/>
+        </group>
+
+        <separator/>
+
+        <group string="Imputation" col="2">
+          <field name="montant_a_imputer" widget="monetary"
+                 options="{'currency_field': 'currency_id'}"/>
+          <field name="date_imputation"/>
+          <field name="currency_id" invisible="1"/>
+        </group>
+
+        <group string="Notes">
+          <field name="notes" nolabel="1" placeholder="Commentaire optionnel..."/>
+        </group>
+
+        <footer>
+          <button name="action_confirmer_imputation"
+                  string="Confirmer l'imputation"
+                  type="object"
+                  class="oe_highlight btn-primary"/>
+          <button string="Annuler" class="btn-secondary" special="cancel"/>
+        </footer>
+
+      </form>
+    </field>
+  </record>
+
+  <!-- 5. ACTION WIZARD -->
+  <record id="action_insurance_imputation_wizard" model="ir.actions.act_window">
+    <field name="name">Imputer un règlement existant</field>
+    <field name="res_model">insurance.imputation.wizard</field>
+    <field name="view_mode">form</field>
+    <field name="view_id" ref="view_insurance_imputation_wizard_form"/>
+    <field name="target">new</field>
+    <field name="context">{'default_receipt_id': active_id}</field>
+  </record>
+
+  <!-- 6. AJOUT BOUTON + ONGLET IMPUTATIONS sur fiche quittance -->
+  <record id="view_insurance_receipt_imputation_inherit" model="ir.ui.view">
+    <field name="name">insurance.receipt.imputation.inherit</field>
+    <field name="model">insurance.receipt</field>
+    <field name="inherit_id" ref="assurcore.view_insurance_receipt_form_detail"/>
+    <field name="arch" type="xml">
+
+      <!-- Bouton stat "Imputations" dans le button_box -->
+      <div name="button_box" position="inside">
+        <button type="object"
+                name="action_view_imputations"
+                class="oe_stat_button"
+                icon="fa-link"
+                invisible="id == False">
+          <div class="o_field_widget o_stat_info">
+            <span class="o_stat_value">
+              <field name="imputation_ids" widget="statinfo" nolabel="1"/>
+            </span>
+            <span class="o_stat_text">Paiements</span>
+          </div>
+        </button>
+      </div>
+
+      <!-- Bouton "Imputer règlement existant" dans le header -->
+      <xpath expr="//header" position="inside">
+        <button name="%(assurcore.action_insurance_imputation_wizard)d"
+                string="Imputer règlement existant"
+                type="action"
+                class="btn-secondary"
+                icon="fa-link"
+                invisible="state in ('encaissee','reversee')"
+                help="Ventiler un règlement existant (avec solde disponible) sur cette quittance."/>
+      </xpath>
+
+    </field>
+  </record>
+
+  <!-- 7. AJOUT IMPUTATIONS sur fiche règlement (sheet, pas notebook) -->
+  <record id="view_insurance_settlement_imputation_inherit" model="ir.ui.view">
+    <field name="name">insurance.settlement.imputation.inherit</field>
+    <field name="model">insurance.settlement</field>
+    <field name="inherit_id" ref="assurcore.view_insurance_settlement_form"/>
+    <field name="arch" type="xml">
+
+      <!-- Solde disponible (compute) en lecture seule -->
+      <field name="montant_restant" position="replace">
+        <field name="montant_restant" readonly="1" widget="monetary"
+               options="{'currency_field': 'currency_id'}"/>
+      </field>
+
+      <!-- Liste des imputations sous le groupe Notes -->
+      <xpath expr="//field[@name='notes']" position="after">
+        <group string="Quittances imputées"
+               invisible="not imputation_ids">
+          <field name="imputation_ids" nolabel="1" readonly="1">
+            <tree string="Quittances imputées">
+              <field name="date_imputation"/>
+              <field name="receipt_id" string="Quittance"/>
+              <field name="receipt_partner_id" string="Assuré"/>
+              <field name="montant_impute" widget="monetary"
+                     options="{'currency_field': 'currency_id'}"
+                     sum="Total imputé"/>
+              <field name="currency_id" column_invisible="1"/>
+            </tree>
+          </field>
+        </group>
+      </xpath>
+
+    </field>
+  </record>
+
+  <!-- 8. MENUS sous Règlements -->
+  <menuitem id="menu_assurcore_settlements_list"
+            name="Règlements"
+            parent="menu_assurcore_settlements"
+            action="action_insurance_settlements"
+            sequence="10"/>
+  <menuitem id="menu_assurcore_imputations"
+            name="Paiements / Imputations"
+            parent="menu_assurcore_settlements"
+            action="action_insurance_imputation"
+            sequence="20"/>
+
+</odoo>
