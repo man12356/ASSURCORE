@@ -30,3 +30,6 @@ from . import evo02_settlement_allocation
 
 # EVO02 Lot 5 : sante des donnees (mixin + anomalies)
 from . import evo02_health
+
+# EVO02 Lot 6 : identification quittances + service de rapprochement RG-QUIT
+from . import evo02_receipt_matcher

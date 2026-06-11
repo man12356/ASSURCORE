@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <data noupdate="1">
+        <!-- EVO02 Lot 6 : référence interne unique des opérations (RG-QUIT.3) -->
+        <record id="seq_insurance_operation_ref" model="ir.sequence">
+            <field name="name">Référence interne opération</field>
+            <field name="code">insurance.operation.ref</field>
+            <field name="prefix">OP-%(year)s-</field>
+            <field name="padding">6</field>
+            <field name="company_id" eval="False"/>
+        </record>
+
+        <!-- Valeurs de quittance « génériques » (liste paramétrable, arbitrage T0.3) -->
+        <record id="param_generic_quittance_values" model="ir.config_parameter">
+            <field name="key">assurcore.generic_quittance_values</field>
+            <field name="value">NF,INST,DIVERS,N/F,NEANT,RAS</field>
+        </record>
+    </data>
+</odoo>

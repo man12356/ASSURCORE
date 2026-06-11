@@ -22,6 +22,7 @@
         'security/ir.model.access.csv',
         'data/insurance_data.xml',
         'data/evo02_anomaly_types.xml',
+        'data/evo02_sequences.xml',
         'data/smtp_config.xml',
         'data/email_templates.xml',
         'views/res_partner_views.xml',
