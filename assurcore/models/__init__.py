@@ -33,3 +33,6 @@ from . import evo02_health
 
 # EVO02 Lot 6 : identification quittances + service de rapprochement RG-QUIT
 from . import evo02_receipt_matcher
+
+# EVO02 Lot 3 : boutons graphe
+from . import evo02_graph_actions

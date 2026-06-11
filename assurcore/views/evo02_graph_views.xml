@@ -1,0 +1,40 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <!-- EVO02 Lot 3 : boutons « Graphe » sur les fiches -->
+
+    <record id="view_operation_form_graph_evo02" model="ir.ui.view">
+        <field name="name">insurance.operation.form.graph.evo02</field>
+        <field name="model">insurance.operation</field>
+        <field name="inherit_id" ref="assurcore.view_insurance_operation_form"/>
+        <field name="arch" type="xml">
+            <xpath expr="//button[@name='action_confirm']" position="before">
+                <button name="action_open_graph" type="object" string="Graphe"
+                        icon="fa-sitemap" class="btn-secondary"/>
+            </xpath>
+        </field>
+    </record>
+
+    <record id="view_receipt_form_graph_evo02" model="ir.ui.view">
+        <field name="name">insurance.receipt.form.graph.evo02</field>
+        <field name="model">insurance.receipt</field>
+        <field name="inherit_id" ref="assurcore.view_insurance_receipt_form_detail"/>
+        <field name="arch" type="xml">
+            <xpath expr="//header" position="inside">
+                <button name="action_open_graph" type="object" string="Graphe"
+                        icon="fa-sitemap" class="btn-secondary"/>
+            </xpath>
+        </field>
+    </record>
+
+    <record id="view_settlement_form_graph_evo02" model="ir.ui.view">
+        <field name="name">insurance.settlement.form.graph.evo02</field>
+        <field name="model">insurance.settlement</field>
+        <field name="inherit_id" ref="assurcore.view_insurance_settlement_form"/>
+        <field name="arch" type="xml">
+            <xpath expr="//header" position="inside">
+                <button name="action_open_graph" type="object" string="Graphe"
+                        icon="fa-sitemap" class="btn-secondary"/>
+            </xpath>
+        </field>
+    </record>
+</odoo>

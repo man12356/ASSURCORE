@@ -46,11 +46,16 @@
         'views/insurance_receipt_report.xml',
         'views/evo02_health_views.xml',
         'views/evo02_lettrage_views.xml',
+        'views/evo02_graph_views.xml',
         'security/menu_restrictions.xml',
     ],
     'assets': {
         'web._assets_primary_variables': [
             ('prepend', 'assurcore/static/src/scss/_variables.scss'),
+        ],
+        'web.assets_backend': [
+            'assurcore/static/src/js/evo02_graph_explorer.js',
+            'assurcore/static/src/xml/evo02_graph_explorer.xml',
         ],
     },
     'installable': True,
