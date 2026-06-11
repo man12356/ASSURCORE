@@ -59,4 +59,9 @@ Docker absent de la sandbox et proxy bloquant github.com/nightly.odoo.com → im
 | # | Point | Statut |
 |---|---|---|
 | 1 | **Run réel sur votre machine** (dernier filet) : `docker compose up -d` puis `docker compose exec odoo odoo -d <db> -u assurcore --test-tags evo02 --stop-after-init`. Le validateur a éliminé les erreurs statiques ; restent les comportements runtime (calculs stockés, séquences). | ⚠️ à faire |
-| 2 | **Lot 4 — migration FIFO + anomalies flaguées** : non démarré (dépend de l'arbitrage T0.1 FIFO et du seuil T0.2).
+| 2 | **Lot 4 — migration FIFO + anomalies flaguées** : non démarré (dépend de l'arbitrage T0.1 FIFO et du seuil T0.2). Le socle est prêt (`is_reconstructed`, `evo02_skip_checks`, `add_anomaly`, types catalogués). | ⏳ phase suivante |
+| 3 | **T3.5 partiel — gabarits OCR par compagnie** : le service et le branchement parseur sont en place ; l'extraction champ par champ par compagnie nécessite des documents réels (LLOYD, STAR, COMAR, GAT en priorité). | ⏳ phase suivante |
+| 4 | Pagination « +N autres » : le compteur est remonté par l'API et affiché ; le clic pour charger la page suivante (offset) reste à câbler côté composant. | ⏳ mineur |
+| 5 | Push GitHub à faire depuis votre poste : `git push origin evo02-lettrage-sante-graphe-ocr`. | ⚠️ à faire |
+
+**Synthèse :** 6 commits, 5 lots du plan couverts (lots 1, 2, 3, 5, 6) + tests, soit l'équivalent des phases 1→5 du plan hors migration. Le chemin critique restant est inchangé : arbitrages phase 0 → lot 4 (migration) → recette chiffrée.
