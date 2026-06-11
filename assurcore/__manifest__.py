@@ -45,6 +45,7 @@
         'views/insurance_accounting_views.xml',
         'views/insurance_receipt_report.xml',
         'views/evo02_health_views.xml',
+        'views/evo02_lettrage_views.xml',
         'security/menu_restrictions.xml',
     ],
     'assets': {

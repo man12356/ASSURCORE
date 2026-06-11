@@ -1,0 +1,107 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <!-- ==================================================================
+         EVO02 Lot 2 : écran de lettrage par opération
+         - colonnes opération / tiers / reconstitué dans le lettrage
+         - confirmation paiement pour tiers dans le wizard
+         - onglet « Règlements » sur la fiche opération
+         ================================================================== -->
+
+    <!-- Lettrage tree : opération + tiers + reconstitué -->
+    <record id="view_imputation_tree_evo02" model="ir.ui.view">
+        <field name="name">insurance.settlement.imputation.tree.evo02</field>
+        <field name="model">insurance.settlement.imputation</field>
+        <field name="inherit_id" ref="assurcore.view_insurance_imputation_tree"/>
+        <field name="arch" type="xml">
+            <field name="receipt_id" position="after">
+                <field name="operation_id" optional="show"/>
+                <field name="company_ins_id" optional="show"/>
+            </field>
+            <field name="settlement_state" position="after">
+                <field name="is_third_party" optional="show" string="Tiers"/>
+                <field name="is_reconstructed" optional="hide" string="Reconstitué"/>
+                <field name="health_state" widget="badge" optional="show"
+                       decoration-danger="health_state == 'anomalie'"/>
+            </field>
+        </field>
+    </record>
+
+    <!-- Lettrage form : opération + indicateurs -->
+    <record id="view_imputation_form_evo02" model="ir.ui.view">
+        <field name="name">insurance.settlement.imputation.form.evo02</field>
+        <field name="model">insurance.settlement.imputation</field>
+        <field name="inherit_id" ref="assurcore.view_insurance_imputation_form"/>
+        <field name="arch" type="xml">
+            <field name="receipt_id" position="after">
+                <field name="operation_id"/>
+            </field>
+            <field name="date_imputation" position="after">
+                <field name="is_third_party" readonly="1"/>
+                <field name="is_reconstructed" readonly="1"
+                       invisible="not is_reconstructed"/>
+            </field>
+        </field>
+    </record>
+
+    <!-- Wizard : alerte + case de confirmation tiers -->
+    <record id="view_imputation_wizard_form_evo02" model="ir.ui.view">
+        <field name="name">insurance.imputation.wizard.form.evo02</field>
+        <field name="model">insurance.imputation.wizard</field>
+        <field name="inherit_id" ref="assurcore.view_insurance_imputation_wizard_form"/>
+        <field name="arch" type="xml">
+            <footer position="before">
+                <field name="is_third_party" invisible="1"/>
+                <div class="alert alert-warning" role="alert"
+                     invisible="not is_third_party">
+                    <strong>Paiement pour compte de tiers</strong> :
+                    le payeur du règlement diffère du client de la quittance.
+                    <field name="confirm_third_party"/>
+                    <label for="confirm_third_party"
+                           string="Je confirme le paiement pour compte de tiers"/>
+                </div>
+            </footer>
+        </field>
+    </record>
+
+    <!-- Fiche opération : statut règlement + onglet ventilation -->
+    <record id="view_operation_form_lettrage_evo02" model="ir.ui.view">
+        <field name="name">insurance.operation.form.lettrage.evo02</field>
+        <field name="model">insurance.operation</field>
+        <field name="inherit_id" ref="assurcore.view_insurance_operation_form"/>
+        <field name="arch" type="xml">
+            <xpath expr="//field[@name='state'][@widget='statusbar']" position="before">
+                <field name="settlement_state" widget="badge"
+                       decoration-success="settlement_state == 'soldee'"
+                       decoration-warning="settlement_state == 'partielle'"
+                       decoration-danger="settlement_state == 'non_reglee'"/>
+            </xpath>
+            <sheet position="inside">
+                <notebook>
+                    <page string="Règlements (lettrage)" name="evo02_lettrage">
+                        <group>
+                            <group>
+                                <field name="internal_ref" readonly="1"/>
+                                <field name="ident_mode" readonly="1"/>
+                            </group>
+                            <group>
+                                <field name="amount_paid_op" readonly="1"/>
+                                <field name="amount_residual_op" readonly="1"/>
+                            </group>
+                        </group>
+                        <field name="allocation_ids" readonly="1">
+                            <tree>
+                                <field name="date_imputation"/>
+                                <field name="settlement_id"/>
+                                <field name="partner_id" string="Payeur"/>
+                                <field name="montant_impute" sum="Total"/>
+                                <field name="is_third_party" string="Tiers"/>
+                                <field name="is_reconstructed" string="Reconstitué"/>
+                                <field name="settlement_state" widget="badge"/>
+                            </tree>
+                        </field>
+                    </page>
+                </notebook>
+            </sheet>
+        </field>
+    </record>
+</odoo>
