@@ -3,7 +3,7 @@
 
 {
     'name': 'AssurCore -- Courtage & Assurance TN',
-    'version': '17.0.2.0.0',
+    'version': '17.0.3.0.0',
     'category': 'Insurance',
     'summary': 'Gestion de courtage assurance pour le marche tunisien.',
     'author': 'IPF',
