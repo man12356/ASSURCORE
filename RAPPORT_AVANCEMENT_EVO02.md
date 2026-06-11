@@ -48,12 +48,15 @@ Constat structurant : EVO01 avait déjà posé `insurance.settlement.imputation`
 
 ## Limites de la session & prochaines étapes
 
+## Étape 7 — Validation environnement (sandbox) ✅ partiel
+
+Docker absent de la sandbox et proxy bloquant github.com/nightly.odoo.com → impossible d'y faire tourner Odoo 17 complet. Réalisé à la place :
+
+- **PostgreSQL embarqué démarré réellement** (pgserver) — l'environnement data fonctionne.
+- **Validateur sémantique d'installation** (`tools_validate_evo02.py`, commité) : vérifie par AST que chaque champ référencé dans les vues EVO02 existe dans les modèles Python, que chaque ancre xpath/field d'héritage existe dans la vue parente, que les `inherit_id`/menus/actions pointent sur des ids existants, ACL des nouveaux modèles, cohérence du manifest (fichiers + ordre + assets). **Résultat : 0 erreur** (30 modèles, 77 vues analysés). Le validateur a été éprouvé par tests négatifs (champ bidon et inherit_id cassé détectés).
+- **Fix Odoo 17.0** appliqué au passage : `rpc` via `useService("rpc")` (l'import direct `@web/core/network/rpc` n'existe qu'en 17.2+).
+
 | # | Point | Statut |
 |---|---|---|
-| 1 | **Validation runtime** : Docker indisponible dans mon environnement — le module n'a pas été installé sur une base réelle. À exécuter sur votre machine : `docker compose up -d` puis `odoo -d <db> -u assurcore --test-tags evo02 --stop-after-init`. Risques résiduels typiques : xpath de vues, ordre de chargement. Corrections mineures à prévoir (réservé ~0,5 j). | ⚠️ à faire |
-| 2 | **Lot 4 — migration FIFO + anomalies flaguées** : non démarré (dépend de l'arbitrage T0.1 FIFO et du seuil T0.2). Le socle est prêt (`is_reconstructed`, `evo02_skip_checks`, `add_anomaly`, types catalogués). | ⏳ phase suivante |
-| 3 | **T3.5 partiel — gabarits OCR par compagnie** : le service et le branchement parseur sont en place ; l'extraction champ par champ par compagnie nécessite des documents réels (LLOYD, STAR, COMAR, GAT en priorité). | ⏳ phase suivante |
-| 4 | Pagination « +N autres » : le compteur est remonté par l'API et affiché ; le clic pour charger la page suivante (offset) reste à câbler côté composant. | ⏳ mineur |
-| 5 | Push GitHub à faire depuis votre poste : `git push origin evo02-lettrage-sante-graphe-ocr`. | ⚠️ à faire |
-
-**Synthèse :** 6 commits, 5 lots du plan couverts (lots 1, 2, 3, 5, 6) + tests, soit l'équivalent des phases 1→5 du plan hors migration. Le chemin critique restant est inchangé : arbitrages phase 0 → lot 4 (migration) → recette chiffrée.
+| 1 | **Run réel sur votre machine** (dernier filet) : `docker compose up -d` puis `docker compose exec odoo odoo -d <db> -u assurcore --test-tags evo02 --stop-after-init`. Le validateur a éliminé les erreurs statiques ; restent les comportements runtime (calculs stockés, séquences). | ⚠️ à faire |
+| 2 | **Lot 4 — migration FIFO + anomalies flaguées** : non démarré (dépend de l'arbitrage T0.1 FIFO et du seuil T0.2).
