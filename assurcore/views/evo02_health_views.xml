@@ -1,0 +1,262 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <!-- ==================================================================
+         EVO02 Lot 5 : Santé des données — vues, filtres, menu Qualité
+         ================================================================== -->
+
+    <!-- Anomalies : tree -->
+    <record id="view_insurance_anomaly_tree" model="ir.ui.view">
+        <field name="name">insurance.anomaly.tree</field>
+        <field name="model">insurance.anomaly</field>
+        <field name="arch" type="xml">
+            <tree decoration-danger="severity == 'error' and state == 'ouverte'"
+                  decoration-warning="severity == 'warning' and state == 'ouverte'"
+                  decoration-muted="state != 'ouverte'">
+                <field name="detected_date"/>
+                <field name="type_id"/>
+                <field name="severity" widget="badge"
+                       decoration-danger="severity == 'error'"
+                       decoration-warning="severity == 'warning'"/>
+                <field name="res_model" optional="hide"/>
+                <field name="res_display"/>
+                <field name="detail"/>
+                <field name="origin" optional="show"/>
+                <field name="oracle_ref" optional="hide"/>
+                <field name="state" widget="badge"
+                       decoration-danger="state == 'ouverte'"
+                       decoration-success="state != 'ouverte'"/>
+                <button name="action_open_record" type="object"
+                        string="Ouvrir l'objet" icon="fa-external-link"/>
+            </tree>
+        </field>
+    </record>
+
+    <!-- Anomalies : form -->
+    <record id="view_insurance_anomaly_form" model="ir.ui.view">
+        <field name="name">insurance.anomaly.form</field>
+        <field name="model">insurance.anomaly</field>
+        <field name="arch" type="xml">
+            <form string="Anomalie de données">
+                <header>
+                    <button name="action_mark_corrected" type="object"
+                            string="Marquer corrigée" class="oe_highlight"
+                            invisible="state != 'ouverte'"/>
+                    <button name="action_justify" type="object"
+                            string="Justifier (motif obligatoire)"
+                            invisible="state != 'ouverte'"/>
+                    <button name="action_reopen" type="object" string="Rouvrir"
+                            invisible="state == 'ouverte'"/>
+                    <field name="state" widget="statusbar"/>
+                </header>
+                <sheet>
+                    <group>
+                        <group>
+                            <field name="type_id"/>
+                            <field name="severity"/>
+                            <field name="origin"/>
+                            <field name="oracle_ref"/>
+                        </group>
+                        <group>
+                            <field name="res_model"/>
+                            <field name="res_id"/>
+                            <field name="res_display"/>
+                            <field name="detected_date"/>
+                            <field name="detected_by"/>
+                        </group>
+                    </group>
+                    <group string="Détail constaté">
+                        <field name="detail" nolabel="1"/>
+                    </group>
+                    <group string="Résolution">
+                        <field name="resolution_note"
+                               placeholder="Justification métier ou description de la correction effectuée…"/>
+                        <field name="resolved_by" readonly="1"/>
+                        <field name="resolved_date" readonly="1"/>
+                    </group>
+                    <footer>
+                        <button name="action_open_record" type="object"
+                                string="Ouvrir l'objet concerné" class="btn-secondary"/>
+                    </footer>
+                </sheet>
+            </form>
+        </field>
+    </record>
+
+    <!-- Anomalies : search -->
+    <record id="view_insurance_anomaly_search" model="ir.ui.view">
+        <field name="name">insurance.anomaly.search</field>
+        <field name="model">insurance.anomaly</field>
+        <field name="arch" type="xml">
+            <search>
+                <field name="type_id"/>
+                <field name="res_display"/>
+                <field name="oracle_ref"/>
+                <filter name="ouvertes" string="Ouvertes"
+                        domain="[('state', '=', 'ouverte')]"/>
+                <filter name="bloquantes" string="Bloquantes"
+                        domain="[('severity', '=', 'error')]"/>
+                <filter name="migration" string="Issues de la migration"
+                        domain="[('origin', '=', 'migration')]"/>
+                <group expand="0" string="Regrouper par">
+                    <filter name="group_type" string="Type"
+                            context="{'group_by': 'type_id'}"/>
+                    <filter name="group_state" string="État"
+                            context="{'group_by': 'state'}"/>
+                    <filter name="group_model" string="Modèle"
+                            context="{'group_by': 'res_model'}"/>
+                    <filter name="group_severity" string="Sévérité"
+                            context="{'group_by': 'severity'}"/>
+                </group>
+            </search>
+        </field>
+    </record>
+
+    <record id="action_insurance_anomaly" model="ir.actions.act_window">
+        <field name="name">Anomalies de données</field>
+        <field name="res_model">insurance.anomaly</field>
+        <field name="view_mode">tree,form,pivot</field>
+        <field name="context">{'search_default_ouvertes': 1}</field>
+        <field name="help" type="html">
+            <p class="o_view_nocontent_smiling_face">Aucune anomalie ouverte</p>
+            <p>Les anomalies migrées depuis Oracle et celles détectées en
+               exploitation apparaissent ici, avec leur détail et leur
+               workflow de résorption (corriger / justifier).</p>
+        </field>
+    </record>
+
+    <record id="action_insurance_anomaly_type" model="ir.actions.act_window">
+        <field name="name">Types d'anomalies</field>
+        <field name="res_model">insurance.anomaly.type</field>
+        <field name="view_mode">tree,form</field>
+    </record>
+
+    <!-- Menu Qualité des données (racine AssurCore supposée : menu existant) -->
+    <menuitem id="menu_assurcore_data_quality_root"
+              name="Qualité des données"
+              parent="assurcore.menu_assurcore_root"
+              sequence="80"/>
+    <menuitem id="menu_assurcore_anomalies"
+              name="Anomalies"
+              parent="menu_assurcore_data_quality_root"
+              action="action_insurance_anomaly"
+              sequence="10"/>
+    <menuitem id="menu_assurcore_anomaly_types"
+              name="Types d'anomalies"
+              parent="menu_assurcore_data_quality_root"
+              action="action_insurance_anomaly_type"
+              groups="assurcore.group_assurcore_manager"
+              sequence="20"/>
+
+    <!-- ==================================================================
+         Pastille santé + filtre dans les vues métier existantes
+         ================================================================== -->
+
+    <!-- Opérations : tree -->
+    <record id="view_operation_tree_health" model="ir.ui.view">
+        <field name="name">insurance.operation.tree.health</field>
+        <field name="model">insurance.operation</field>
+        <field name="inherit_id" ref="assurcore.view_insurance_operation_tree"/>
+        <field name="arch" type="xml">
+            <tree position="attributes">
+                <attribute name="decoration-danger">health_state == 'anomalie'</attribute>
+            </tree>
+            <tree position="inside">
+                <field name="health_state" widget="badge" optional="show"
+                       decoration-danger="health_state == 'anomalie'"
+                       decoration-success="health_state == 'ok'"/>
+                <field name="settlement_state" widget="badge" optional="show"
+                       decoration-success="settlement_state == 'soldee'"
+                       decoration-warning="settlement_state == 'partielle'"/>
+            </tree>
+        </field>
+    </record>
+
+    <!-- Opérations : bandeau form -->
+    <record id="view_operation_form_health" model="ir.ui.view">
+        <field name="name">insurance.operation.form.health</field>
+        <field name="model">insurance.operation</field>
+        <field name="inherit_id" ref="assurcore.view_insurance_operation_form"/>
+        <field name="arch" type="xml">
+            <sheet position="before">
+                <div class="alert alert-danger" role="alert"
+                     invisible="health_state != 'anomalie'">
+                    <strong>Objet en anomalie de données</strong>
+                    <field name="anomaly_note" readonly="1" nolabel="1"/>
+                    <button name="action_view_anomalies" type="object"
+                            string="Voir les anomalies" class="btn btn-link"/>
+                </div>
+            </sheet>
+            <sheet position="inside">
+                <field name="health_state" invisible="1"/>
+            </sheet>
+        </field>
+    </record>
+
+    <!-- Opérations : filtre -->
+    <record id="view_operation_search_health" model="ir.ui.view">
+        <field name="name">insurance.operation.search.health</field>
+        <field name="model">insurance.operation</field>
+        <field name="inherit_id" ref="assurcore.view_insurance_operation_search"/>
+        <field name="arch" type="xml">
+            <search position="inside">
+                <filter name="filter_anomalie" string="Avec anomalie"
+                        domain="[('health_state', '=', 'anomalie')]"/>
+                <filter name="filter_non_reglees" string="Non réglées"
+                        domain="[('settlement_state', '=', 'non_reglee')]"/>
+                <filter name="filter_partielles" string="Partiellement réglées"
+                        domain="[('settlement_state', '=', 'partielle')]"/>
+            </search>
+        </field>
+    </record>
+
+    <!-- Quittances : tree + filtre -->
+    <record id="view_receipt_tree_health" model="ir.ui.view">
+        <field name="name">insurance.receipt.tree.health</field>
+        <field name="model">insurance.receipt</field>
+        <field name="inherit_id" ref="assurcore.view_insurance_receipt_tree_detail"/>
+        <field name="arch" type="xml">
+            <tree position="inside">
+                <field name="health_state" widget="badge" optional="show"
+                       decoration-danger="health_state == 'anomalie'"
+                       decoration-success="health_state == 'ok'"/>
+            </tree>
+        </field>
+    </record>
+
+    <!-- Pas de vue search existante sur insurance.receipt : on en crée une -->
+    <record id="view_receipt_search_health" model="ir.ui.view">
+        <field name="name">insurance.receipt.search.health</field>
+        <field name="model">insurance.receipt</field>
+        <field name="arch" type="xml">
+            <search>
+                <field name="name"/>
+                <field name="partner_id"/>
+                <field name="policy_id"/>
+                <filter name="filter_anomalie" string="Avec anomalie"
+                        domain="[('health_state', '=', 'anomalie')]"/>
+                <group expand="0" string="Regrouper par">
+                    <filter name="group_state" string="État"
+                            context="{'group_by': 'state'}"/>
+                    <filter name="group_health" string="Santé"
+                            context="{'group_by': 'health_state'}"/>
+                </group>
+            </search>
+        </field>
+    </record>
+
+    <!-- Règlements : tree + filtre -->
+    <record id="view_settlement_tree_health" model="ir.ui.view">
+        <field name="name">insurance.settlement.tree.health</field>
+        <field name="model">insurance.settlement</field>
+        <field name="inherit_id" ref="assurcore.view_insurance_settlement_tree"/>
+        <field name="arch" type="xml">
+            <tree position="inside">
+                <field name="health_state" widget="badge" optional="show"
+                       decoration-danger="health_state == 'anomalie'"
+                       decoration-success="health_state == 'ok'"/>
+                <field name="is_fully_allocated" optional="show"/>
+                <field name="has_third_party" optional="hide"/>
+            </tree>
+        </field>
+    </record>
+</odoo>

@@ -21,6 +21,7 @@
         'security/res_groups.xml',
         'security/ir.model.access.csv',
         'data/insurance_data.xml',
+        'data/evo02_anomaly_types.xml',
         'data/smtp_config.xml',
         'data/email_templates.xml',
         'views/res_partner_views.xml',
@@ -42,6 +43,7 @@
         'views/insurance_mouvement_report_wizard_views.xml',
         'views/insurance_accounting_views.xml',
         'views/insurance_receipt_report.xml',
+        'views/evo02_health_views.xml',
         'security/menu_restrictions.xml',
     ],
     'assets': {

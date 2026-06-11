@@ -1,0 +1,77 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <data noupdate="1">
+        <!-- EVO02 Lot 5 : catalogue initial des types d'anomalies.
+             Source : Rapport_Verification_Regles_Gestion_DATA_REEL_2026-06-11.md -->
+
+        <record id="anomaly_type_mem_inexistante" model="insurance.anomaly.type">
+            <field name="code">MEM_INEXISTANTE</field>
+            <field name="name">Référence mémoire/facture inexistante</field>
+            <field name="severity">error</field>
+            <field name="description">L'opération référence une mémoire/facture absente de la base (suppression physique côté Oracle). 123 cas constatés à la migration.</field>
+        </record>
+
+        <record id="anomaly_type_mem_orpheline" model="insurance.anomaly.type">
+            <field name="code">MEM_ORPHELINE</field>
+            <field name="name">Mémoire/quittance sans opération rattachée</field>
+            <field name="severity">error</field>
+            <field name="description">Pièce comptable client sans détail compagnie (316 cas, 1 442 661 TND).</field>
+        </record>
+
+        <record id="anomaly_type_sur_imputation" model="insurance.anomaly.type">
+            <field name="code">SUR_IMPUTATION</field>
+            <field name="name">Règlement sur-imputé</field>
+            <field name="severity">error</field>
+            <field name="description">Somme des imputations supérieure au montant du règlement (3 cas, ex. règ. Oracle 7966).</field>
+        </record>
+
+        <record id="anomaly_type_sur_reglement" model="insurance.anomaly.type">
+            <field name="code">SUR_REGLEMENT</field>
+            <field name="name">Quittance/mémoire sur-réglée</field>
+            <field name="severity">error</field>
+            <field name="description">Total lettré supérieur au total dû (29 cas : doubles règlements non marqués impayés, lettrages doublés).</field>
+        </record>
+
+        <record id="anomaly_type_lettrage_orphelin" model="insurance.anomaly.type">
+            <field name="code">LETTRAGE_ORPHELIN</field>
+            <field name="name">Lettrage vers pièce inexistante</field>
+            <field name="severity">error</field>
+            <field name="description">Ligne de lettrage pointant vers une facture/mémoire (95) ou un règlement (28) absent.</field>
+        </record>
+
+        <record id="anomaly_type_total_reg_incoherent" model="insurance.anomaly.type">
+            <field name="code">TOTAL_REG_INCOHERENT</field>
+            <field name="name">Agrégat Oracle TOTAL_REG incohérent</field>
+            <field name="severity">info</field>
+            <field name="description">Champ TOTAL_REG/TOTAL_RESTANT Oracle divergent du lettrage réel (253 cas, écart cumulé −725 096 TND). Documentaire : Odoo recalcule.</field>
+        </record>
+
+        <record id="anomaly_type_tiers_non_flague" model="insurance.anomaly.type">
+            <field name="code">TIERS_NON_FLAGUE</field>
+            <field name="name">Paiement pour tiers non signalé</field>
+            <field name="severity">warning</field>
+            <field name="description">Lettrage cross-client sans flag TIERS dans Oracle (3 cas) ou flag TIERS sur même client (2 cas).</field>
+        </record>
+
+        <record id="anomaly_type_quittance_generique" model="insurance.anomaly.type">
+            <field name="code">QUITTANCE_GENERIQUE</field>
+            <field name="name">Quittance sans identifiant compagnie exploitable</field>
+            <field name="severity">warning</field>
+            <field name="description">N° de quittance absent ou générique (NF, INST, DIVERS, n° de police recopié). Identification par clé métier (§2.6 spec).</field>
+        </record>
+
+        <record id="anomaly_type_op_non_facturee" model="insurance.anomaly.type">
+            <field name="code">OP_NON_FACTUREE_ANCIENNE</field>
+            <field name="name">Opération ancienne jamais facturée</field>
+            <field name="severity">warning</field>
+            <field name="description">Opération sans mémoire au-delà du seuil d'ancienneté arbitré en phase 0 (484 candidates, 3 168 850 TND).</field>
+        </record>
+
+        <record id="anomaly_type_ventilation_reconstituee" model="insurance.anomaly.type">
+            <field name="code">VENTILATION_RECONSTITUEE</field>
+            <field name="name">Ventilation règlement→opération reconstituée (FIFO)</field>
+            <field name="severity">info</field>
+            <field name="description">La répartition par opération a été reconstituée à la migration selon la règle FIFO ; elle n'est pas contractuelle.</field>
+        </record>
+    </data>
+</odoo>

@@ -27,3 +27,6 @@ from . import insurance_ocr_classify_wizard
 
 # EVO02 Lot 1 : granularite reglement <-> operation + statut + tiers
 from . import evo02_settlement_allocation
+
+# EVO02 Lot 5 : sante des donnees (mixin + anomalies)
+from . import evo02_health
