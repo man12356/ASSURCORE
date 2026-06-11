@@ -1,0 +1,155 @@
+╔══════════════════════════════════════════════════════════════╗
+║         RAPPORT MONITORING ASSURCORE — 2026-06-04          ║
+║         Genere le 2026-06-04 à 06:00:01                   ║
+╚══════════════════════════════════════════════════════════════╝
+Serveur   : vps784643.ovh.net
+IP        : 51.83.33.250
+OS        : CentOS Linux 7 (Core)
+Kernel    : 3.10.0-1160.105.1.el7.x86_64
+Uptime    : up 8 weeks, 6 days, 3 hours, 55 minutes
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  1. SÉCURITÉ SSH
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  [INFO]    Tentatives SSH échouées aujourd'hui : 129
+  [CRIT]    ATTAQUE BRUTEFORCE ACTIVE : 129 tentatives aujourd'hui !
+
+  Top IPs suspectes (dernières 24h) :
+    16 tentatives depuis ubuntu
+    11 tentatives depuis sahatybook
+    10 tentatives depuis admin
+    5 tentatives depuis sol
+    4 tentatives depuis 93.94.141.115
+    4 tentatives depuis 176.109.97.11
+    3 tentatives depuis 103.229.125.106
+    2 tentatives depuis solana
+    2 tentatives depuis dummy
+    2 tentatives depuis dot
+  [INFO]    Sessions SSH actives : 1
+
+  Dernières connexions réussies :
+    root     pts/0        197.1.69.172     Wed Jun  3 23:22   still logged in
+    root     pts/0        197.1.69.172     Wed Jun  3 17:02 - 22:19  (05:16)
+    root     pts/0        197.1.69.172     Wed Jun  3 14:54 - 15:22  (00:28)
+    root     pts/0        197.240.96.133   Mon Jun  1 18:32 - 01:10  (06:38)
+    root     pts/0        197.240.98.35    Sun May 24 23:44 - 02:01  (02:16)
+  [WARN]    PermitRootLogin=yes — connexion root SSH autorisée (risque élevé)
+  [OK]      SSH sur port non-standard : 
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  2. SÉCURITÉ SYSTÈME
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  [INFO]    Utilisateurs UID=0 : root 
+  [OK]      Un seul compte root
+  [WARN]    4 mises à jour de sécurité disponibles
+  [OK]      Aucun processus suspect détecté
+  [OK]      Aucune connexion sortante suspecte
+  [OK]      Aucun fichier SUID modifié récemment
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  3. STOCKAGE
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+  Utilisation des partitions :
+    Filesystem      Size  Used Avail Use% Mounted on
+    /dev/sda1        99G   52G   43G  55% /
+    /dev/loop0      6.2M  6.2M     0 100% /var/lib/snapd/snap/spreed-webrtc-snap/2
+  [CRIT]    Partition critique : /dev/loop0      6.2M  6.2M     0 100% /var/lib/snapd/snap/spreed-webrtc-snap/2
+    /dev/loop1       97M   97M     0 100% /var/lib/snapd/snap/core/9436
+  [CRIT]    Partition critique : /dev/loop1       97M   97M     0 100% /var/lib/snapd/snap/core/9436
+    /dev/loop2       97M   97M     0 100% /var/lib/snapd/snap/core/9665
+  [CRIT]    Partition critique : /dev/loop2       97M   97M     0 100% /var/lib/snapd/snap/core/9665
+    /dev/sdb        493G  329G  139G  71% /mnt/sdb
+
+  Volumes Docker :
+    TYPE            TOTAL     ACTIVE    SIZE      RECLAIMABLE
+    Images          22        8         46.59GB   43.97GB (94%)
+    Containers      10        10        20.49GB   0B (0%)
+    Local Volumes   23        4         12.61GB   12.07GB (95%)
+    Build Cache     5         0         0B        0B
+  [INFO]    Taille base assurcore_db : 193MB
+
+  Top 5 tables par taille :
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  4. RÉSEAU
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+  Ports en écoute (TCP) :
+  [OK]      Aucune base de données exposée publiquement
+  [INFO]    Connexions TCP établies : 0
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  5. DOCKER
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+  État des containers :
+    NAMES                        STATUS                  PORTS
+    assurcore_web                Up 5 hours (healthy)    8071-8072/tcp, 127.0.0.1:8071->8069/tcp
+    assurcore_db                 Up 2 days (healthy)     5432/tcp
+    exregister_nginx             Up 2 weeks              0.0.0.0:8094->80/tcp, :::8094->80/tcp
+    exregister_api               Up 2 weeks (healthy)    8000/tcp
+    exregister_db                Up 2 weeks (healthy)    5432/tcp
+    CTBCGEN19C2                  Up 3 weeks (healthy)    0.0.0.0:8081->8081/tcp, :::8081->8081/tcp, 0.0.0.0:1523->1521/tcp, :::1523->1521/tcp, 0.0.0.0:5502->5500/tcp, :::5502->5500/tcp
+    app1                         Up 2 months (healthy)   0.0.0.0:8085->9090/tcp, :::8085->9090/tcp
+    oracle18                     Up 2 months (healthy)   0.0.0.0:1525->1521/tcp, :::1525->1521/tcp, 0.0.0.0:55501->5500/tcp, :::55501->5500/tcp
+    metadidomi_db_metadidomi_1   Up 2 months (healthy)   0.0.0.0:3306->3306/tcp, :::3306->3306/tcp, 33060/tcp
+    tunfeed_db_tunfeed_1         Up 2 months (healthy)   33060/tcp, 0.0.0.0:3307->3306/tcp, :::3307->3306/tcp
+  [OK]      Tous les containers sont en cours d'exécution
+
+  Erreurs Odoo (dernières 50 lignes) :
+    2026-06-04 03:55:18,628 18 ERROR assurcore_db odoo.http: Exception during request handling.
+    2026-06-04 03:55:58,726 17 ERROR assurcore_db odoo.http: Exception during request handling.
+    2026-06-04 03:56:19,131 18 ERROR assurcore_db odoo.http: Exception during request handling.
+    2026-06-04 03:56:59,187 18 ERROR assurcore_db odoo.http: Exception during request handling.
+    2026-06-04 03:57:19,503 17 ERROR assurcore_db odoo.http: Exception during request handling.
+    2026-06-04 03:58:00,101 18 ERROR assurcore_db odoo.http: Exception during request handling.
+    2026-06-04 03:58:19,977 18 ERROR assurcore_db odoo.http: Exception during request handling.
+    2026-06-04 03:59:01,224 18 ERROR assurcore_db odoo.http: Exception during request handling.
+    2026-06-04 03:59:20,669 18 ERROR assurcore_db odoo.http: Exception during request handling.
+    2026-06-04 04:00:02,180 17 ERROR assurcore_db odoo.http: Exception during request handling.
+  [WARN]    Nombreuses erreurs Odoo : 2241 dans les dernières 24h
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  6. SANTÉ ODOO / POSTGRESQL
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  [OK]      Odoo répond (HTTP 200) sur port 8071
+
+  Statistiques base de données :
+  [INFO]    Connexions PostgreSQL actives : 7
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  7. RESSOURCES SYSTÈME
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  [INFO]    Charge CPU : 0.71 (8 cœurs)
+  [OK]      Charge CPU normale : 0.71
+  [INFO]    RAM : 6885Mo / 31255Mo (22%)
+  [OK]      RAM normale : 22%
+
+  Top 5 processus par CPU :
+    root      9580  8.4  1.5 9952228 496592 ?      Sl   Apr03 7486:22 java -jar ords.war standalone
+    oracle    6822  1.6  0.2 2035424 84832 ?       Ss   05:59   0:00 ora_j000_BDGEN
+    oracle    1671  1.0  0.3 2055492 116428 ?      Ss   05:50   0:05 oracleXE (LOCAL=NO)
+    oracle    6826  0.7  0.2 2035288 67224 ?       Ss   05:59   0:00 ora_j001_BDGEN
+    oracle   17019  0.6  0.3 2051352 123796 ?      Ss   05:16   0:16 oracleXE (LOCAL=NO)
+
+  Top 5 processus par RAM :
+    oracle    9190  0.2  4.7 2334608 1513348 ?     Ss   Apr03 249:54 xe_cjq0_XE
+    oracle   23693  0.2  3.8 2175072 1221500 ?     Ss   May17  55:54 ora_m004_BDGEN
+    oracle   24908  0.2  3.7 2175076 1208336 ?     Ss   May19  47:33 ora_m002_BDGEN
+    oracle   11820  0.2  3.5 2142304 1138104 ?     Ss   May22  40:30 ora_m000_BDGEN
+    oracle    8773  0.0  3.5 2060400 1124888 ?     Ss   Apr03  52:06 xe_dbw0_XE
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  8. RÉSUMÉ ET SCORE DE RISQUE
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+  Niveau de risque : 🔴 CRITIQUE
+  Message          : Action immédiate requise !
+
+  Points critiques : 1
+  Avertissements   : 3
+
+  Rapport complet  : /tmp/monitoring/2026-06-04.txt
+  Prochain rapport : demain à 06:00
+

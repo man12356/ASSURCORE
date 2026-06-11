@@ -1,4 +1,4 @@
-#!/usr/bin/env python3
+﻿#!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
 ================================================================================
@@ -58,7 +58,7 @@ from collections import defaultdict
 #  ① CONFIGURATION — À ADAPTER selon votre environnement
 # ══════════════════════════════════════════════════════════════════════════════
 
-ODOO_URL      = 'http://localhost:8071'   # URL de l'instance Odoo AssurCore
+ODOO_URL      = 'https://assurcore.metadidomi.com'   # URL de l'instance Odoo AssurCore
 ODOO_DB       = 'assurcore_db'            # Nom de la base de données Odoo
 ODOO_USER     = 'admin'                   # Utilisateur Odoo (doit avoir droits admin)
 ODOO_PASSWORD = 'admin'                   # Mot de passe Odoo

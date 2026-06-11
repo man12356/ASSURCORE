@@ -377,6 +377,138 @@ class InsuranceOperation(models.Model):
              'Ex-champ Oracle : NUM_JOUR_ENC dans PR_OPERATION.',
     )
 
+    # ── EVO02 — Suivi reversement compagnie ──────────────────────────────────
+
+    prime_a_envoyer = fields.Monetary(
+        string='Prime à envoyer (TND)',
+        currency_field='currency_id',
+        help='Montant de prime restant à reverser à la compagnie. Oracle: PRIME_A_ENVOYER.',
+    )
+    montant_prime_envoyer = fields.Monetary(
+        string='Prime envoyée (TND)',
+        currency_field='currency_id',
+        help='Montant de prime déjà reversé. Oracle: MONTANT_PRIME_ENVOYER.',
+    )
+    montant_prime_non_envoyer = fields.Monetary(
+        string='Prime non envoyée (TND)',
+        currency_field='currency_id',
+        compute='_compute_prime_non_envoyer',
+        store=True,
+        help='= Prime facturée - Prime envoyée. Oracle: MONTANT_PRIME_NON_ENVOYER.',
+    )
+    montant_prime_effectif = fields.Monetary(
+        string='Prime effective (TND)',
+        currency_field='currency_id',
+        help='Prime réelle après remise/avoir. Oracle: MONTANT_PRIME_EFFECTIF.',
+    )
+    borderau_envoi = fields.Boolean(
+        string='Inclus dans bordereau',
+        default=False,
+        help='Inclus dans un bordereau envoi compagnie. Oracle: BORDERAU_ENVOI.',
+    )
+    envoi_prime = fields.Boolean(
+        string='Prime envoyée',
+        default=False,
+        help='Prime reversée à la compagnie. Oracle: ENVOI_PRIME.',
+    )
+    contrat_retourne = fields.Boolean(
+        string='Contrat retourné',
+        default=False,
+        help='Contrat retourné à la compagnie. Oracle: CONTRAT_RETOURNE.',
+    )
+
+    @api.depends('montant_prime', 'montant_prime_envoyer')
+    def _compute_prime_non_envoyer(self):
+        for rec in self:
+            rec.montant_prime_non_envoyer = max(
+                0.0, rec.montant_prime - rec.montant_prime_envoyer
+            )
+
+    # ── EVO02 — Facturation honoraires ────────────────────────────────────────
+
+    num_facture_prime = fields.Char(
+        string='N° Facture Prime', size=30,
+        help='Référence facture prime. Oracle: NUM_FACTURE_PRIME.',
+    )
+    num_facture_hon = fields.Char(
+        string='N° Facture Honoraires', size=30,
+        help='Référence facture honoraires. Oracle: NUM_FACTURE_HON.',
+    )
+    honoraire_facture = fields.Monetary(
+        string='Honoraires facturés (TND)',
+        currency_field='currency_id',
+        help='Honoraires déjà facturés. Oracle: HONORAIRE_FACTURE.',
+    )
+    avoir_hon = fields.Monetary(
+        string='Avoir honoraires (TND)',
+        currency_field='currency_id',
+        help='Avoirs sur honoraires. Oracle: AVOIR_HON.',
+    )
+    commission_calculee = fields.Monetary(
+        string='Commission calculée (TND)',
+        currency_field='currency_id',
+        help='Commission calculée automatiquement. Oracle: COMMISSION_CALCULEE.',
+    )
+    taux_remise = fields.Float(
+        string='Taux remise (%)',
+        digits=(5, 2),
+        help='Taux de remise sur commission. Oracle: TAUX_REMISE.',
+    )
+    montant_tva = fields.Monetary(
+        string='Montant TVA (TND)',
+        currency_field='currency_id',
+        compute='_compute_montant_tva',
+        store=True,
+        help='TVA sur honoraires. Oracle: MONTANT_TVA.',
+    )
+    taux_tva = fields.Float(
+        string='Taux TVA (%)',
+        digits=(5, 2),
+        default=7.0,
+        help='Taux TVA applicable aux honoraires. Oracle: TAUX_TVA.',
+    )
+    case_a_cocher_avenant = fields.Boolean(
+        string='Avenant',
+        default=False,
+        help='Cette opération est un avenant. Oracle: CASE_A_COCHER_AVENANT.',
+    )
+    case_a_cocher_encais_prime = fields.Boolean(
+        string='Prime encaissée',
+        default=False,
+        help='Prime déjà encaissée. Oracle: CASE_A_COCHER_ENCAIS_PRIME.',
+    )
+    credite = fields.Boolean(
+        string='Crédité',
+        default=False,
+        help='Opération créditée en comptabilité. Oracle: CREDITE.',
+    )
+    debitee = fields.Boolean(
+        string='Débitée',
+        default=False,
+        help='Opération débitée en comptabilité. Oracle: DEBITEE.',
+    )
+
+    @api.depends('montant_honoraire_ht', 'taux_tva')
+    def _compute_montant_tva(self):
+        for rec in self:
+            rec.montant_tva = rec.montant_honoraire_ht * (rec.taux_tva / 100.0)
+
+    # ── EVO02 — Véhicule détail ───────────────────────────────────────────────
+
+    marque = fields.Char(
+        string='Marque', size=50,
+        help='Marque du véhicule assuré. Oracle: MARQUE.',
+    )
+    modele = fields.Char(
+        string='Modèle', size=50,
+        help='Modèle du véhicule assuré. Oracle: MODELE.',
+    )
+    flotte_p = fields.Boolean(
+        string='Flotte',
+        default=False,
+        help='Opération flotte de véhicules. Oracle: FLOTTE_P.',
+    )
+
     # ── Métadonnées ───────────────────────────────────────────────────────────
 
     notes = fields.Text(string='Notes')

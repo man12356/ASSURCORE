@@ -9,15 +9,16 @@ from . import insurance_risk
 from . import res_partner
 from . import insurance_policy
 from . import insurance_commission_rule
+from . import insurance_operation_type   # EVO02 - Referentiel codes operations
 from . import insurance_operation
-from . import insurance_settlement_imputation  # Lettrage multi-quittances — avant receipt
+from . import insurance_settlement_imputation  # Lettrage multi-quittances - avant receipt
 from . import insurance_receipt
 from . import insurance_claim
 from . import insurance_mouvement_report
 from . import insurance_mouvement_report_wizard
 from . import fleet_vehicle
 # EVO01 Etape 1 : Parseur OCR + etat draft_ocr sur insurance.policy
-from . import insurance_ocr_training         # Apprentissage OCR — doit preceder document_parser
+from . import insurance_ocr_training         # Apprentissage OCR - doit preceder document_parser
 from . import insurance_document_parser
 # EVO01 Etape 2 : Wizard de validation manuelle du client
 from . import insurance_ocr_wizard
