@@ -8,7 +8,6 @@
 
 import { registry } from "@web/core/registry";
 import { useService } from "@web/core/utils/hooks";
-import { rpc } from "@web/core/network/rpc_service";
 import { Component, onWillStart, useState, useRef, markup } from "@odoo/owl";
 
 const NODE_W = 132;
@@ -41,6 +40,7 @@ export class GraphExplorer extends Component {
 
     setup() {
         this.action = useService("action");
+        this.rpc = useService("rpc");
         this.containerRef = useRef("container");
         this.tooltipRef = useRef("tooltip");
         const p = this.props.action?.params || this.props.action?.context?.params || {};
@@ -57,7 +57,7 @@ export class GraphExplorer extends Component {
 
     async load() {
         try {
-            const data = await rpc("/assurcore/graph/node", {
+            const data = await this.rpc("/assurcore/graph/node", {
                 model: this.state.model,
                 res_id: this.state.resId,
                 limit_per_level: 25,
