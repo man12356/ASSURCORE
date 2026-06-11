@@ -24,3 +24,6 @@ from . import insurance_document_parser
 from . import insurance_ocr_wizard
 # EVO01 Etape 3 : Assistant de classification OCR 2 etapes
 from . import insurance_ocr_classify_wizard
+
+# EVO02 Lot 1 : granularite reglement <-> operation + statut + tiers
+from . import evo02_settlement_allocation
