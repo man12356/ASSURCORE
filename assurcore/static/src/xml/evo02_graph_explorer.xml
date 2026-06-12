@@ -12,6 +12,10 @@
                 <t t-esc="state.error"/>
             </div>
             <t t-else="">
+                <div class="mb-2 d-flex align-items-center" style="font-size: 12px; gap: 8px;">
+                    <button class="btn btn-secondary btn-sm" t-if="state.canBack"
+                            t-on-click="goBack">&#8592; Précédent</button>
+                </div>
                 <div class="text-muted mb-2" style="font-size: 12px;">
                     Sommet : <b t-esc="state.rootLabel"/> — les nœuds du même type sont masqués ·
                     clic = nouveau sommet · double-clic = ouvrir la fiche · survol = détail

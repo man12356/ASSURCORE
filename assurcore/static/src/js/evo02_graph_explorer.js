@@ -57,6 +57,10 @@ export class GraphExplorer extends Component {
             sessionStorage.setItem("assurcore_graph_ctx",
                 JSON.stringify({ model: model || "operation", resId }));
         }
+        this.stack = [];
+        try {
+            this.stack = JSON.parse(sessionStorage.getItem("assurcore_graph_stack") || "[]");
+        } catch (e) { this.stack = []; }
         this.state = useState({
             model: model || "operation",
             resId: resId,
@@ -64,6 +68,7 @@ export class GraphExplorer extends Component {
             error: "",
             rootLabel: "",
             truncatedMsg: "",
+            canBack: this.stack.length > 0,
         });
         onWillStart(() => this.load());
     }
@@ -208,14 +213,30 @@ export class GraphExplorer extends Component {
         }
         const n = this.nodeFromEvent(ev);
         if (!n || n.is_root) return;
+        this.navigateTo(n.type, n.action.res_id);
+    }
+
+    navigateTo(model, resId) {
+        this.stack.push({ model: this.state.model, resId: this.state.resId });
+        sessionStorage.setItem("assurcore_graph_stack", JSON.stringify(this.stack));
         sessionStorage.setItem("assurcore_graph_ctx",
-            JSON.stringify({ model: n.type, resId: n.action.res_id }));
-        this.action.doAction({
-            type: "ir.actions.client",
-            tag: "assurcore_graph",
-            name: `Graphe — ${n.label}`,
-            params: { model: n.type, res_id: n.action.res_id },
-        });
+            JSON.stringify({ model, resId }));
+        this.state.model = model;
+        this.state.resId = resId;
+        this.state.canBack = true;
+        this.load();
+    }
+
+    goBack() {
+        const prev = this.stack.pop();
+        if (!prev) return;
+        sessionStorage.setItem("assurcore_graph_stack", JSON.stringify(this.stack));
+        sessionStorage.setItem("assurcore_graph_ctx",
+            JSON.stringify({ model: prev.model, resId: prev.resId }));
+        this.state.model = prev.model;
+        this.state.resId = prev.resId;
+        this.state.canBack = this.stack.length > 0;
+        this.load();
     }
 
     openForm(n) {
