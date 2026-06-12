@@ -351,4 +351,6 @@ if DRY_RUN:
     env.cr.rollback()
 else:
     flush_anomalies()
-   
+    env.cr.commit()
+    log('\nCOMMIT effectue.')
+log('FIN — %s' % ('RECETTE CONFORME' if ok else 'ECARTS A ANALYSER (voir ci-dessus)'))
