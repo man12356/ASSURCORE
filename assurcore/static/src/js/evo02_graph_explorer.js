@@ -151,10 +151,15 @@ export class GraphExplorer extends Component {
                 : `stroke="${c.stroke}" stroke-width="${n.is_root ? 1.8 : 0.8}"`;
             const label = this.trim(n.label, n.is_root ? 24 : 17);
             const sub = this.trim(n.subtitle || TYPE_LABEL[n.type], n.is_root ? 26 : 19);
+            const bx = p.x + w / 2 - 11, by = p.y - NODE_H / 2 + 11;
             s += `<g data-key="${key}" style="cursor:pointer">
                 <rect x="${p.x - w / 2}" y="${p.y - NODE_H / 2}" width="${w}" height="${NODE_H}" rx="6" fill="${c.fill}" ${danger}/>
                 <text x="${p.x}" y="${p.y - 3}" text-anchor="middle" font-size="12.5" font-weight="600" fill="${c.text}">${this.esc(label)}${n.is_root ? " · sommet" : ""}</text>
                 <text x="${p.x}" y="${p.y + 13}" text-anchor="middle" font-size="11" fill="${c.stroke}">${this.esc(sub)}</text>
+                <g data-open="${key}" style="cursor:pointer"><title>Ouvrir la fiche</title>
+                    <circle cx="${bx}" cy="${by}" r="8" fill="#ffffff" stroke="${c.stroke}" stroke-width="0.8"/>
+                    <text x="${bx}" y="${by + 3.5}" text-anchor="middle" font-size="10" fill="${c.stroke}">&#8599;</text>
+                </g>
             </g>`;
         }
         return `<svg width="100%" viewBox="0 0 ${SVG_W} ${H}" xmlns="http://www.w3.org/2000/svg">${s}</svg>`;
@@ -177,6 +182,12 @@ export class GraphExplorer extends Component {
     }
 
     onClick(ev) {
+        const openBtn = ev.target.closest("[data-open]");
+        if (openBtn) {
+            const node = this.nodesByKey[openBtn.dataset.open];
+            if (node) this.openForm(node);
+            return;
+        }
         const n = this.nodeFromEvent(ev);
         if (!n || n.is_root) return;
         this.action.doAction({
@@ -187,9 +198,7 @@ export class GraphExplorer extends Component {
         });
     }
 
-    onDblClick(ev) {
-        const n = this.nodeFromEvent(ev);
-        if (!n) return;
+    openForm(n) {
         this.action.doAction({
             type: "ir.actions.act_window",
             res_model: n.action.res_model,
@@ -197,6 +206,11 @@ export class GraphExplorer extends Component {
             views: [[false, "form"]],
             target: "current",
         });
+    }
+
+    onDblClick(ev) {
+        const n = this.nodeFromEvent(ev);
+        if (n) this.openForm(n);
     }
 
     onMouseMove(ev) {

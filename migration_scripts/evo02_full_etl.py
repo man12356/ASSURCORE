@@ -85,8 +85,8 @@ for c in clients:
     rows.append('(%s,%s,%s,%s,%s,%s)' % (S(num), S(nom, 120), S(c.get('ADRESSE'), 120), S(c.get('CODE_POSTAL'), 12), S(c.get('TEL1') or c.get('MOBILE') or c.get('TEL2'), 30), 'TRUE' if c.get('TYPE_CLIENT') == 'E' else 'FALSE'))
 values_block('INSERT INTO tmp_cli', rows)
 W("""
-INSERT INTO res_partner (name, ref, street, zip, phone, is_company, active, customer_rank, health_state, create_date, write_date, create_uid, write_uid, company_id, commercial_partner_id, complete_name)
-SELECT t.nom, 'ORA-'||t.num, t.street, t.zip, t.phone, t.is_co, TRUE, 1, 'ok', NOW(), NOW(), 1, 1, NULL, NULL, t.nom
+INSERT INTO res_partner (name, ref, street, zip, phone, is_company, active, customer_rank, client_state, health_state, create_date, write_date, create_uid, write_uid, company_id, commercial_partner_id, complete_name)
+SELECT t.nom, 'ORA-'||t.num, t.street, t.zip, t.phone, t.is_co, TRUE, 1, 'actif', 'ok', NOW(), NOW(), 1, 1, NULL, NULL, t.nom
 FROM tmp_cli t WHERE NOT EXISTS (SELECT 1 FROM res_partner p WHERE p.ref = 'ORA-'||t.num);
 UPDATE res_partner SET commercial_partner_id = id WHERE ref LIKE 'ORA-%' AND commercial_partner_id IS NULL;
 """)
