@@ -322,4 +322,43 @@ class InsuranceImputationWizardEvo02(models.TransientModel):
                 payer=self.settlement_id.partner_id.display_name,
                 insured=self.receipt_id.partner_id.display_name,
             ))
+        # EVO02 : une seule ligne par couple (règlement, quittance) —
+        # si une imputation existe déjà, on FUSIONNE au lieu de créer
+        # une seconde ligne (refusée par la contrainte anti-doublon).
+        existing = self.env['insurance.settlement.imputation'].search([
+            ('settlement_id', '=', self.settlement_id.id),
+            ('receipt_id', '=', self.receipt_id.id),
+            ('is_reconstructed', '=', False),
+        ], limit=1)
+        if existing:
+            if self.montant_a_imputer <= 0:
+                raise UserError(_('Le montant à imputer doit être positif.'))
+            if self.montant_a_imputer > self.settlement_id.montant_restant + 0.001:
+                raise UserError(_(
+                    'Le montant à imputer (%(a).3f TND) dépasse le solde '
+                    'disponible du règlement (%(b).3f TND).',
+                    a=self.montant_a_imputer,
+                    b=self.settlement_id.montant_restant,
+                ))
+            existing.write({
+                'montant_impute': existing.montant_impute + self.montant_a_imputer,
+                'date_imputation': self.date_imputation,
+            })
+            self.receipt_id._compute_amounts()
+            return {
+                'type': 'ir.actions.client',
+                'tag': 'display_notification',
+                'params': {
+                    'title': _('Imputation fusionnée'),
+                    'message': _(
+                        '%(montant).3f TND ajoutés à la ligne existante du '
+                        'règlement %(reg)s (total : %(total).3f TND).',
+                        montant=self.montant_a_imputer,
+                        reg=self.settlement_id.name,
+                        total=existing.montant_impute,
+                    ),
+                    'type': 'success',
+                    'sticky': False,
+                },
+            }
         return super().action_confirmer_imputation()

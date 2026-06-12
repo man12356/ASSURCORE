@@ -75,7 +75,8 @@ class TestEvo02(TransactionCase):
     def test_02_c2_overpayment_refused(self):
         """Critère 1 / C2 : sur-règlement d'une quittance refusé."""
         op = self._make_operation(prime=100.0)
-        s1 = self._make_settlement(100.0)
+        # amount_total inclut le timbre fiscal : le règlement doit le couvrir
+        s1 = self._make_settlement(op.receipt_id.amount_total)
         self._impute(s1, op.receipt_id, op.receipt_id.amount_total)
         s2 = self._make_settlement(100.0)
         with self.assertRaises(ValidationError):
@@ -204,5 +205,4 @@ class TestEvo02(TransactionCase):
         r_ocr = matcher.match(company_ins_id=self.company_ins.id,
                               identifiers={'num_quittance': 'INST'},
                               business_key=key)
-        self.assertEqual(r_manual['candidates'], r_ocr['candidates'])
-        self.assertIn(op, r_ocr['candidates'])
+        self.asse
