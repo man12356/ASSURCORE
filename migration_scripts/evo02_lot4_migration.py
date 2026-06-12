@@ -65,11 +65,12 @@ log('EVO02 LOT 4 — démarrage %s (DRY_RUN=%s)' % (datetime.now(), DRY_RUN))
 log('=' * 70)
 
 ops_tsv = read_tsv('PR_OPERATION_DATA_TABLE.tsv')
+opan_tsv = read_tsv('PR_OPERATION_FACTUREE_ANNULEE_DATA_TABLE.tsv')
 fact_tsv = read_tsv('PR_FACTURE_DATA_TABLE.tsv')
 reg_tsv = read_tsv('PR_REGELEMENT_DATA_TABLE.tsv')
 rf_tsv = read_tsv('PR_REG_FACTURE_DATA_TABLE.tsv')
-log('TSV charges : ops=%d fact=%d reg=%d lettrage=%d'
-    % (len(ops_tsv), len(fact_tsv), len(reg_tsv), len(rf_tsv)))
+log('TSV charges : ops=%d annulees=%d fact=%d reg=%d lettrage=%d'
+    % (len(ops_tsv), len(opan_tsv), len(fact_tsv), len(reg_tsv), len(rf_tsv)))
 
 # ── Index Odoo (une seule requête par modèle) ─────────────────────────────────
 Operation = env['insurance.operation'].with_context(active_test=False)
@@ -91,6 +92,14 @@ log('Odoo : operations migrees=%d quittances/memoires=%d reglements=%d'
     % (len(op_idx), len(rcpt_idx), len(sett_idx)))
 
 atype_idx = {t.code: t.id for t in AnomalyType.search([])}
+
+# Idempotence par PURGE-RECREATION : les anomalies de migration encore
+# OUVERTES sont supprimees puis recalculees (auto-correction des faux
+# positifs d'un run precedent). Les justifiees/corrigees sont conservees.
+old = Anomaly.search([('origin', '=', 'migration'), ('state', '=', 'ouverte')])
+log('Anomalies de migration ouvertes purgees avant recalcul : %d' % len(old))
+if not DRY_RUN and old:
+    old.unlink()
 existing_keys = set()
 for a in Anomaly.search_read(
         [('origin', '=', 'migration')], ['type_id', 'oracle_ref']):
@@ -246,8 +255,10 @@ for o in ops_tsv:
                     'OP-%s->FACT-%s/%s' % (k(o['NUM_OPERATION']), an, nf))
 
 # D2 — memoires sans aucune operation (316) + D6 TOTAL_REG incoherent (253)
+# NB : une memoire rattachee uniquement a des operations ANNULEES n'est
+# PAS orpheline (cycle annulation/refacturation normal) → opan_tsv inclus.
 ops_by_fact = {}
-for o in ops_tsv:
+for o in ops_tsv + opan_tsv:
     nf, an = k(o.get('NUM_FACTURE_PRIME')), k(o.get('ANNEE_FACT_PRIME'))
     if nf:
         ops_by_fact.setdefault((an, nf), []).append(o)
