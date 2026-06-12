@@ -200,9 +200,11 @@ class TestEvo02(TransactionCase):
         """Critère 9 : même service ⇒ même candidat quel que soit le canal."""
         matcher = self.env['insurance.receipt.matcher']
         op = self._make_operation(prime=777.0, quittance='INST')
+        key = {'num_police': 'POL-TEST-001', 'montant_prime': 777.0}
         r_manual = matcher.match(company_ins_id=self.company_ins.id,
                                  identifiers={}, business_key=key)
         r_ocr = matcher.match(company_ins_id=self.company_ins.id,
                               identifiers={'num_quittance': 'INST'},
                               business_key=key)
-        self.asse
+        self.assertEqual(r_manual['candidates'], r_ocr['candidates'])
+        self.assertIn(op, r_ocr['candidates'])
