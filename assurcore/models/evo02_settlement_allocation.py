@@ -81,6 +81,38 @@ class InsuranceSettlementImputationEvo02(models.Model):
                 [('receipt_id', '=', rec.receipt_id.id)], limit=1,
             ) if rec.receipt_id else False
 
+    @api.onchange('operation_id')
+    def _onchange_operation_evo02(self):
+        """Ergonomie : choisir l'operation remplit la quittance et propose
+        le montant = reste du de l'operation, plafonne au restant du
+        reglement."""
+        if not self.operation_id:
+            return
+        if self.operation_id.receipt_id:
+            self.receipt_id = self.operation_id.receipt_id
+        reste_op = self.operation_id._residual_amount()
+        budget = reste_op
+        if self.settlement_id:
+            origin_id = self._origin.id if self._origin else False
+            deja = sum(self.settlement_id.imputation_ids.filtered(
+                lambda l: l.id != origin_id
+            ).mapped('montant_impute'))
+            budget = min(reste_op,
+                         max((self.settlement_id.montant_reg or 0.0) - deja, 0.0))
+        if not self.montant_impute:
+            self.montant_impute = budget
+
+    @api.onchange('montant_impute')
+    def _onchange_montant_evo02(self):
+        if self.operation_id and self.montant_impute and not self.is_reconstructed:
+            reste = self.operation_id._residual_amount()
+            if self.montant_impute > reste + 0.0005:
+                self.montant_impute = reste
+                return {'warning': {
+                    'title': _('Montant plafonné'),
+                    'message': _('Le montant ne peut pas dépasser le reste dû '
+                                 'de l\'opération (%(r).3f TND).', r=reste)}}
+
     @api.depends('settlement_id.partner_id', 'receipt_id.partner_id')
     def _compute_is_third_party(self):
         for rec in self:
