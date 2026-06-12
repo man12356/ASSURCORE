@@ -1,0 +1,185 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <!-- ==================================================================
+         EVO02 : refonte des indicateurs du Tableau de Bord
+         - retrait des mesures non pertinentes (honoraires HT, TVA, taux,
+           timbre, prime echeance) des analyses quittances
+         - nouveaux indicateurs : rendement par utilisateur, sante du
+           portefeuille, delai de paiement des memoires, fidelite clients,
+           recouvrement par compagnie
+         ================================================================== -->
+
+    <!-- 1. Nettoyage des mesures de l'analyse quittances -->
+    <record id="view_receipt_pivot_clean_evo02" model="ir.ui.view">
+        <field name="name">insurance.receipt.pivot.clean.evo02</field>
+        <field name="model">insurance.receipt</field>
+        <field name="inherit_id" ref="assurcore.view_insurance_receipt_pivot"/>
+        <field name="arch" type="xml">
+            <field name="timbre_fiscal" position="replace"/>
+            <pivot position="inside">
+                <field name="montant_honoraire_ht" invisible="1"/>
+                <field name="montant_tva" invisible="1"/>
+                <field name="taux_tva" invisible="1"/>
+                <field name="prime_echeance" invisible="1"/>
+                <field name="timbre_fiscal" invisible="1"/>
+                <field name="payment_lead_days" invisible="1"/>
+            </pivot>
+        </field>
+    </record>
+
+    <record id="view_receipt_graph_clean_evo02" model="ir.ui.view">
+        <field name="name">insurance.receipt.graph.clean.evo02</field>
+        <field name="model">insurance.receipt</field>
+        <field name="inherit_id" ref="assurcore.view_insurance_receipt_graph"/>
+        <field name="arch" type="xml">
+            <graph position="inside">
+                <field name="montant_honoraire_ht" invisible="1"/>
+                <field name="montant_tva" invisible="1"/>
+                <field name="taux_tva" invisible="1"/>
+                <field name="prime_echeance" invisible="1"/>
+                <field name="timbre_fiscal" invisible="1"/>
+            </graph>
+        </field>
+    </record>
+
+    <!-- 2. Rendement par utilisateur (dossiers traites / mois) -->
+    <record id="view_imputation_pivot_rendement" model="ir.ui.view">
+        <field name="name">imputation.pivot.rendement</field>
+        <field name="model">insurance.settlement.imputation</field>
+        <field name="arch" type="xml">
+            <pivot string="Rendement par utilisateur" display_quantity="1">
+                <field name="create_uid" type="row"/>
+                <field name="create_date" interval="month" type="col"/>
+                <field name="montant_impute" type="measure" string="Montant imputé (TND)"/>
+            </pivot>
+        </field>
+    </record>
+    <record id="view_imputation_graph_rendement" model="ir.ui.view">
+        <field name="name">imputation.graph.rendement</field>
+        <field name="model">insurance.settlement.imputation</field>
+        <field name="arch" type="xml">
+            <graph string="Dossiers traités par utilisateur" type="bar" stacked="1">
+                <field name="create_date" interval="month" type="row"/>
+                <field name="create_uid" type="col"/>
+            </graph>
+        </field>
+    </record>
+    <record id="action_dashboard_rendement" model="ir.actions.act_window">
+        <field name="name">Rendement par utilisateur</field>
+        <field name="res_model">insurance.settlement.imputation</field>
+        <field name="view_mode">graph,pivot</field>
+        <field name="view_ids" eval="[(5,0,0),
+            (0,0,{'view_mode':'graph','view_id':ref('view_imputation_graph_rendement')}),
+            (0,0,{'view_mode':'pivot','view_id':ref('view_imputation_pivot_rendement')})]"/>
+        <field name="domain">[('is_reconstructed', '=', False)]</field>
+        <field name="help" type="html"><p>Imputations saisies par utilisateur et par mois (hors historique migré) — indicateur de rendement.</p></field>
+    </record>
+    <menuitem id="menu_dash_rendement" name="Rendement par utilisateur"
+              parent="assurcore.menu_assurcore_dashboard"
+              action="action_dashboard_rendement" sequence="50"/>
+
+    <!-- 3. Sante du portefeuille (sain / anomalie) -->
+    <record id="view_operation_graph_sante" model="ir.ui.view">
+        <field name="name">operation.graph.sante</field>
+        <field name="model">insurance.operation</field>
+        <field name="arch" type="xml">
+            <graph string="Santé du portefeuille" type="pie">
+                <field name="health_state" type="row"/>
+            </graph>
+        </field>
+    </record>
+    <record id="action_dashboard_sante" model="ir.actions.act_window">
+        <field name="name">Santé du portefeuille</field>
+        <field name="res_model">insurance.operation</field>
+        <field name="view_mode">graph,pivot,tree</field>
+        <field name="view_ids" eval="[(5,0,0),
+            (0,0,{'view_mode':'graph','view_id':ref('view_operation_graph_sante')})]"/>
+        <field name="context">{'group_by': ['health_state']}</field>
+        <field name="help" type="html"><p>Répartition des opérations saines / en anomalie. Le détail des anomalies est dans le menu Qualité des données.</p></field>
+    </record>
+    <menuitem id="menu_dash_sante" name="Santé du portefeuille"
+              parent="assurcore.menu_assurcore_dashboard"
+              action="action_dashboard_sante" sequence="60"/>
+
+    <!-- 4. Delai de paiement des memoires (creation -> solde) -->
+    <record id="view_receipt_pivot_delai" model="ir.ui.view">
+        <field name="name">receipt.pivot.delai</field>
+        <field name="model">insurance.receipt</field>
+        <field name="arch" type="xml">
+            <pivot string="Délai de paiement des mémoires" display_quantity="1">
+                <field name="date_emission" interval="month" type="row"/>
+                <field name="payment_lead_days" type="measure" string="Délai moyen (jours)"/>
+            </pivot>
+        </field>
+    </record>
+    <record id="view_receipt_graph_delai" model="ir.ui.view">
+        <field name="name">receipt.graph.delai</field>
+        <field name="model">insurance.receipt</field>
+        <field name="arch" type="xml">
+            <graph string="Délai moyen de paiement (jours)" type="line">
+                <field name="date_emission" interval="month" type="row"/>
+                <field name="payment_lead_days" type="measure"/>
+            </graph>
+        </field>
+    </record>
+    <record id="action_dashboard_delai" model="ir.actions.act_window">
+        <field name="name">Délai de paiement des mémoires</field>
+        <field name="res_model">insurance.receipt</field>
+        <field name="view_mode">graph,pivot</field>
+        <field name="view_ids" eval="[(5,0,0),
+            (0,0,{'view_mode':'graph','view_id':ref('view_receipt_graph_delai')}),
+            (0,0,{'view_mode':'pivot','view_id':ref('view_receipt_pivot_delai')})]"/>
+        <field name="domain">[('payment_lead_days', '!=', False)]</field>
+        <field name="help" type="html"><p>Temps moyen entre l'émission d'une mémoire et son solde complet — indicateur de délai d'encaissement.</p></field>
+    </record>
+    <menuitem id="menu_dash_delai" name="Délai de paiement"
+              parent="assurcore.menu_assurcore_dashboard"
+              action="action_dashboard_delai" sequence="70"/>
+
+    <!-- 5. Fidelite clients -->
+    <record id="view_partner_graph_fidelite" model="ir.ui.view">
+        <field name="name">partner.graph.fidelite</field>
+        <field name="model">res.partner</field>
+        <field name="arch" type="xml">
+            <graph string="Fidélité clients" type="pie">
+                <field name="client_state" type="row"/>
+            </graph>
+        </field>
+    </record>
+    <record id="action_dashboard_fidelite" model="ir.actions.act_window">
+        <field name="name">Fidélité clients</field>
+        <field name="res_model">res.partner</field>
+        <field name="view_mode">graph,tree</field>
+        <field name="view_ids" eval="[(5,0,0),
+            (0,0,{'view_mode':'graph','view_id':ref('view_partner_graph_fidelite')})]"/>
+        <field name="domain">[('customer_rank', '&gt;', 0)]</field>
+        <field name="help" type="html"><p>Répartition du portefeuille clients par statut de fidélité (prospect, actif, fidèle 5+, VIP, résilié).</p></field>
+    </record>
+    <menuitem id="menu_dash_fidelite" name="Fidélité clients"
+              parent="assurcore.menu_assurcore_dashboard"
+              action="action_dashboard_fidelite" sequence="80"/>
+
+    <!-- 6. Recouvrement par compagnie (propose) -->
+    <record id="view_imputation_pivot_recouvrement" model="ir.ui.view">
+        <field name="name">imputation.pivot.recouvrement</field>
+        <field name="model">insurance.settlement.imputation</field>
+        <field name="arch" type="xml">
+            <pivot string="Recouvrement par compagnie">
+                <field name="company_ins_id" type="row"/>
+                <field name="date_imputation" interval="year" type="col"/>
+                <field name="montant_impute" type="measure" string="Encaissé (TND)"/>
+            </pivot>
+        </field>
+    </record>
+    <record id="action_dashboard_recouvrement" model="ir.actions.act_window">
+        <field name="name">Recouvrement par compagnie</field>
+        <field name="res_model">insurance.settlement.imputation</field>
+        <field name="view_mode">pivot</field>
+        <field name="view_ids" eval="[(5,0,0),
+            (0,0,{'view_mode':'pivot','view_id':ref('view_imputation_pivot_recouvrement')})]"/>
+        <field name="help" type="html"><p>Montants encaissés ventilés par compagnie et par année — base des reversements compagnie.</p></field>
+    </record>
+    <menuitem id="menu_dash_recouvrement" name="Recouvrement par compagnie"
+              parent="assurcore.menu_assurcore_dashboard"
+              action="action_dashboard_recouvrement" sequence="90"/>
+</odoo>

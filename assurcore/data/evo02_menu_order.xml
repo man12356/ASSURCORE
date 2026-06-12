@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <!-- EVO02 : ordre des menus valide avec le client (12/06/2026) -->
+    <record id="menu_assurcore_dashboard" model="ir.ui.menu"><field name="sequence">10</field></record>
+    <record id="menu_clients" model="ir.ui.menu"><field name="sequence">20</field></record>
+    <record id="menu_assurcore_policies" model="ir.ui.menu"><field name="sequence">30</field></record>
+    <record id="menu_assurcore_receipts_all" model="ir.ui.menu"><field name="sequence">40</field></record>
+    <record id="menu_assurcore_operations" model="ir.ui.menu"><field name="sequence">50</field></record>
+    <record id="menu_assurcore_settlements" model="ir.ui.menu"><field name="sequence">60</field></record>
+    <record id="menu_tresorerie" model="ir.ui.menu"><field name="sequence">70</field></record>
+    <record id="menu_sinistres" model="ir.ui.menu"><field name="sequence">80</field></record>
+    <record id="menu_assurcore_data_quality_root" model="ir.ui.menu"><field name="sequence">90</field></record>
+    <record id="menu_assurcore_parametrage" model="ir.ui.menu"><field name="sequence">100</field></record>
+    <record id="menu_assurcore_ocr" model="ir.ui.menu"><field name="sequence">110</field></record>
+</odoo>

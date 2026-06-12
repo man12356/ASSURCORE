@@ -302,6 +302,29 @@ class InsuranceReceiptEvo02(models.Model):
         help='Opérations (quittances compagnie) couvertes par cette quittance.',
     )
 
+    payment_lead_days = fields.Integer(
+        string='Délai de paiement (jours)',
+        compute='_compute_payment_lead_days', store=True,
+        group_operator='avg',
+        help='Nombre de jours entre l\'émission de la mémoire et la dernière '
+             'imputation qui la solde. Vide tant qu\'elle n\'est pas soldée.',
+    )
+
+    @api.depends('imputation_ids.montant_impute', 'imputation_ids.date_imputation',
+                 'date_emission', 'montant_prime')
+    def _compute_payment_lead_days(self):
+        for rec in self:
+            lines = rec.imputation_ids.filtered(
+                lambda l: l.settlement_id.state not in ('impaye', 'remplace'))
+            paid = sum(lines.mapped('montant_impute'))
+            due = rec.montant_prime or 0.0
+            if (rec.date_emission and lines and due > 0
+                    and paid + 0.005 >= due):
+                last = max(lines.mapped('date_imputation'))
+                rec.payment_lead_days = max((last - rec.date_emission).days, 0)
+            else:
+                rec.payment_lead_days = False
+
     # ── Décision client 12/06/2026 : timbre fiscal OPTIONNEL ──────────────────
     apply_timbre_fiscal = fields.Boolean(
         string='Appliquer le timbre fiscal',

@@ -23,6 +23,7 @@
         'data/insurance_data.xml',
         'data/evo02_anomaly_types.xml',
         'data/evo02_sequences.xml',
+        'data/evo02_menu_order.xml',
         'data/smtp_config.xml',
         'data/email_templates.xml',
         'views/res_partner_views.xml',
@@ -48,6 +49,7 @@
         'views/evo02_lettrage_views.xml',
         'views/evo02_graph_views.xml',
         'views/evo02_ventilation_views.xml',
+        'views/evo02_dashboard_views.xml',
         'security/menu_restrictions.xml',
     ],
     'assets': {
