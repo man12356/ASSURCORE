@@ -104,4 +104,15 @@
             </sheet>
         </field>
     </record>
+    <!-- Timbre fiscal optionnel (decision client 12/06/2026) -->
+    <record id="view_receipt_form_timbre_evo02" model="ir.ui.view">
+        <field name="name">insurance.receipt.form.timbre.evo02</field>
+        <field name="model">insurance.receipt</field>
+        <field name="inherit_id" ref="assurcore.view_insurance_receipt_form_detail"/>
+        <field name="arch" type="xml">
+            <field name="timbre_fiscal" position="before">
+                <field name="apply_timbre_fiscal"/>
+            </field>
+        </field>
+    </record>
 </odoo>
