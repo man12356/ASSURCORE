@@ -135,7 +135,7 @@ INSERT INTO insurance_policy (num_police, ref_interne, partner_id, payer_id, com
 SELECT 'FALLBACK-MIG', 'FALLBACK-MIG', (SELECT min(id) FROM res_partner WHERE ref LIKE 'ORA-%'), (SELECT min(id) FROM res_partner WHERE ref LIKE 'ORA-%'), (SELECT min(id) FROM insurance_company), 'AUTRE', DATE '2015-01-01', DATE '2099-12-31', 'active', 'P', (SELECT id FROM res_currency WHERE name='TND'), TRUE, FALSE, NOW(), NOW(), 1, 1
 WHERE NOT EXISTS (SELECT 1 FROM insurance_policy WHERE num_police='FALLBACK-MIG');
 
-INSERT INTO insurance_receipt (name, policy_id, partner_id, payer_id, company_ins_id, date_emission, date_echeance, montant_prime, state, health_state, currency_id, active, notes, create_date, write_date, create_uid, write_uid)
+INSERT INTO insurance_receipt (name, policy_id, partner_id, payer_id, company_ins_id, date_emission, date_echeance, montant_prime, state, health_state, apply_timbre_fiscal, currency_id, active, notes, create_date, write_date, create_uid, write_uid)
 SELECT 'ORA-FACT-'||t.annee||'-'||t.num,
        COALESCE(pol.id, polcli.id, (SELECT id FROM insurance_policy WHERE num_police='FALLBACK-MIG')),
        COALESCE(cli.id, polcli_p.id, (SELECT partner_id FROM insurance_policy WHERE num_police='FALLBACK-MIG')),
@@ -143,7 +143,7 @@ SELECT 'ORA-FACT-'||t.annee||'-'||t.num,
        COALESCE(pol.company_ins_id, polcli.company_ins_id, (SELECT min(id) FROM insurance_company)),
        t.dt, t.dt, t.total,
        CASE WHEN t.encaisse THEN 'encaissee' WHEN t.total_reg > 0 THEN 'partielle' ELSE 'emise' END,
-       'ok', (SELECT id FROM res_currency WHERE name='TND'), TRUE,
+       'ok', FALSE, (SELECT id FROM res_currency WHERE name='TND'), TRUE,
        'Migre depuis PR_FACTURE '||t.annee||'/'||t.num, NOW(), NOW(), 1, 1
 FROM tmp_fact t
 LEFT JOIN insurance_policy pol ON pol.num_police = t.pol_hint

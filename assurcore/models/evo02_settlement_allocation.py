@@ -270,6 +270,23 @@ class InsuranceReceiptEvo02(models.Model):
         help='Opérations (quittances compagnie) couvertes par cette quittance.',
     )
 
+    # ── Décision client 12/06/2026 : timbre fiscal OPTIONNEL ──────────────────
+    apply_timbre_fiscal = fields.Boolean(
+        string='Appliquer le timbre fiscal',
+        default=True,
+        help='Coché par défaut sur les nouvelles facturations : le timbre '
+             'fiscal légal (1 DT) est intégré automatiquement. Décochez pour '
+             'l\'exclure. Désactivé sur l\'historique migré (TOTAL_FACT '
+             'Oracle l\'incluait déjà).',
+    )
+
+    @api.depends('apply_timbre_fiscal')
+    def _compute_tax_rates(self):
+        super()._compute_tax_rates()
+        for rec in self:
+            if not rec.apply_timbre_fiscal:
+                rec.timbre_fiscal = 0.0
+
 
 class InsuranceSettlementEvo02(models.Model):
     _inherit = 'insurance.settlement'

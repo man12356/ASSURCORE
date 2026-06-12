@@ -208,3 +208,19 @@ class TestEvo02(TransactionCase):
                               business_key=key)
         self.assertEqual(r_manual['candidates'], r_ocr['candidates'])
         self.assertIn(op, r_ocr['candidates'])
+
+    def test_11_timbre_fiscal_optionnel(self):
+        """Décision client 12/06/2026 : timbre auto sur les nouvelles
+        quittances mais décochable ; le total dû suit."""
+        op = self._make_operation(prime=100.0)
+        rcpt = op.receipt_id
+        self.assertTrue(rcpt.apply_timbre_fiscal,
+                        'Timbre appliqué par défaut sur une nouvelle quittance')
+        total_avec = rcpt.amount_total
+        rcpt.apply_timbre_fiscal = False
+        rcpt._compute_tax_rates()
+        rcpt._compute_amounts()
+        self.assertEqual(rcpt.timbre_fiscal, 0.0)
+        self.assertLess(rcpt.amount_total, total_avec)
+        self.assertAlmostEqual(rcpt.amount_total, 100.0, places=3,
+                               msg='Sans timbre, le dû = prime seule')
