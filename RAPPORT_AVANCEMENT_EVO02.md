@@ -72,3 +72,20 @@ Docker absent de la sandbox et proxy bloquant github.com/nightly.odoo.com → im
 | 1 | **Run réel sur votre machine** (dernier filet) : `docker compose up -d` puis `docker compose exec odoo odoo -d <db> -u assurcore --test-tags evo02 --stop-after-init`. Le validateur a éliminé les erreurs statiques ; restent les comportements runtime (calculs stockés, séquences). | ⚠️ à faire |
 | 2 | **Lot 4 — migration FIFO + anomalies flaguées** : non démarré (dépend de l'arbitrage T0.1 FIFO et du seuil T0.2). Le socle est prêt (`is_reconstructed`, `evo02_skip_checks`, `add_anomaly`, types catalogués). | ⏳ phase suivante |
 | 3 | **T3.5 partiel — gabarits OCR par comp
+---
+
+## Journée du 12/06/2026 (suite) — finitions UX, écrans de saisie et tableau de bord
+
+**Livré et validé en conditions réelles :**
+
+- **Ré-import intégral SQL direct** des données métier (config/utilisateurs préservés) : 4 678 clients, 9 609 polices, 22 930 mémoires, 24 443 opérations, 21 773 règlements, ~26 000 imputations dont 3 203 ventilées FIFO — recette des anomalies CONFORME au rapport (123/316/3/29/123/253), 7 575 anomalies documentées.
+- **Timbre fiscal optionnel** (décision client) : coché par défaut sur les nouvelles quittances, décochable, OFF sur l'historique migré.
+- **Graphe de navigation finalisé** : bouton Graphe sur client/mémoire (2 vues)/règlement/opération, pastille ↗ d'ouverture de fiche sur chaque nœud, bouton ← Précédent (pile interne), règlements en bleu + icônes symboliques par type + légende, info-bulles complètes, gardes anti « contexte perdu ».
+- **Écrans de saisie d'imputation** : wizard de ventilation multi-opérations depuis le règlement (opérations limitées à la mémoire, montants auto = reste dû plafonné, Tout ventiler FIFO, verrou FOR UPDATE NOWAIT + revalidation contre la saisie concurrente) ; écran unitaire ergonomisé (filtrage par quittance, montant auto, plafonnement).
+- **Onglet Opérations** sur la fiche mémoire (les 2 vues) ; fix OwlError aggregates (currency_id invisible).
+- **Menus** : ordre validé client (Tableau/Clients/Contrats/Mémoires/Opérations/Règlements/Trésorerie/Sinistres/Qualité/Paramétrage/OCR — fichier d'ordre chargé en dernier), libellés « Mémoires opération » / « Opérations ».
+- **Tableau de bord v2 — bordereaux standards courtage** : production (primes/commissions × compagnie × branche × mois), encaissement par mode de paiement, balance des impayés par ancienneté (champ amount_open), reversement compagnie, production vs renouvellements ; + GRH/qualité : rendement par gestionnaire, délai moyen de paiement (payment_lead_days), santé du portefeuille, fidélité clients. Mesures non pertinentes retirées (honoraires HT, TVA, taux, timbre, prime échéance).
+
+**Environnement** : Docker Desktop re-pointé définitivement sur D: (Disk image location), base de travail reconstruite et sauvegardée (dumps avant_reimport_*.dump dans data_db).
+
+**Backlog restant** : gabarits OCR par compagnie (documents réels requis), pagination « +N autres » cliquable du graphe, reprise des 37 polices non matchées et 96 lettrages orphelins, balance âgée 30/60/90 j temps réel, suivi mensuel des paiements pour tiers, taux de résorption des anomalies.
