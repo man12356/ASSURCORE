@@ -115,4 +115,60 @@
             </field>
         </field>
     </record>
+    <!-- Onglet Operations sur la fiche memoire (les DEUX vues form) -->
+    <record id="view_receipt_form_operations_evo02" model="ir.ui.view">
+        <field name="name">insurance.receipt.form.operations.evo02</field>
+        <field name="model">insurance.receipt</field>
+        <field name="inherit_id" ref="assurcore.view_insurance_receipt_form_detail"/>
+        <field name="arch" type="xml">
+            <xpath expr="//notebook" position="inside">
+                <page string="Opérations" name="evo02_operations">
+                    <field name="operation_ids" readonly="1">
+                        <tree decoration-danger="health_state == 'anomalie'">
+                            <field name="name"/>
+                            <field name="internal_ref" optional="show"/>
+                            <field name="code_operation" optional="show"/>
+                            <field name="date_op"/>
+                            <field name="num_quittance" string="Quittance compagnie"/>
+                            <field name="montant_prime" sum="Total prime"/>
+                            <field name="settlement_state" widget="badge"
+                                   decoration-success="settlement_state == 'soldee'"
+                                   decoration-warning="settlement_state == 'partielle'"
+                                   decoration-danger="settlement_state == 'non_reglee'"/>
+                            <field name="health_state" widget="badge" optional="show"
+                                   decoration-danger="health_state == 'anomalie'"/>
+                        </tree>
+                    </field>
+                </page>
+            </xpath>
+        </field>
+    </record>
+
+    <record id="view_receipt_dash_form_operations_evo02" model="ir.ui.view">
+        <field name="name">insurance.receipt.form.dash.operations.evo02</field>
+        <field name="model">insurance.receipt</field>
+        <field name="inherit_id" ref="assurcore.view_insurance_receipt_form"/>
+        <field name="arch" type="xml">
+            <xpath expr="//notebook" position="inside">
+                <page string="Opérations" name="evo02_operations">
+                    <field name="operation_ids" readonly="1">
+                        <tree decoration-danger="health_state == 'anomalie'">
+                            <field name="name"/>
+                            <field name="internal_ref" optional="show"/>
+                            <field name="code_operation" optional="show"/>
+                            <field name="date_op"/>
+                            <field name="num_quittance" string="Quittance compagnie"/>
+                            <field name="montant_prime" sum="Total prime"/>
+                            <field name="settlement_state" widget="badge"
+                                   decoration-success="settlement_state == 'soldee'"
+                                   decoration-warning="settlement_state == 'partielle'"
+                                   decoration-danger="settlement_state == 'non_reglee'"/>
+                            <field name="health_state" widget="badge" optional="show"
+                                   decoration-danger="health_state == 'anomalie'"/>
+                        </tree>
+                    </field>
+                </page>
+            </xpath>
+        </field>
+    </record>
 </odoo>
