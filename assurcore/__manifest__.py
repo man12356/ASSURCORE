@@ -47,6 +47,7 @@
         'views/evo02_health_views.xml',
         'views/evo02_lettrage_views.xml',
         'views/evo02_graph_views.xml',
+        'views/evo02_ventilation_views.xml',
         'security/menu_restrictions.xml',
     ],
     'assets': {

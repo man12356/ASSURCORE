@@ -1,0 +1,72 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <!-- EVO02 : wizard de ventilation multi-operations d'un reglement -->
+
+    <record id="view_ventilation_wizard_form" model="ir.ui.view">
+        <field name="name">insurance.ventilation.wizard.form</field>
+        <field name="model">insurance.ventilation.wizard</field>
+        <field name="arch" type="xml">
+            <form string="Ventiler le règlement sur les opérations">
+                <group>
+                    <group>
+                        <field name="settlement_id" readonly="1"/>
+                        <field name="partner_id" readonly="1"/>
+                        <field name="receipt_id"
+                               options="{'no_create': True}"
+                               domain="[('state', '!=', 'reversee')]"/>
+                    </group>
+                    <group>
+                        <field name="montant_reg"/>
+                        <field name="restant_reglement"
+                               decoration-danger="restant_reglement &lt;= 0"/>
+                        <field name="total_ventile"
+                               decoration-danger="total_ventile &gt; restant_reglement"/>
+                        <field name="currency_id" invisible="1"/>
+                    </group>
+                </group>
+                <button name="action_fill_all" type="object"
+                        string="Tout ventiler (opérations de la mémoire, FIFO)"
+                        class="btn-secondary" invisible="not receipt_id"/>
+                <field name="line_ids">
+                    <tree editable="bottom">
+                        <field name="currency_id" column_invisible="1"/>
+                        <field name="operation_id" required="1"
+                               domain="[('receipt_id', '=', parent.receipt_id)]"
+                               options="{'no_create': True}"/>
+                        <field name="reste_du"/>
+                        <field name="montant" sum="Total"/>
+                    </tree>
+                </field>
+                <footer>
+                    <button name="action_confirmer" type="object"
+                            string="Confirmer la ventilation" class="btn-primary"/>
+                    <button string="Annuler" class="btn-secondary" special="cancel"/>
+                </footer>
+            </form>
+        </field>
+    </record>
+
+    <record id="action_ventilation_wizard" model="ir.actions.act_window">
+        <field name="name">Ventiler sur opérations</field>
+        <field name="res_model">insurance.ventilation.wizard</field>
+        <field name="view_mode">form</field>
+        <field name="target">new</field>
+        <field name="binding_model_id" ref="assurcore.model_insurance_settlement"/>
+        <field name="binding_view_types">form</field>
+    </record>
+
+    <!-- Bouton sur la fiche reglement -->
+    <record id="view_settlement_form_ventilation_evo02" model="ir.ui.view">
+        <field name="name">insurance.settlement.form.ventilation.evo02</field>
+        <field name="model">insurance.settlement</field>
+        <field name="inherit_id" ref="assurcore.view_insurance_settlement_form"/>
+        <field name="arch" type="xml">
+            <xpath expr="//button[@name='action_open_graph']" position="after">
+                <button name="%(assurcore.action_ventilation_wizard)d"
+                        type="action" string="Ventiler sur opérations"
+                        class="btn-primary"
+                        invisible="state not in ('regle', 'encaisse')"/>
+            </xpath>
+        </field>
+    </record>
+</odoo>

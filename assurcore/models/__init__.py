@@ -36,3 +36,6 @@ from . import evo02_receipt_matcher
 
 # EVO02 Lot 3 : boutons graphe
 from . import evo02_graph_actions
+
+# EVO02 : wizard de ventilation multi-operations
+from . import evo02_ventilation_wizard
