@@ -95,6 +95,8 @@ for a in Anomaly.search_read(
     existing_keys.add((a['type_id'][0], a['oracle_ref'] or ''))
 
 stats = {}
+anomaly_vals = []   # REX projet : creations par LOTS (model_create_multi),
+                    # pas une par une — ~10x plus rapide via l'ORM in-process.
 def add_anomaly(record, code, detail, oracle_ref):
     stats[code] = stats.get(code, 0) + 1
     if DRY_RUN or not record:
@@ -106,22 +108,38 @@ def add_anomaly(record, code, detail, oracle_ref):
     if (tid, oracle_ref or '') in existing_keys:
         return  # idempotence
     existing_keys.add((tid, oracle_ref or ''))
-    Anomaly.create({
+    anomaly_vals.append({
         'res_model': record._name, 'res_id': record.id,
         'type_id': tid, 'detail': detail,
         'origin': 'migration', 'oracle_ref': oracle_ref,
     })
 
+def flush_anomalies():
+    if not anomaly_vals:
+        return
+    BATCH = 2000
+    for i in range(0, len(anomaly_vals), BATCH):
+        Anomaly.create(anomaly_vals[i:i + BATCH])
+    log('  -> %d anomalies creees (par lots de %d)' % (len(anomaly_vals), BATCH))
+    anomaly_vals.clear()
+
 # ══════════════════════════════════════════════════════════════════════════════
 log('\nA. Backfill internal_ref + recalcul ident_mode')
 # ══════════════════════════════════════════════════════════════════════════════
-sans_ref = all_ops.filtered(lambda o: not o.internal_ref)
-log('  operations migrees sans reference interne : %d' % len(sans_ref))
-if not DRY_RUN and sans_ref:
-    seq = env['ir.sequence']
-    for op in sans_ref:
-        op.internal_ref = seq.next_by_code('insurance.operation.ref')
-    log('  -> references generees')
+# REX projet : SQL direct (pas de logique metier sur ce champ) — instantane
+# au lieu de 2 requetes x 24 000 operations via la sequence ORM.
+env.cr.execute("SELECT count(*) FROM insurance_operation "
+               "WHERE internal_ref IS NULL")
+nb_sans_ref = env.cr.fetchone()[0]
+log('  operations sans reference interne : %d' % nb_sans_ref)
+if not DRY_RUN and nb_sans_ref:
+    env.cr.execute("""
+        UPDATE insurance_operation
+           SET internal_ref = 'OP-MIG-' || lpad(id::text, 7, '0')
+         WHERE internal_ref IS NULL
+    """)
+    all_ops.invalidate_recordset(['internal_ref'])
+    log('  -> references generees en un seul UPDATE (prefixe OP-MIG-)')
 
 # ══════════════════════════════════════════════════════════════════════════════
 log('\nB. Flag is_reconstructed sur les imputations migrees')
@@ -151,6 +169,7 @@ def op_due(op):
 multi = [r for r in all_rcpts if len(r.operation_ids) > 1]
 log('  memoires multi-operations : %d' % len(multi))
 nb_split, nb_lines_new = 0, 0
+fifo_vals = []   # REX projet : creation par lots en fin de boucle
 for rcpt in multi:
     ops_sorted = rcpt.operation_ids.sorted(
         key=lambda o: (o.date_op or date(1900, 1, 1), o.id))
@@ -189,7 +208,7 @@ for rcpt in multi:
         line.write({'operation_id': first_op.id,
                     'montant_impute': first_amount})
         for (o, amt) in chunks[1:]:
-            Imputation.create({
+            fifo_vals.append({
                 'settlement_id': line.settlement_id.id,
                 'receipt_id': rcpt.id,
                 'operation_id': o.id,
@@ -199,7 +218,11 @@ for rcpt in multi:
                 'notes': 'Ventilation FIFO EVO02 depuis %s' % line.name,
             })
             nb_lines_new += 1
-log('  lignes ventilees : %d (nouvelles lignes creees : %d)'
+if not DRY_RUN and fifo_vals:
+    BATCH = 2000
+    for i in range(0, len(fifo_vals), BATCH):
+        Imputation.create(fifo_vals[i:i + BATCH])
+log('  lignes ventilees : %d (nouvelles lignes creees : %d, par lots)'
     % (nb_split, nb_lines_new))
 
 # ══════════════════════════════════════════════════════════════════════════════
@@ -306,7 +329,7 @@ if CREER_ANOMALIES_QUITTANCE_GENERIQUE:
 
 # ══════════════════════════════════════════════════════════════════════════════
 log('\nE. RECETTE — comptages vs rapport du 11/06/2026')
-# ══════════════════════════════════════════════════════════════════════════════
+# ==============================================================================
 attendus = {'MEM_INEXISTANTE': 123, 'MEM_ORPHELINE': 316, 'SUR_IMPUTATION': 3,
             'SUR_REGLEMENT': 29, 'LETTRAGE_ORPHELIN': 95 + 28,
             'TOTAL_REG_INCOHERENT': 253}
@@ -325,6 +348,7 @@ if DRY_RUN:
     log('\nDRY_RUN : aucune ecriture. Relancer avec DRY_RUN=False pour appliquer.')
     env.cr.rollback()
 else:
+    flush_anomalies()
     env.cr.commit()
     log('\nCOMMIT effectue.')
 log('FIN — %s' % ('RECETTE CONFORME' if ok else 'ECARTS A ANALYSER (voir ci-dessus)'))
