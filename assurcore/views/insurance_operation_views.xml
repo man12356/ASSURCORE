@@ -295,7 +295,7 @@
 
   <!-- Menuitem pour les Opérations Contractuelles -->
   <menuitem id="menu_assurcore_operations"
-            name="Opérations contractuelles"
+            name="Opérations"
             parent="menu_assurcore_root"
             action="action_insurance_operation"
             sequence="26"/>

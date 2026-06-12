@@ -205,7 +205,7 @@
 
   <!-- Menu Quittances déplacé sous la racine (sequence 40) -->
   <menuitem id="menu_assurcore_receipts_all"
-            name="Quittances"
+            name="Mémoires opération"
             parent="menu_assurcore_root"
             action="action_insurance_receipts_detail"
             sequence="40"/>
