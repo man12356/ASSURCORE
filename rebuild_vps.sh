@@ -42,7 +42,7 @@ echo "=== [4/10] Upgrade module assurcore (schema EVO02) ==="
 $DC run --rm -T web odoo -c /etc/odoo/odoo.conf -d assurcore_db -u assurcore --stop-after-init --workers 0
 
 echo "=== [5/10] Generation SQL ETL (dans le conteneur web) ==="
-$DC run --rm -T web python3 /mnt/extra-addons/evo02_full_etl.py
+$DC run --rm -T -u 0 web python3 /mnt/extra-addons/evo02_full_etl.py
 cp -f addons/evo02_full_import.sql data_db/
 
 echo "=== [6/10] RESET + IMPORT metier (une transaction) ==="
