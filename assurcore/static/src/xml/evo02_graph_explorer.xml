@@ -12,9 +12,15 @@
                 <t t-esc="state.error"/>
             </div>
             <t t-else="">
-                <div class="mb-2 d-flex align-items-center" style="font-size: 12px; gap: 8px;">
+                <div class="mb-2 d-flex align-items-center flex-wrap" style="font-size: 12px; gap: 12px;">
                     <button class="btn btn-secondary btn-sm" t-if="state.canBack"
                             t-on-click="goBack">&#8592; Précédent</button>
+                    <span><span style="display:inline-block;width:11px;height:11px;border-radius:3px;background:#F1EFE8;border:1.5px solid #5F5E5A;"/> opération</span>
+                    <span><span style="display:inline-block;width:11px;height:11px;border-radius:3px;background:#EEEDFE;border:1.5px solid #534AB7;"/> mémoire</span>
+                    <span><span style="display:inline-block;width:11px;height:11px;border-radius:3px;background:#D6E9FB;border:1.5px solid #185FA5;"/> règlement</span>
+                    <span><span style="display:inline-block;width:11px;height:11px;border-radius:3px;background:#D9F2E5;border:1.5px solid #0F6E56;"/> client</span>
+                    <span><span style="display:inline-block;width:11px;height:11px;border-radius:3px;background:#FAEEDA;border:1.5px solid #854F0B;"/> partiellement réglée</span>
+                    <span><span style="display:inline-block;width:11px;height:11px;border-radius:3px;background:#fff;border:2.5px solid #A32D2D;"/> anomalie</span>
                 </div>
                 <div class="text-muted mb-2" style="font-size: 12px;">
                     Sommet : <b t-esc="state.rootLabel"/> — les nœuds du même type sont masqués ·
