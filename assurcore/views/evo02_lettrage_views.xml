@@ -90,6 +90,7 @@
                         </group>
                         <field name="allocation_ids" readonly="1">
                             <tree>
+                                <field name="currency_id" column_invisible="1"/>
                                 <field name="date_imputation"/>
                                 <field name="settlement_id"/>
                                 <field name="partner_id" string="Payeur"/>
@@ -125,6 +126,7 @@
                 <page string="Opérations" name="evo02_operations">
                     <field name="operation_ids" readonly="1">
                         <tree decoration-danger="health_state == 'anomalie'">
+                            <field name="currency_id" column_invisible="1"/>
                             <field name="name"/>
                             <field name="internal_ref" optional="show"/>
                             <field name="code_operation" optional="show"/>
@@ -153,6 +155,7 @@
                 <page string="Opérations" name="evo02_operations">
                     <field name="operation_ids" readonly="1">
                         <tree decoration-danger="health_state == 'anomalie'">
+                            <field name="currency_id" column_invisible="1"/>
                             <field name="name"/>
                             <field name="internal_ref" optional="show"/>
                             <field name="code_operation" optional="show"/>
