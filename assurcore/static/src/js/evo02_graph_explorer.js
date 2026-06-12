@@ -44,9 +44,22 @@ export class GraphExplorer extends Component {
         this.containerRef = useRef("container");
         this.tooltipRef = useRef("tooltip");
         const p = this.props.action?.params || this.props.action?.context?.params || {};
+        // Retour navigateur : les params ne survivent pas dans l'URL ->
+        // on restaure le dernier contexte depuis sessionStorage.
+        let model = p.model, resId = p.res_id;
+        if (!resId) {
+            try {
+                const saved = JSON.parse(sessionStorage.getItem("assurcore_graph_ctx") || "null");
+                if (saved) { model = saved.model; resId = saved.resId; }
+            } catch (e) { /* ignore */ }
+        }
+        if (resId) {
+            sessionStorage.setItem("assurcore_graph_ctx",
+                JSON.stringify({ model: model || "operation", resId }));
+        }
         this.state = useState({
-            model: p.model || "operation",
-            resId: p.res_id,
+            model: model || "operation",
+            resId: resId,
             svg: "",
             error: "",
             rootLabel: "",
@@ -56,6 +69,11 @@ export class GraphExplorer extends Component {
     }
 
     async load() {
+        if (!this.state.resId) {
+            this.state.error = "Contexte du graphe perdu. Rouvrez le graphe " +
+                "depuis la fiche d'un enregistrement (bouton Graphe).";
+            return;
+        }
         try {
             const data = await this.rpc("/assurcore/graph/node", {
                 model: this.state.model,
@@ -190,6 +208,8 @@ export class GraphExplorer extends Component {
         }
         const n = this.nodeFromEvent(ev);
         if (!n || n.is_root) return;
+        sessionStorage.setItem("assurcore_graph_ctx",
+            JSON.stringify({ model: n.type, resId: n.action.res_id }));
         this.action.doAction({
             type: "ir.actions.client",
             tag: "assurcore_graph",

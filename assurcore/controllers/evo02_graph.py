@@ -27,9 +27,12 @@ MAX_DEPTH = 4
 class AssurcoreGraphController(http.Controller):
 
     @http.route('/assurcore/graph/node', type='json', auth='user')
-    def graph_node(self, model, res_id, limit_per_level=25, **kw):
-        if model not in MODELS:
-            return {'error': _('Type de nœud inconnu : %s') % model}
+    def graph_node(self, model=None, res_id=None, limit_per_level=25, **kw):
+        if not model or model not in MODELS or not res_id:
+            return {'error': _(
+                'Contexte du graphe perdu (retour navigateur). '
+                'Rouvrez le graphe depuis la fiche d\'un enregistrement '
+                'via le bouton « Graphe ».')}
         record = request.env[MODELS[model]].browse(int(res_id))
         if not record.exists() or not self._readable(record):
             return {'error': _('Enregistrement introuvable ou non autorisé.')}
