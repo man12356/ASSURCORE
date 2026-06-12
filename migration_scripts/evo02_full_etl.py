@@ -236,6 +236,55 @@ WHERE NOT EXISTS (SELECT 1 FROM insurance_settlement s WHERE s.name='ORA-REG-'||
    OR NOT EXISTS (SELECT 1 FROM insurance_receipt r WHERE r.name='ORA-FACT-'||t.annee||'-'||t.num);
 """)
 
+# ── S8. Sinistres ─────────────────────────────────────────────────────────────
+sin = tsv('PR_SINISTRE_DATA_TABLE.tsv')
+TYPE_SIN = {'IDA': 'ida', 'Dommage_Collision': 'dommage_collision'}
+W("""
+-- S8. SINISTRES (PR_SINISTRE)
+DELETE FROM insurance_claim WHERE name LIKE 'ORA-SIN-%';
+DROP TABLE IF EXISTS tmp_sin;
+CREATE TEMP TABLE tmp_sin (annee text, num text, num_pol text, dt date, lib text, cat text,
+  montant numeric, hon numeric, hon_fact boolean, ref_sin text, tiers text, type_sin text,
+  bdg numeric, vol numeric, total_paye numeric, compagnie text, supp boolean);
+""")
+rows = []
+for r in sin:
+    if not (r.get('NUM_SINISTRE') or '').strip(): continue
+    rows.append('(%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)' % (
+        S(r.get('ANNEE_SIN'), 4), S(r.get('NUM_SINISTRE')), S(r.get('NUM_POLICE'), 30),
+        D(r.get('DATE_SINISTRE'), "'2015-01-01'"), S(r.get('LIB_SINISTRE'), 250),
+        S(r.get('CATEGORIE_INDEMNISATION'), 50), N(r.get('MONTANT_INDEMNITE')),
+        N(r.get('MONTANT_HON_SIN_HT')), 'TRUE' if r.get('HON_SIN_FACTURE') == 'O' else 'FALSE',
+        S(r.get('REF_SINISTRE'), 20), S(r.get('TIERS'), 50),
+        S(TYPE_SIN.get((r.get('TYPE_SINISTRE') or '').strip())),
+        N(r.get('BRIS_DE_GLACES')), N(r.get('VOL_INCENDIE')),
+        N(r.get('TOTAL_INDEMNITE_PAYE')), S(r.get('COMPAGNIE'), 30),
+        'TRUE' if r.get('SUPP_LOG') == 'O' else 'FALSE'))
+values_block('INSERT INTO tmp_sin', rows)
+W("""
+INSERT INTO insurance_claim (name, state, policy_id, partner_id, company_ins_id, branche,
+       commercial_id, agence_courtier, date_sinistre, date_declaration, lib_sinistre,
+       categorie_indemnisation, tiers, ref_compagnie, type_sinistre, bris_de_glaces, vol_incendie,
+       montant_reclame, montant_expertise, franchise, montant_indemnite, montant_indemnite_net,
+       montant_honoraire_sin_ht, hon_sin_facture, currency_id, notes, supp_log, active,
+       create_date, write_date, create_uid, write_uid)
+SELECT 'ORA-SIN-'||t.annee||'-'||t.num, 'declare',
+       p.id, p.partner_id, p.company_ins_id, p.branche, p.commercial_id, p.agence_courtier,
+       t.dt::timestamp, t.dt, COALESCE(t.lib, 'Sinistre migre depuis Oracle -- '||t.num),
+       t.cat, t.tiers, t.ref_sin, t.type_sin, t.bdg, t.vol,
+       t.montant, 0, 0, t.montant, t.montant,
+       t.hon, t.hon_fact, (SELECT id FROM res_currency WHERE name='TND'),
+       'Migre depuis PR_SINISTRE '||t.annee||'/'||t.num||' | Compagnie: '||COALESCE(t.compagnie,'?')
+        ||' | Total indemnite payee Oracle: '||COALESCE(t.total_paye,0)
+        ||CASE WHEN p.num_police='FALLBACK-MIG' THEN ' | ANOMALIE: police Oracle introuvable ('||COALESCE(t.num_pol,'?')||')' ELSE '' END,
+       t.supp, NOT t.supp, NOW(), NOW(), 1, 1
+FROM tmp_sin t
+JOIN insurance_policy p ON p.id = COALESCE(
+     (SELECT id FROM insurance_policy ip WHERE ip.num_police = t.num_pol LIMIT 1),
+     (SELECT id FROM insurance_policy ip WHERE ip.num_police = 'FALLBACK-MIG'));
+""")
+print('S8 sinistres: %d' % len(rows))
+
 # ── S7. Controles de volumes ─────────────────────────────────────────────────
 W("""
 -- S7. CONTROLES
@@ -245,6 +294,7 @@ UNION ALL SELECT 'quittances', count(*) FROM insurance_receipt
 UNION ALL SELECT 'operations', count(*) FROM insurance_operation
 UNION ALL SELECT 'reglements', count(*) FROM insurance_settlement
 UNION ALL SELECT 'imputations', count(*) FROM insurance_settlement_imputation
+UNION ALL SELECT 'sinistres', count(*) FROM insurance_claim WHERE name LIKE 'ORA-SIN-%'
 UNION ALL SELECT 'lettrage_orphelin', count(*) FROM evo02_lettrage_orphelin
 UNION ALL SELECT 'polices_non_matchees', count(*) FROM tmp_pol_skipped;
 COMMIT;
