@@ -69,6 +69,11 @@ class InsuranceSettlementImputationEvo02(models.Model):
         readonly=True,
     )
 
+    type_reg = fields.Selection(
+        related='settlement_id.type_reg', string='Mode de paiement',
+        store=True, readonly=True,
+    )
+
     # ── Calculs ────────────────────────────────────────────────────────────────
 
     @api.depends('receipt_id')
@@ -301,6 +306,22 @@ class InsuranceReceiptEvo02(models.Model):
         string='Opérations',
         help='Opérations (quittances compagnie) couvertes par cette quittance.',
     )
+
+    amount_open = fields.Monetary(
+        string='Reste dû (TND)', currency_field='currency_id',
+        compute='_compute_amount_open', store=True,
+        help='Montant de la mémoire non encore réglé (imputations actives '
+             'déduites) — base de la balance des impayés.',
+    )
+
+    @api.depends('imputation_ids.montant_impute',
+                 'imputation_ids.settlement_id.state', 'montant_prime')
+    def _compute_amount_open(self):
+        for rec in self:
+            paid = sum(rec.imputation_ids.filtered(
+                lambda l: l.settlement_id.state not in ('impaye', 'remplace')
+            ).mapped('montant_impute'))
+            rec.amount_open = max((rec.montant_prime or 0.0) - paid, 0.0)
 
     payment_lead_days = fields.Integer(
         string='Délai de paiement (jours)',
