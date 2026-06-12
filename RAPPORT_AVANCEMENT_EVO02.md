@@ -1,5 +1,16 @@
 # Rapport d'avancement — EVO02 (session du 11/06/2026)
 
+> **MISE À JOUR 12/06/2026 — VALIDATION RUNTIME RÉUSSIE ✅**
+> Module installé sur Odoo 17.0 réel (Docker, base restaurée depuis dump) :
+> **10/10 tests EVO02 passent — 0 failed, 0 error** (`odoo.tests.result`).
+> Corrections apportées en boucle courte pendant la validation :
+> mixin graphe converti en AbstractModel (TypeError object layout au registre),
+> wizard d'imputation : fusion dans la ligne existante au lieu d'un doublon,
+> données de test alignées sur les champs obligatoires réels (branche, dates,
+> code opération, timbre fiscal inclus dans le total dû).
+> Environnement remis d'aplomb au passage : disque Docker migré définitivement
+> sur D: (Disk image location), base restaurée depuis data_db\assurcore_db.dump.
+
 **Branche :** `evo02-lettrage-sante-graphe-ocr` · **Version module :** 17.0.3.0.0
 **Référentiels :** SPEC_Imputation_Operation_Graphe_Navigation.md · PLAN_TACHES_EVO_Lettrage_Sante_Graphe_OCR.md
 
@@ -60,8 +71,4 @@ Docker absent de la sandbox et proxy bloquant github.com/nightly.odoo.com → im
 |---|---|---|
 | 1 | **Run réel sur votre machine** (dernier filet) : `docker compose up -d` puis `docker compose exec odoo odoo -d <db> -u assurcore --test-tags evo02 --stop-after-init`. Le validateur a éliminé les erreurs statiques ; restent les comportements runtime (calculs stockés, séquences). | ⚠️ à faire |
 | 2 | **Lot 4 — migration FIFO + anomalies flaguées** : non démarré (dépend de l'arbitrage T0.1 FIFO et du seuil T0.2). Le socle est prêt (`is_reconstructed`, `evo02_skip_checks`, `add_anomaly`, types catalogués). | ⏳ phase suivante |
-| 3 | **T3.5 partiel — gabarits OCR par compagnie** : le service et le branchement parseur sont en place ; l'extraction champ par champ par compagnie nécessite des documents réels (LLOYD, STAR, COMAR, GAT en priorité). | ⏳ phase suivante |
-| 4 | Pagination « +N autres » : le compteur est remonté par l'API et affiché ; le clic pour charger la page suivante (offset) reste à câbler côté composant. | ⏳ mineur |
-| 5 | Push GitHub à faire depuis votre poste : `git push origin evo02-lettrage-sante-graphe-ocr`. | ⚠️ à faire |
-
-**Synthèse :** 6 commits, 5 lots du plan couverts (lots 1, 2, 3, 5, 6) + tests, soit l'équivalent des phases 1→5 du plan hors migration. Le chemin critique restant est inchangé : arbitrages phase 0 → lot 4 (migration) → recette chiffrée.
+| 3 | **T3.5 partiel — gabarits OCR par comp
