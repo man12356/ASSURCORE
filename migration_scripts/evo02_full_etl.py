@@ -191,7 +191,7 @@ LEFT JOIN insurance_receipt rcpt ON rcpt.name = 'ORA-FACT-'||t.an_p||'-'||t.nf_p
 
 # ── S5. REGLEMENTS ────────────────────────────────────────────────────────────
 regs = tsv('PR_REGELEMENT_DATA_TABLE.tsv')
-W("\n-- S5. REGLEMENTS (%d)\nCREATE TEMP TABLE tmp_reg(num text, num_cli text, dt date, typ text, montant numeric, cheque text, impute boolean, impaye boolean);\n" % len(regs))
+W("\n-- S5. REGLEMENTS (%d)\nCREATE TEMP TABLE tmp_reg(num text, num_cli text, dt date, typ text, montant numeric, cheque text, impute boolean, impaye boolean, encaisse boolean);\n" % len(regs))
 rows, seen = [], set()
 for r in regs:
     num = r.get('NUM_REG_CLT','')
@@ -199,14 +199,14 @@ for r in regs:
     seen.add(num)
     typ = (r.get('TYPE_REG') or 'C')[:1]
     if typ not in 'CEVPA': typ = 'C'
-    rows.append('(%s,%s,%s,%s,%s,%s,%s,%s)' % (S(num), S(r.get('NUM_CLIENT')), D(r.get('DATE_REG'),"'2015-01-01'"), S(typ), N(r.get('MONTANT_REG')), S(r.get('NUM_CHEQUE'),20), 'TRUE' if r.get('IMPUTER')=='O' else 'FALSE', 'TRUE' if r.get('IMPAYE')=='O' else 'FALSE'))
+    rows.append('(%s,%s,%s,%s,%s,%s,%s,%s,%s)' % (S(num), S(r.get('NUM_CLIENT')), D(r.get('DATE_REG'),"'2015-01-01'"), S(typ), N(r.get('MONTANT_REG')), S(r.get('NUM_CHEQUE'),20), 'TRUE' if r.get('IMPUTER')=='O' else 'FALSE', 'TRUE' if r.get('IMPAYE')=='O' else 'FALSE', 'TRUE' if r.get('ENCAISSE')=='O' else 'FALSE'))
 values_block('INSERT INTO tmp_reg', rows)
 W("""
 INSERT INTO insurance_settlement (name, partner_id, date_reg, type_reg, montant_reg, num_cheque, state, imputer, health_state, currency_id, notes, create_date, write_date, create_uid, write_uid)
 SELECT 'ORA-REG-'||t.num,
        COALESCE(cli.id, (SELECT partner_id FROM insurance_policy WHERE num_police='FALLBACK-MIG')),
        t.dt, t.typ, t.montant, t.cheque,
-       CASE WHEN t.impaye THEN 'impaye' WHEN t.impute THEN 'regle' ELSE 'brouillon' END,
+       CASE WHEN t.impaye THEN 'impaye' WHEN t.encaisse THEN 'encaisse' WHEN t.impute THEN 'regle' ELSE 'brouillon' END,
        t.impute, 'ok', (SELECT id FROM res_currency WHERE name='TND'),
        'Migre depuis PR_REGELEMENT '||t.num, NOW(), NOW(), 1, 1
 FROM tmp_reg t

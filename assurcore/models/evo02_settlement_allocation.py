@@ -97,6 +97,26 @@ class InsuranceSettlementImputationEvo02(models.Model):
             or self.is_reconstructed
         )
 
+    @api.constrains('montant_impute', 'settlement_id')
+    def _check_montant_impute(self):
+        """Surcharge de la contrainte C1 d'EVO01 : ajoute l'exemption
+        historique migré (is_reconstructed / evo02_skip_checks) — les
+        3 règlements sur-imputés Oracle doivent rester modifiables par
+        la ventilation FIFO sans être bloqués."""
+        for rec in self:
+            if not rec._evo02_checks_enabled() or not rec.settlement_id:
+                continue
+            lines = rec.settlement_id.imputation_ids.filtered(
+                lambda l: not l.is_reconstructed)
+            total = sum(lines.mapped('montant_impute'))
+            if float_compare(total, rec.settlement_id.montant_reg,
+                             precision_digits=PRECISION) > 0:
+                raise ValidationError(_(
+                    'Le total des imputations (%(total).3f TND) dépasse '
+                    'le montant du règlement (%(reg).3f TND).',
+                    total=total, reg=rec.settlement_id.montant_reg,
+                ))
+
     @api.constrains('montant_impute', 'receipt_id')
     def _check_receipt_overpayment(self):
         """C2 — Non sur-règlement : total imputé sur la quittance ≤ total dû.
