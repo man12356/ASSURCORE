@@ -22,6 +22,9 @@ class TestEvo02(TransactionCase):
             'partner_id': cls.partner.id,
             'company_ins_id': cls.company_ins.id,
             'num_police': 'POL-TEST-001',
+            'branche': 'AUTO',
+            'date_effect': '2026-01-01',
+            'date_echeance': '2026-12-31',
         })
 
     def _make_operation(self, prime=1000.0, quittance='Q-12345'):
@@ -29,9 +32,12 @@ class TestEvo02(TransactionCase):
             'policy_id': self.policy.id,
             'partner_id': self.partner.id,
             'company_ins_id': self.company_ins.id,
+            'code_operation': 'EMI',
             'num_police': 'POL-TEST-001',
             'num_quittance': quittance,
             'montant_prime': prime,
+            'date_validite_du': '2026-01-01',
+            'date_validite_au': '2026-12-31',
             'state': 'confirmed',
         })
         op.action_generate_receipt()
@@ -123,8 +129,11 @@ class TestEvo02(TransactionCase):
             'policy_id': self.policy.id,
             'partner_id': self.partner.id,
             'company_ins_id': self.company_ins.id,
+            'code_operation': 'EMI',
             'num_quittance': 'Q-CYCLE',
             'montant_prime': 100.0,
+            'date_validite_du': '2026-01-01',
+            'date_validite_au': '2026-12-31',
             'state': 'confirmed',
         })
         self.assertEqual(op.settlement_state, 'non_facturee')
@@ -190,7 +199,6 @@ class TestEvo02(TransactionCase):
         """Critère 9 : même service ⇒ même candidat quel que soit le canal."""
         matcher = self.env['insurance.receipt.matcher']
         op = self._make_operation(prime=777.0, quittance='INST')
-        key = {'num_police': 'POL-TEST-001', 'montant_prime': 777.0}
         r_manual = matcher.match(company_ins_id=self.company_ins.id,
                                  identifiers={}, business_key=key)
         r_ocr = matcher.match(company_ins_id=self.company_ins.id,
