@@ -29,7 +29,9 @@ import os
 from datetime import datetime, date
 
 # ── PARAMÈTRES (arbitrages phase 0 — à ajuster si le client tranche autrement) ─
-DATA_DIR = '/backups/DATA_REEL'      # TSV Oracle copiés dans data_db/DATA_REEL
+# TSV Oracle : /mnt/extra-addons = ./addons (monté sur le conteneur web)
+_CANDIDATS = ['/mnt/extra-addons/DATA_REEL', '/backups/DATA_REEL']
+DATA_DIR = next((p for p in _CANDIDATS if os.path.isdir(p)), _CANDIDATS[0])
 DRY_RUN = False                      # True = tout calculer, ne rien écrire
 SEUIL_OP_NON_FACTUREE = date(2025, 6, 1)   # T0.2 : avant cette date = anomalie
 CREER_ANOMALIES_QUITTANCE_GENERIQUE = True  # T0.3
@@ -349,6 +351,4 @@ if DRY_RUN:
     env.cr.rollback()
 else:
     flush_anomalies()
-    env.cr.commit()
-    log('\nCOMMIT effectue.')
-log('FIN — %s' % ('RECETTE CONFORME' if ok else 'ECARTS A ANALYSER (voir ci-dessus)'))
+   
