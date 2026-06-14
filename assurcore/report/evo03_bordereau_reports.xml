@@ -1,0 +1,791 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+
+  <!-- ══════════════════════════════════════════════════════════════════════ -->
+  <!--  ACTIONS D'IMPRESSION — BORDEREAUX EVO03                              -->
+  <!-- ══════════════════════════════════════════════════════════════════════ -->
+
+  <record id="action_report_bordereau_cheques" model="ir.actions.report">
+    <field name="name">Bordereau de Remise de Chèques</field>
+    <field name="model">insurance.bordereau</field>
+    <field name="report_type">qweb-pdf</field>
+    <field name="report_name">assurcore.report_bordereau_cheques_template</field>
+    <field name="report_file">assurcore.report_bordereau_cheques_template</field>
+    <field name="print_report_name">'BRD_Cheques_' + (object.name or '')</field>
+    <field name="binding_model_id" ref="model_insurance_bordereau"/>
+    <field name="binding_type">report</field>
+  </record>
+
+  <record id="action_report_bordereau_traites" model="ir.actions.report">
+    <field name="name">Bordereau de Remise de Traités</field>
+    <field name="model">insurance.bordereau</field>
+    <field name="report_type">qweb-pdf</field>
+    <field name="report_name">assurcore.report_bordereau_traites_template</field>
+    <field name="report_file">assurcore.report_bordereau_traites_template</field>
+    <field name="print_report_name">'BRD_Traites_' + (object.name or '')</field>
+    <field name="binding_model_id" ref="model_insurance_bordereau"/>
+    <field name="binding_type">report</field>
+  </record>
+
+  <record id="action_report_bordereau_especes" model="ir.actions.report">
+    <field name="name">Bordereau de Versement Espèces</field>
+    <field name="model">insurance.bordereau</field>
+    <field name="report_type">qweb-pdf</field>
+    <field name="report_name">assurcore.report_bordereau_especes_template</field>
+    <field name="report_file">assurcore.report_bordereau_especes_template</field>
+    <field name="print_report_name">'BVE_Especes_' + (object.name or '')</field>
+    <field name="binding_model_id" ref="model_insurance_bordereau"/>
+    <field name="binding_type">report</field>
+  </record>
+
+  <!-- ══════════════════════════════════════════════════════════════════════ -->
+  <!--  CSS COMMUN AUX BORDEREAUX                                            -->
+  <!-- ══════════════════════════════════════════════════════════════════════ -->
+
+  <template id="bordereau_common_css">
+    <style type="text/css">
+      @page { size: A4; margin: 18mm 15mm 18mm 15mm; }
+      body  { font-family: 'Arial', sans-serif; font-size: 11px; color: #1a1a1a; }
+
+      /* ── En-tête ─────────────────────────────────────────── */
+      .brd-header          { display: flex; justify-content: space-between; align-items: flex-start;
+                             border-bottom: 3px solid #003366; padding-bottom: 10px; margin-bottom: 14px; }
+      .brd-logo-zone       { width: 45%; }
+      .brd-title-zone      { width: 52%; text-align: center; }
+      .brd-title           { font-size: 15px; font-weight: bold; text-transform: uppercase;
+                             color: #003366; letter-spacing: 0.8px; border: 2px solid #003366;
+                             padding: 6px 12px; display: inline-block; }
+      .brd-subtitle        { font-size: 10px; color: #555; margin-top: 4px; }
+      .company-name        { font-size: 13px; font-weight: bold; color: #003366; }
+      .company-info        { font-size: 9px; color: #444; margin-top: 2px; line-height: 1.5; }
+
+      /* ── Bloc info (remettant / banque) ───────────────────── */
+      .brd-info-row        { display: flex; gap: 12px; margin-bottom: 12px; }
+      .brd-info-box        { flex: 1; border: 1px solid #b0b8c4; border-radius: 3px;
+                             padding: 8px 10px; background: #f7f9fc; }
+      .brd-info-box h4     { margin: 0 0 5px 0; font-size: 10px; text-transform: uppercase;
+                             color: #003366; border-bottom: 1px solid #ccd5e0; padding-bottom: 3px; }
+      .brd-info-line       { display: flex; margin-bottom: 2px; font-size: 10px; }
+      .brd-info-label      { width: 130px; font-weight: 600; color: #555; flex-shrink: 0; }
+      .brd-info-val        { color: #1a1a1a; }
+      .brd-num-badge       { display: inline-block; background: #003366; color: white;
+                             padding: 2px 10px; border-radius: 3px; font-size: 10px; font-weight: bold; }
+
+      /* ── Tableau règlements ───────────────────────────────── */
+      .brd-table           { width: 100%; border-collapse: collapse; margin-bottom: 14px; font-size: 10px; }
+      .brd-table thead tr  { background: #003366; color: white; }
+      .brd-table thead th  { padding: 6px 5px; text-align: center; font-size: 9.5px;
+                             font-weight: 600; border: 1px solid #002244; }
+      .brd-table tbody tr:nth-child(even) { background: #f0f4f9; }
+      .brd-table tbody tr:hover           { background: #e2eaf4; }
+      .brd-table tbody td { padding: 5px 5px; border: 1px solid #c8d4e4; vertical-align: middle; }
+      .brd-table tfoot tr  { background: #e8eef6; font-weight: bold; }
+      .brd-table tfoot td  { padding: 6px 5px; border: 1px solid #b0bdd0; font-size: 10.5px; }
+      .td-center           { text-align: center; }
+      .td-right            { text-align: right; }
+      .td-montant          { text-align: right; font-weight: 600; white-space: nowrap; }
+
+      /* ── Totaux ───────────────────────────────────────────── */
+      .brd-total-box       { border: 2px solid #003366; border-radius: 3px; padding: 8px 14px;
+                             display: inline-block; float: right; margin-bottom: 10px;
+                             background: #eef3fb; }
+      .brd-total-label     { font-size: 10px; color: #555; text-transform: uppercase; }
+      .brd-total-amount    { font-size: 16px; font-weight: bold; color: #003366; }
+      .brd-total-lettres   { font-size: 9px; color: #555; font-style: italic; border-top: 1px dashed #aaa;
+                             margin-top: 4px; padding-top: 3px; }
+
+      /* ── Signatures / Décharge ────────────────────────────── */
+      .brd-sign-row        { display: flex; gap: 20px; margin-top: 30px; clear: both; }
+      .brd-sign-box        { flex: 1; border: 1px solid #b0b8c4; border-radius: 3px;
+                             padding: 8px 10px; min-height: 80px; }
+      .brd-sign-box h4     { margin: 0 0 6px 0; font-size: 9.5px; text-transform: uppercase;
+                             color: #003366; border-bottom: 1px solid #ccd5e0; padding-bottom: 3px; }
+      .brd-sign-line       { border-bottom: 1px solid #aaa; height: 20px; margin: 8px 0; }
+      .brd-sign-label      { font-size: 9px; color: #888; }
+      .brd-disclaimer      { font-size: 8.5px; color: #666; margin-top: 12px; border-top: 1px solid #ddd;
+                             padding-top: 6px; font-style: italic; }
+
+      /* ── Badge état migration ─────────────────────────────── */
+      .brd-migration-warn  { background: #fff3cd; border: 1px solid #ffc107; border-radius: 3px;
+                             padding: 4px 10px; font-size: 9px; color: #856404; margin-bottom: 10px;
+                             display: inline-block; }
+
+      /* ── Coupures espèces ─────────────────────────────────── */
+      .brd-coupures-table  { width: 60%; border-collapse: collapse; font-size: 10px; }
+      .brd-coupures-table th { background: #003366; color: white; padding: 5px 8px; text-align: center;
+                               border: 1px solid #002244; font-size: 9.5px; }
+      .brd-coupures-table td { padding: 4px 8px; border: 1px solid #c8d4e4; height: 22px; }
+      .brd-coupures-table tr:nth-child(even) { background: #f0f4f9; }
+      .brd-coupures-subtotal td { background: #d9e4f5 !important; font-weight: bold; }
+      .brd-coupures-total td   { background: #e8eef6 !important; font-weight: bold; font-size: 11px; }
+    </style>
+  </template>
+
+  <!-- ══════════════════════════════════════════════════════════════════════ -->
+  <!--  TEMPLATE 1 — BORDEREAU DE REMISE DE CHÈQUES                         -->
+  <!-- ══════════════════════════════════════════════════════════════════════ -->
+
+  <template id="report_bordereau_cheques_template">
+    <t t-call="web.html_container">
+      <t t-foreach="docs" t-as="o">
+        <t t-call="web.external_layout">
+          <t t-call="assurcore.bordereau_common_css"/>
+          <div class="brd-container" style="padding:5px;">
+
+            <!-- EN-TÊTE -->
+            <div class="brd-header">
+              <div class="brd-logo-zone">
+                <div class="company-name"><t t-esc="o.company_id.name"/></div>
+                <div class="company-info">
+                  <t t-esc="o.company_id.street"/> — <t t-esc="o.company_id.city"/><br/>
+                  Tél : <t t-esc="o.company_id.phone or '—'"/> &nbsp;|&nbsp;
+                  MF : <t t-esc="o.company_id.vat or '—'"/>
+                </div>
+              </div>
+              <div class="brd-title-zone">
+                <div class="brd-title">Bordereau de Remise de Chèques</div>
+                <div class="brd-subtitle">À remettre à la banque avec les chèques correspondants</div>
+              </div>
+            </div>
+
+            <!-- AVERTISSEMENT MIGRATION -->
+            <t t-if="o.is_migration">
+              <div class="brd-migration-warn">
+                ⚠ Bordereau de régularisation historique — Justification bancaire à fournir
+              </div>
+            </t>
+
+            <!-- BLOC INFOS -->
+            <div class="brd-info-row">
+              <!-- Remettant -->
+              <div class="brd-info-box">
+                <h4>Remettant</h4>
+                <div class="brd-info-line">
+                  <span class="brd-info-label">Raison sociale :</span>
+                  <span class="brd-info-val"><t t-esc="o.company_id.name"/></span>
+                </div>
+                <div class="brd-info-line">
+                  <span class="brd-info-label">Adresse :</span>
+                  <span class="brd-info-val">
+                    <t t-esc="o.company_id.street or ''"/>
+                    <t t-if="o.company_id.city">, <t t-esc="o.company_id.city"/></t>
+                  </span>
+                </div>
+                <div class="brd-info-line">
+                  <span class="brd-info-label">Matricule Fiscal :</span>
+                  <span class="brd-info-val"><t t-esc="o.company_id.vat or '—'"/></span>
+                </div>
+                <div class="brd-info-line">
+                  <span class="brd-info-label">Téléphone :</span>
+                  <span class="brd-info-val"><t t-esc="o.company_id.phone or '—'"/></span>
+                </div>
+              </div>
+              <!-- Banque destinataire -->
+              <div class="brd-info-box">
+                <h4>Banque Destinataire</h4>
+                <div class="brd-info-line">
+                  <span class="brd-info-label">Banque :</span>
+                  <span class="brd-info-val"><t t-esc="o.etablissement_id.name"/></span>
+                </div>
+                <div class="brd-info-line">
+                  <span class="brd-info-label">Agence :</span>
+                  <span class="brd-info-val"><t t-esc="o.etablissement_id.agence or '—'"/></span>
+                </div>
+                <div class="brd-info-line">
+                  <span class="brd-info-label">N° Compte (RIB) :</span>
+                  <span class="brd-info-val"><t t-esc="o.etablissement_id.rib or '—'"/></span>
+                </div>
+                <div class="brd-info-line">
+                  <span class="brd-info-label">Date de remise :</span>
+                  <span class="brd-info-val"><t t-esc="o.date_depot or '—'"/></span>
+                </div>
+              </div>
+              <!-- Références bordereau -->
+              <div class="brd-info-box">
+                <h4>Références</h4>
+                <div class="brd-info-line">
+                  <span class="brd-info-label">N° Bordereau local :</span>
+                  <span class="brd-info-val">
+                    <span class="brd-num-badge"><t t-esc="o.name"/></span>
+                  </span>
+                </div>
+                <div class="brd-info-line">
+                  <span class="brd-info-label">N° Bordereau banque :</span>
+                  <span class="brd-info-val"><t t-esc="o.num_bordereau_banque or 'À compléter par la banque'"/></span>
+                </div>
+                <div class="brd-info-line">
+                  <span class="brd-info-label">Nb de chèques :</span>
+                  <span class="brd-info-val"><t t-esc="len(o.settlement_ids)"/></span>
+                </div>
+                <div class="brd-info-line">
+                  <span class="brd-info-label">Responsable :</span>
+                  <span class="brd-info-val"><t t-esc="o.responsable_id.name or '—'"/></span>
+                </div>
+              </div>
+            </div>
+
+            <!-- TABLEAU DES CHÈQUES -->
+            <table class="brd-table">
+              <thead>
+                <tr>
+                  <th style="width:4%">N°</th>
+                  <th style="width:14%">N° Chèque</th>
+                  <th style="width:20%">Tireur (Émetteur)</th>
+                  <th style="width:18%">Banque Tirée</th>
+                  <th style="width:18%">Client / Assuré</th>
+                  <th style="width:11%">Date Chèque</th>
+                  <th style="width:15%">Montant (DT)</th>
+                </tr>
+              </thead>
+              <tbody>
+                <t t-foreach="o.settlement_ids" t-as="s">
+                  <tr>
+                    <td class="td-center"><t t-esc="s_index + 1"/></td>
+                    <td class="td-center"><t t-esc="s.num_cheque or '—'"/></td>
+                    <td><t t-esc="s.tireur or '—'"/></td>
+                    <td><t t-esc="s.banque_tireur or '—'"/></td>
+                    <td><t t-esc="s.partner_id.name if s.partner_id else '—'"/></td>
+                    <td class="td-center">
+                      <t t-esc="s.date_reg.strftime('%d/%m/%Y') if s.date_reg else '—'"/>
+                    </td>
+                    <td class="td-montant">
+                      <t t-esc="'{:,.3f}'.format(s.amount).replace(',', ' ')"/>
+                    </td>
+                  </tr>
+                </t>
+              </tbody>
+              <tfoot>
+                <tr>
+                  <td colspan="6" class="td-right" style="font-size:10.5px;">
+                    TOTAL GÉNÉRAL (<t t-esc="len(o.settlement_ids)"/> chèques) :
+                  </td>
+                  <td class="td-montant" style="font-size:12px; color:#003366;">
+                    <t t-esc="'{:,.3f}'.format(o.montant_total).replace(',', ' ')"/> DT
+                  </td>
+                </tr>
+              </tfoot>
+            </table>
+
+            <!-- TOTAL EN LETTRES -->
+            <div style="margin-bottom:12px; clear:both;">
+              <span style="font-size:9.5px; font-weight:600;">Arrêté le présent bordereau à la somme de : </span>
+              <span style="font-size:9.5px; font-style:italic; color:#003366;">
+                <t t-esc="o.montant_total_lettres if hasattr(o, 'montant_total_lettres') else '(montant en lettres)'"/>
+              </span>
+              <span style="font-size:9.5px;"> Dinars Tunisiens.</span>
+            </div>
+
+            <!-- INSTRUCTIONS BANCAIRES -->
+            <div style="background:#f0f4f9; border-left:3px solid #003366; padding:7px 12px;
+                        font-size:9.5px; margin-bottom:14px; border-radius:2px;">
+              <strong>Instructions :</strong> Veuillez encaisser les chèques ci-dessus et créditer
+              notre compte N° <strong><t t-esc="o.etablissement_id.rib or '_______________'"/></strong>
+              du montant total de
+              <strong><t t-esc="'{:,.3f}'.format(o.montant_total).replace(',', ' ')"/> DT</strong>.
+              En cas d'impayé, nous retourner le(s) chèque(s) avec avis de sort.
+            </div>
+
+            <!-- SIGNATURES -->
+            <div class="brd-sign-row">
+              <div class="brd-sign-box">
+                <h4>Signature du Remettant</h4>
+                <div class="brd-sign-label">Nom &amp; Qualité : <t t-esc="o.responsable_id.name or ''"/></div>
+                <div class="brd-sign-line"/>
+                <div class="brd-sign-label">Date : <t t-esc="o.date_depot or ''"/></div>
+                <div class="brd-sign-line" style="margin-top:20px;"/>
+                <div class="brd-sign-label" style="text-align:center;">Signature &amp; Cachet</div>
+              </div>
+              <div class="brd-sign-box">
+                <h4>Décharge Banque — Accusé de Réception</h4>
+                <div class="brd-info-line" style="font-size:9.5px;">
+                  <span class="brd-info-label">Reçu le :</span>
+                  <div class="brd-sign-line" style="flex:1; margin:0; margin-left:6px;"/>
+                </div>
+                <div class="brd-info-line" style="font-size:9.5px; margin-top:6px;">
+                  <span class="brd-info-label">N° Bordereau banque :</span>
+                  <div class="brd-sign-line" style="flex:1; margin:0; margin-left:6px;"/>
+                </div>
+                <div class="brd-info-line" style="font-size:9.5px; margin-top:6px;">
+                  <span class="brd-info-label">Nb chèques reçus :</span>
+                  <div class="brd-sign-line" style="flex:1; margin:0; margin-left:6px;"/>
+                </div>
+                <div class="brd-sign-line" style="margin-top:18px;"/>
+                <div class="brd-sign-label" style="text-align:center;">Signature &amp; Cachet Banque</div>
+              </div>
+              <div class="brd-sign-box" style="flex:0.6;">
+                <h4>Vérification Caisse</h4>
+                <div class="brd-sign-label">Nb chèques vérifiés :</div>
+                <div class="brd-sign-line"/>
+                <div class="brd-sign-label">Montant vérifié (DT) :</div>
+                <div class="brd-sign-line"/>
+                <div class="brd-sign-label" style="text-align:center; margin-top:8px;">Paraphe</div>
+              </div>
+            </div>
+
+            <div class="brd-disclaimer">
+              Document généré par AssurCore — <t t-esc="o.company_id.name"/> —
+              Bordereau N° <t t-esc="o.name"/> —
+              Imprimé le <t t-esc="context_timestamp(datetime.datetime.now()).strftime('%d/%m/%Y à %H:%M')"/>
+            </div>
+
+          </div>
+        </t>
+      </t>
+    </t>
+  </template>
+
+  <!-- ══════════════════════════════════════════════════════════════════════ -->
+  <!--  TEMPLATE 2 — BORDEREAU DE REMISE DE TRAITÉS / EFFETS                -->
+  <!-- ══════════════════════════════════════════════════════════════════════ -->
+
+  <template id="report_bordereau_traites_template">
+    <t t-call="web.html_container">
+      <t t-foreach="docs" t-as="o">
+        <t t-call="web.external_layout">
+          <t t-call="assurcore.bordereau_common_css"/>
+          <div class="brd-container" style="padding:5px;">
+
+            <!-- EN-TÊTE -->
+            <div class="brd-header">
+              <div class="brd-logo-zone">
+                <div class="company-name"><t t-esc="o.company_id.name"/></div>
+                <div class="company-info">
+                  <t t-esc="o.company_id.street"/> — <t t-esc="o.company_id.city"/><br/>
+                  Tél : <t t-esc="o.company_id.phone or '—'"/> &nbsp;|&nbsp;
+                  MF : <t t-esc="o.company_id.vat or '—'"/>
+                </div>
+              </div>
+              <div class="brd-title-zone">
+                <div class="brd-title">Bordereau de Remise d'Effets</div>
+                <div class="brd-subtitle">Remise à l'encaissement — Traites &amp; Effets de Commerce</div>
+              </div>
+            </div>
+
+            <t t-if="o.is_migration">
+              <div class="brd-migration-warn">
+                ⚠ Bordereau de régularisation historique — Justification bancaire à fournir
+              </div>
+            </t>
+
+            <!-- BLOC INFOS -->
+            <div class="brd-info-row">
+              <div class="brd-info-box">
+                <h4>Remettant</h4>
+                <div class="brd-info-line">
+                  <span class="brd-info-label">Raison sociale :</span>
+                  <span class="brd-info-val"><t t-esc="o.company_id.name"/></span>
+                </div>
+                <div class="brd-info-line">
+                  <span class="brd-info-label">Adresse :</span>
+                  <span class="brd-info-val">
+                    <t t-esc="o.company_id.street or ''"/>
+                    <t t-if="o.company_id.city">, <t t-esc="o.company_id.city"/></t>
+                  </span>
+                </div>
+                <div class="brd-info-line">
+                  <span class="brd-info-label">Matricule Fiscal :</span>
+                  <span class="brd-info-val"><t t-esc="o.company_id.vat or '—'"/></span>
+                </div>
+                <div class="brd-info-line">
+                  <span class="brd-info-label">Nature de remise :</span>
+                  <span class="brd-info-val" style="font-weight:bold; color:#003366;">
+                    À L'ENCAISSEMENT
+                  </span>
+                </div>
+              </div>
+              <div class="brd-info-box">
+                <h4>Banque Destinataire</h4>
+                <div class="brd-info-line">
+                  <span class="brd-info-label">Banque :</span>
+                  <span class="brd-info-val"><t t-esc="o.etablissement_id.name"/></span>
+                </div>
+                <div class="brd-info-line">
+                  <span class="brd-info-label">Agence :</span>
+                  <span class="brd-info-val"><t t-esc="o.etablissement_id.agence or '—'"/></span>
+                </div>
+                <div class="brd-info-line">
+                  <span class="brd-info-label">N° Compte (RIB) :</span>
+                  <span class="brd-info-val"><t t-esc="o.etablissement_id.rib or '—'"/></span>
+                </div>
+                <div class="brd-info-line">
+                  <span class="brd-info-label">Date de remise :</span>
+                  <span class="brd-info-val"><t t-esc="o.date_depot or '—'"/></span>
+                </div>
+              </div>
+              <div class="brd-info-box">
+                <h4>Références</h4>
+                <div class="brd-info-line">
+                  <span class="brd-info-label">N° Bordereau local :</span>
+                  <span class="brd-info-val">
+                    <span class="brd-num-badge"><t t-esc="o.name"/></span>
+                  </span>
+                </div>
+                <div class="brd-info-line">
+                  <span class="brd-info-label">N° Bordereau banque :</span>
+                  <span class="brd-info-val"><t t-esc="o.num_bordereau_banque or 'À compléter par la banque'"/></span>
+                </div>
+                <div class="brd-info-line">
+                  <span class="brd-info-label">Nb d'effets :</span>
+                  <span class="brd-info-val"><t t-esc="len(o.settlement_ids)"/></span>
+                </div>
+                <div class="brd-info-line">
+                  <span class="brd-info-label">Responsable :</span>
+                  <span class="brd-info-val"><t t-esc="o.responsable_id.name or '—'"/></span>
+                </div>
+              </div>
+            </div>
+
+            <!-- TABLEAU DES TRAITÉS -->
+            <!-- IMPORTANT BANCAIRE : date échéance OBLIGATOIRE pour les traités -->
+            <table class="brd-table">
+              <thead>
+                <tr>
+                  <th style="width:4%">N°</th>
+                  <th style="width:13%">N° Effet / Traité</th>
+                  <th style="width:18%">Tiré (Débiteur / Client)</th>
+                  <th style="width:18%">Domiciliation Bancaire du Tiré</th>
+                  <th style="width:11%">Date Émission</th>
+                  <th style="width:11%">Date Échéance ★</th>
+                  <th style="width:11%">Référence Police</th>
+                  <th style="width:14%">Montant (DT)</th>
+                </tr>
+              </thead>
+              <tbody>
+                <t t-foreach="o.settlement_ids" t-as="s">
+                  <tr>
+                    <td class="td-center"><t t-esc="s_index + 1"/></td>
+                    <td class="td-center"><t t-esc="s.num_cheque or '—'"/></td>
+                    <td><t t-esc="s.partner_id.name if s.partner_id else '—'"/></td>
+                    <td><t t-esc="s.banque_tireur or '—'"/></td>
+                    <td class="td-center">
+                      <t t-esc="s.date_reg.strftime('%d/%m/%Y') if s.date_reg else '—'"/>
+                    </td>
+                    <td class="td-center" style="font-weight:bold; color:#cc0000;">
+                      <t t-esc="s.date_echeance.strftime('%d/%m/%Y') if s.date_echeance else '⚠ MANQUANTE'"/>
+                    </td>
+                    <td class="td-center">
+                      <t t-esc="s.operation_id.num_police if hasattr(s, 'operation_id') and s.operation_id else '—'"/>
+                    </td>
+                    <td class="td-montant">
+                      <t t-esc="'{:,.3f}'.format(s.amount).replace(',', ' ')"/>
+                    </td>
+                  </tr>
+                </t>
+              </tbody>
+              <tfoot>
+                <tr>
+                  <td colspan="7" class="td-right">
+                    TOTAL GÉNÉRAL (<t t-esc="len(o.settlement_ids)"/> effets) :
+                  </td>
+                  <td class="td-montant" style="font-size:12px; color:#003366;">
+                    <t t-esc="'{:,.3f}'.format(o.montant_total).replace(',', ' ')"/> DT
+                  </td>
+                </tr>
+              </tfoot>
+            </table>
+
+            <div style="font-size:8.5px; color:#cc0000; margin-bottom:8px;">
+              ★ La date d'échéance est obligatoire pour la présentation des effets à l'encaissement.
+              Tout effet sans date d'échéance sera rejeté par la banque.
+            </div>
+
+            <!-- TOTAL EN LETTRES -->
+            <div style="margin-bottom:12px;">
+              <span style="font-size:9.5px; font-weight:600;">Arrêté le présent bordereau à la somme de : </span>
+              <span style="font-size:9.5px; font-style:italic; color:#003366;">
+                <t t-esc="o.montant_total_lettres if hasattr(o, 'montant_total_lettres') else '(montant en lettres)'"/>
+              </span>
+              <span style="font-size:9.5px;"> Dinars Tunisiens.</span>
+            </div>
+
+            <!-- INSTRUCTIONS -->
+            <div style="background:#f0f4f9; border-left:3px solid #003366; padding:7px 12px;
+                        font-size:9.5px; margin-bottom:14px; border-radius:2px;">
+              <strong>Instructions :</strong> Veuillez présenter les effets ci-dessus à l'encaissement
+              à leurs dates d'échéance respectives et créditer notre compte N°
+              <strong><t t-esc="o.etablissement_id.rib or '_______________'"/></strong>.
+              En cas d'impayé, nous retourner l'effet avec protêt dans les délais légaux.
+              <strong>Frais à notre charge.</strong>
+            </div>
+
+            <!-- SIGNATURES -->
+            <div class="brd-sign-row">
+              <div class="brd-sign-box">
+                <h4>Signature du Remettant</h4>
+                <div class="brd-sign-label">Nom : <t t-esc="o.responsable_id.name or ''"/></div>
+                <div class="brd-sign-line"/>
+                <div class="brd-sign-label">Date : <t t-esc="o.date_depot or ''"/></div>
+                <div class="brd-sign-line" style="margin-top:20px;"/>
+                <div class="brd-sign-label" style="text-align:center;">Signature &amp; Cachet</div>
+              </div>
+              <div class="brd-sign-box">
+                <h4>Décharge Banque — Accusé de Réception</h4>
+                <div class="brd-info-line" style="font-size:9.5px;">
+                  <span class="brd-info-label">Reçu le :</span>
+                  <div class="brd-sign-line" style="flex:1; margin:0; margin-left:6px;"/>
+                </div>
+                <div class="brd-info-line" style="font-size:9.5px; margin-top:6px;">
+                  <span class="brd-info-label">N° Bordereau banque :</span>
+                  <div class="brd-sign-line" style="flex:1; margin:0; margin-left:6px;"/>
+                </div>
+                <div class="brd-info-line" style="font-size:9.5px; margin-top:6px;">
+                  <span class="brd-info-label">Nb effets reçus :</span>
+                  <div class="brd-sign-line" style="flex:1; margin:0; margin-left:6px;"/>
+                </div>
+                <div class="brd-sign-line" style="margin-top:18px;"/>
+                <div class="brd-sign-label" style="text-align:center;">Signature &amp; Cachet Banque</div>
+              </div>
+            </div>
+
+            <div class="brd-disclaimer">
+              Document généré par AssurCore — <t t-esc="o.company_id.name"/> —
+              Bordereau N° <t t-esc="o.name"/> —
+              Imprimé le <t t-esc="context_timestamp(datetime.datetime.now()).strftime('%d/%m/%Y à %H:%M')"/>
+            </div>
+
+          </div>
+        </t>
+      </t>
+    </t>
+  </template>
+
+  <!-- ══════════════════════════════════════════════════════════════════════ -->
+  <!--  TEMPLATE 3 — BORDEREAU DE VERSEMENT ESPÈCES                         -->
+  <!-- ══════════════════════════════════════════════════════════════════════ -->
+
+  <template id="report_bordereau_especes_template">
+    <t t-call="web.html_container">
+      <t t-foreach="docs" t-as="o">
+        <t t-call="web.external_layout">
+          <t t-call="assurcore.bordereau_common_css"/>
+          <div class="brd-container" style="padding:5px;">
+
+            <!-- EN-TÊTE -->
+            <div class="brd-header">
+              <div class="brd-logo-zone">
+                <div class="company-name"><t t-esc="o.company_id.name"/></div>
+                <div class="company-info">
+                  <t t-esc="o.company_id.street"/> — <t t-esc="o.company_id.city"/><br/>
+                  Tél : <t t-esc="o.company_id.phone or '—'"/> &nbsp;|&nbsp;
+                  MF : <t t-esc="o.company_id.vat or '—'"/>
+                </div>
+              </div>
+              <div class="brd-title-zone">
+                <div class="brd-title">Bordereau de Versement Espèces</div>
+                <div class="brd-subtitle">Versement en numéraire — À remettre au caissier</div>
+              </div>
+            </div>
+
+            <t t-if="o.is_migration">
+              <div class="brd-migration-warn">
+                ⚠ Bordereau de régularisation historique — Justification à fournir
+              </div>
+            </t>
+
+            <!-- INFOS + COUPURES sur la même ligne -->
+            <div style="display:flex; gap:14px; margin-bottom:14px;">
+
+              <!-- Colonne gauche : infos -->
+              <div style="flex:1;">
+                <div class="brd-info-row" style="margin-bottom:10px;">
+                  <div class="brd-info-box" style="flex:1;">
+                    <h4>Versant</h4>
+                    <div class="brd-info-line">
+                      <span class="brd-info-label">Raison sociale :</span>
+                      <span class="brd-info-val"><t t-esc="o.company_id.name"/></span>
+                    </div>
+                    <div class="brd-info-line">
+                      <span class="brd-info-label">MF :</span>
+                      <span class="brd-info-val"><t t-esc="o.company_id.vat or '—'"/></span>
+                    </div>
+                    <div class="brd-info-line">
+                      <span class="brd-info-label">Tél :</span>
+                      <span class="brd-info-val"><t t-esc="o.company_id.phone or '—'"/></span>
+                    </div>
+                  </div>
+                </div>
+                <div class="brd-info-row">
+                  <div class="brd-info-box" style="flex:1;">
+                    <h4>Établissement Destinataire</h4>
+                    <div class="brd-info-line">
+                      <span class="brd-info-label">Banque / Caisse :</span>
+                      <span class="brd-info-val"><t t-esc="o.etablissement_id.name"/></span>
+                    </div>
+                    <div class="brd-info-line">
+                      <span class="brd-info-label">Agence :</span>
+                      <span class="brd-info-val"><t t-esc="o.etablissement_id.agence or '—'"/></span>
+                    </div>
+                    <div class="brd-info-line">
+                      <span class="brd-info-label">N° Compte à créditer :</span>
+                      <span class="brd-info-val" style="font-weight:bold;">
+                        <t t-esc="o.etablissement_id.rib or '—'"/>
+                      </span>
+                    </div>
+                    <div class="brd-info-line">
+                      <span class="brd-info-label">Date de versement :</span>
+                      <span class="brd-info-val"><t t-esc="o.date_depot or '—'"/></span>
+                    </div>
+                    <div class="brd-info-line">
+                      <span class="brd-info-label">N° Bordereau local :</span>
+                      <span class="brd-info-val">
+                        <span class="brd-num-badge"><t t-esc="o.name"/></span>
+                      </span>
+                    </div>
+                    <div class="brd-info-line">
+                      <span class="brd-info-label">N° Bordereau banque :</span>
+                      <span class="brd-info-val">
+                        <t t-esc="o.num_bordereau_banque or 'À compléter par la banque'"/>
+                      </span>
+                    </div>
+                    <div class="brd-info-line">
+                      <span class="brd-info-label">Motif versement :</span>
+                      <span class="brd-info-val">Primes d'assurance collectées</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Colonne droite : tableau coupures -->
+              <div style="flex:0 0 280px;">
+                <div style="font-size:10px; font-weight:bold; color:#003366; text-transform:uppercase;
+                            border-bottom:2px solid #003366; padding-bottom:4px; margin-bottom:6px;">
+                  Détail des Coupures
+                </div>
+                <table class="brd-coupures-table" style="width:100%;">
+                  <thead>
+                    <tr>
+                      <th>Coupure</th>
+                      <th>Nb billets/pièces</th>
+                      <th>Montant (DT)</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <tr><td>50 DT</td><td></td><td></td></tr>
+                    <tr><td>20 DT</td><td></td><td></td></tr>
+                    <tr><td>10 DT</td><td></td><td></td></tr>
+                    <tr><td>5 DT</td><td></td><td></td></tr>
+                    <tr class="brd-coupures-subtotal">
+                      <td colspan="2" style="text-align:right; font-size:9.5px;">Sous-total billets :</td>
+                      <td></td>
+                    </tr>
+                    <tr><td>2 DT</td><td></td><td></td></tr>
+                    <tr><td>1 DT</td><td></td><td></td></tr>
+                    <tr><td>500 Millimes</td><td></td><td></td></tr>
+                    <tr><td>100 Millimes</td><td></td><td></td></tr>
+                    <tr><td>Pièces div.</td><td></td><td></td></tr>
+                    <tr class="brd-coupures-subtotal">
+                      <td colspan="2" style="text-align:right; font-size:9.5px;">Sous-total pièces :</td>
+                      <td></td>
+                    </tr>
+                    <tr class="brd-coupures-total">
+                      <td colspan="2" style="text-align:right;">TOTAL VERSÉ :</td>
+                      <td style="color:#003366;">
+                        <t t-esc="'{:,.3f}'.format(o.montant_total).replace(',', ' ')"/>
+                      </td>
+                    </tr>
+                  </tbody>
+                </table>
+                <div style="font-size:8.5px; color:#888; margin-top:4px; font-style:italic;">
+                  * Le caissier complète le détail des coupures lors du comptage.
+                </div>
+              </div>
+            </div>
+
+            <!-- TOTAL EN LETTRES -->
+            <div style="background:#f0f4f9; border:1px solid #b0bdd0; border-radius:3px;
+                        padding:7px 12px; font-size:9.5px; margin-bottom:12px;">
+              <strong>Total en lettres :</strong>
+              <span style="font-style:italic; color:#003366;">
+                <t t-esc="o.montant_total_lettres if hasattr(o, 'montant_total_lettres') else '(montant en lettres)'"/>
+              </span>
+              Dinars Tunisiens.
+            </div>
+
+            <!-- RÉCAPITULATIF DES RÈGLEMENTS ESPÈCES -->
+            <div style="font-size:10px; font-weight:bold; color:#003366; text-transform:uppercase;
+                        border-bottom:2px solid #003366; padding-bottom:4px; margin-bottom:8px;">
+              Récapitulatif des Versements Clients
+            </div>
+            <table class="brd-table">
+              <thead>
+                <tr>
+                  <th style="width:5%">N°</th>
+                  <th style="width:25%">Client / Assuré</th>
+                  <th style="width:20%">Référence Règlement</th>
+                  <th style="width:15%">Date</th>
+                  <th style="width:20%">Objet (Police / Quittance)</th>
+                  <th style="width:15%">Montant (DT)</th>
+                </tr>
+              </thead>
+              <tbody>
+                <t t-foreach="o.settlement_ids" t-as="s">
+                  <tr>
+                    <td class="td-center"><t t-esc="s_index + 1"/></td>
+                    <td><t t-esc="s.partner_id.name if s.partner_id else '—'"/></td>
+                    <td class="td-center"><t t-esc="s.name or '—'"/></td>
+                    <td class="td-center">
+                      <t t-esc="s.date_reg.strftime('%d/%m/%Y') if s.date_reg else '—'"/>
+                    </td>
+                    <td>
+                      <t t-esc="s.notes[:40] if s.notes else '—'"/>
+                    </td>
+                    <td class="td-montant">
+                      <t t-esc="'{:,.3f}'.format(s.amount).replace(',', ' ')"/>
+                    </td>
+                  </tr>
+                </t>
+              </tbody>
+              <tfoot>
+                <tr>
+                  <td colspan="5" class="td-right">
+                    TOTAL (<t t-esc="len(o.settlement_ids)"/> versements) :
+                  </td>
+                  <td class="td-montant" style="font-size:12px; color:#003366;">
+                    <t t-esc="'{:,.3f}'.format(o.montant_total).replace(',', ' ')"/> DT
+                  </td>
+                </tr>
+              </tfoot>
+            </table>
+
+            <!-- SIGNATURES -->
+            <div class="brd-sign-row">
+              <div class="brd-sign-box">
+                <h4>Signature du Versant</h4>
+                <div class="brd-sign-label">Nom : <t t-esc="o.responsable_id.name or ''"/></div>
+                <div class="brd-sign-line"/>
+                <div class="brd-sign-label">Date : <t t-esc="o.date_depot or ''"/></div>
+                <div class="brd-sign-line" style="margin-top:20px;"/>
+                <div class="brd-sign-label" style="text-align:center;">Signature &amp; Cachet</div>
+              </div>
+              <div class="brd-sign-box">
+                <h4>Décharge — Accusé de Réception Caissier</h4>
+                <div class="brd-info-line" style="font-size:9.5px;">
+                  <span class="brd-info-label">Reçu le :</span>
+                  <div class="brd-sign-line" style="flex:1; margin:0; margin-left:6px;"/>
+                </div>
+                <div class="brd-info-line" style="font-size:9.5px; margin-top:6px;">
+                  <span class="brd-info-label">Montant reçu (DT) :</span>
+                  <div class="brd-sign-line" style="flex:1; margin:0; margin-left:6px;"/>
+                </div>
+                <div class="brd-info-line" style="font-size:9.5px; margin-top:6px;">
+                  <span class="brd-info-label">N° Reçu :</span>
+                  <div class="brd-sign-line" style="flex:1; margin:0; margin-left:6px;"/>
+                </div>
+                <div class="brd-sign-line" style="margin-top:18px;"/>
+                <div class="brd-sign-label" style="text-align:center;">Signature &amp; Cachet Caissier</div>
+              </div>
+            </div>
+
+            <div class="brd-disclaimer">
+              Document généré par AssurCore — <t t-esc="o.company_id.name"/> —
+              Bordereau N° <t t-esc="o.name"/> —
+              Imprimé le <t t-esc="context_timestamp(datetime.datetime.now()).strftime('%d/%m/%Y à %H:%M')"/>
+            </div>
+
+          </div>
+        </t>
+      </t>
+    </t>
+  </template>
+
+</odoo>

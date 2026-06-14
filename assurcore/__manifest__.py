@@ -51,6 +51,8 @@
         'views/evo02_dashboard_views.xml',
         'security/menu_restrictions.xml',
         'data/evo02_menu_order.xml',
+        # EVO03 — Bordereaux & Encaissement
+        'report/evo03_bordereau_reports.xml',
     ],
     'assets': {
         'web._assets_primary_variables': [
@@ -59,9 +61,4 @@
         'web.assets_backend': [
             'assurcore/static/src/js/evo02_graph_explorer.js',
             'assurcore/static/src/xml/evo02_graph_explorer.xml',
-        ],
-    },
-    'installable': True,
-    'application': True,
-    'auto_install': False,
-}
+     
